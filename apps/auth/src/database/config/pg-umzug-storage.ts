@@ -19,9 +19,10 @@ export default class PgUmzugStorage implements UmzugStorage {
 
   public async logMigration({ name }: { name: string }): Promise<void> {
     await this.ensureTable();
-    await this.pool.query(`INSERT INTO "${this.tableName}" (name) VALUES ($1)`, [
-      name,
-    ]);
+    await this.pool.query(
+      `INSERT INTO "${this.tableName}" (name) VALUES ($1)`,
+      [name],
+    );
   }
 
   public async unlogMigration({ name }: { name: string }): Promise<void> {

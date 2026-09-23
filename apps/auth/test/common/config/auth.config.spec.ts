@@ -2,7 +2,9 @@ import * as schema from '@database/schema';
 
 jest.mock('dotenv', () => ({ config: jest.fn() }));
 jest.mock('better-auth', () => ({ betterAuth: jest.fn() }));
-jest.mock('better-auth/adapters/drizzle', () => ({ drizzleAdapter: jest.fn() }));
+jest.mock('better-auth/adapters/drizzle', () => ({
+  drizzleAdapter: jest.fn(),
+}));
 jest.mock('@database/config/database-connection.factory', () => ({
   __esModule: true,
   default: jest.fn(),
@@ -44,7 +46,9 @@ const loadAuthConfig = (setup?: (mocks: Mocks) => void) => {
   let error: unknown;
 
   jest.isolateModules(() => {
-    mocks.dotenvConfig = jest.requireMock<{ config: jest.Mock }>('dotenv').config;
+    mocks.dotenvConfig = jest.requireMock<{ config: jest.Mock }>(
+      'dotenv',
+    ).config;
     mocks.betterAuth = jest.requireMock<{ betterAuth: jest.Mock }>(
       'better-auth',
     ).betterAuth;
