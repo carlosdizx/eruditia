@@ -19,9 +19,7 @@ const auth = betterAuth({
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
   trustedOrigins: env.TRUSTED_ORIGINS,
-  emailAndPassword: {
-    enabled: true,
-  },
+  emailAndPassword: { enabled: true, autoSignIn: true },
 });
 
 export default auth;
