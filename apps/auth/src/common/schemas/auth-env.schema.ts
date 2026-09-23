@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const authSchema = z.object({
+const authEnvSchema = z.object({
   BETTER_AUTH_SECRET: z.string().min(32),
   BETTER_AUTH_URL: z.string().url(),
   TRUSTED_ORIGINS: z
@@ -16,4 +16,4 @@ const authSchema = z.object({
     ),
 });
 
-export default authSchema;
+export default authEnvSchema;

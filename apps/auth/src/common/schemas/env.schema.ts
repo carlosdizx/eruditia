@@ -2,7 +2,7 @@ import { z } from 'zod';
 import logLevelSchema from './log-level.schema';
 import databaseSchema from './database.schema';
 import observeSchema from './observe.schema';
-import authSchema from './auth.schema';
+import authEnvSchema from './auth-env.schema';
 
 export const envSchema = z
   .object({
@@ -20,7 +20,7 @@ export const envSchema = z
   })
   .extend(databaseSchema.shape)
   .extend(observeSchema.shape)
-  .extend(authSchema.shape);
+  .extend(authEnvSchema.shape);
 
 type Env = z.infer<typeof envSchema>;
 

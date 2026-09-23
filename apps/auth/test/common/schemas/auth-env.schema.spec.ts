@@ -1,13 +1,13 @@
-import authSchema from '@common/schemas/auth.schema';
+import authEnvSchema from '@common/schemas/auth-env.schema';
 
 const validEnv = {
   BETTER_AUTH_SECRET: 'a'.repeat(32),
   BETTER_AUTH_URL: 'http://localhost:3000',
 };
 
-describe('authSchema', () => {
+describe('authEnvSchema', () => {
   it('applies the default empty TRUSTED_ORIGINS', () => {
-    expect(authSchema.parse(validEnv)).toEqual({
+    expect(authEnvSchema.parse(validEnv)).toEqual({
       ...validEnv,
       TRUSTED_ORIGINS: [],
     });
@@ -16,7 +16,7 @@ describe('authSchema', () => {
   describe('BETTER_AUTH_SECRET', () => {
     it('rejects a secret shorter than 32 characters', () => {
       expect(
-        authSchema.safeParse({ ...validEnv, BETTER_AUTH_SECRET: 'short' })
+        authEnvSchema.safeParse({ ...validEnv, BETTER_AUTH_SECRET: 'short' })
           .success,
       ).toBe(false);
     });
@@ -25,7 +25,7 @@ describe('authSchema', () => {
   describe('BETTER_AUTH_URL', () => {
     it('rejects a non-URL value', () => {
       expect(
-        authSchema.safeParse({ ...validEnv, BETTER_AUTH_URL: 'not-a-url' })
+        authEnvSchema.safeParse({ ...validEnv, BETTER_AUTH_URL: 'not-a-url' })
           .success,
       ).toBe(false);
     });
@@ -34,7 +34,7 @@ describe('authSchema', () => {
   describe('TRUSTED_ORIGINS', () => {
     it('splits a comma-separated list and trims whitespace', () => {
       expect(
-        authSchema.parse({
+        authEnvSchema.parse({
           ...validEnv,
           TRUSTED_ORIGINS: ' https://a.test , https://b.test ',
         }).TRUSTED_ORIGINS,
@@ -43,7 +43,7 @@ describe('authSchema', () => {
 
     it('ignores empty entries', () => {
       expect(
-        authSchema.parse({
+        authEnvSchema.parse({
           ...validEnv,
           TRUSTED_ORIGINS: 'https://a.test,,',
         }).TRUSTED_ORIGINS,
@@ -51,7 +51,7 @@ describe('authSchema', () => {
     });
 
     it('defaults to an empty array when omitted', () => {
-      expect(authSchema.parse(validEnv).TRUSTED_ORIGINS).toEqual([]);
+      expect(authEnvSchema.parse(validEnv).TRUSTED_ORIGINS).toEqual([]);
     });
   });
 
@@ -61,7 +61,7 @@ describe('authSchema', () => {
       const env: Record<string, string> = { ...validEnv };
       delete env[key];
 
-      expect(authSchema.safeParse(env).success).toBe(false);
+      expect(authEnvSchema.safeParse(env).success).toBe(false);
     },
   );
 });

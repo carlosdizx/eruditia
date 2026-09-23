@@ -30,7 +30,7 @@ src/database/
 │   └── drizzle.types.ts               # DrizzleDb / DrizzleTx (tipos compartidos)   
 ├── interfaces/                        # DatabaseEnvInterface
 ├── schema/
-│   ├── auth.schema.ts                 # Tablas de Better Auth (user, session, account, verification)
+│   ├── auth-env.schema.ts                 # Tablas de Better Auth (user, session, account, verification)
 │   └── index.ts                       # Registro central de TODAS las tablas — source of truth de drizzle-kit
 ├── migrations/                        # *.sql + meta/, generados por `drizzle-kit generate` (nunca a mano)
 ├── seeders/                           # Un archivo por seed, generado por el script (nunca a mano)
