@@ -9,6 +9,7 @@ const bootstrap = async () => {
   const app = await NestFactory.create(AppModule, {
     instrument: ObserveInstrument,
     bufferLogs: true,
+    bodyParser: false,
   });
 
   const configService = app.get(ConfigService<Env, true>);
