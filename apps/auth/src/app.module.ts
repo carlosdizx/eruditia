@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { createObserveModule } from '@nestjs/observe';
 import { ConfigService } from '@nestjs/config';
 import { AuthModule } from '@thallesp/nestjs-better-auth';
+import HealthController from './controllers/health.controller';
 import CommonModule from './common/common.module';
 import Env from './common/schemas/env.schema';
 import auth from '@common/config/auth.config';
@@ -22,5 +23,6 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
       }),
     }),
   ],
+  controllers: [HealthController],
 })
 export default class AppModule {}
