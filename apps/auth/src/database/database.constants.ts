@@ -1,1 +1,2 @@
-export const DRIZZLE = Symbol('DRIZZLE_CONNECTION');
+const DRIZZLE = Symbol('DRIZZLE_CONNECTION');
+export default DRIZZLE;

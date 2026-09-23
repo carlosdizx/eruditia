@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import Env from '@common/schemas/env.schema';
-import { DRIZZLE } from '@database/database.constants';
+import DRIZZLE from '@database/database.constants';
 import createDrizzleConnection from '@database/config/database-connection.factory';
 
 @Module({

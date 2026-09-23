@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import AbstractRepository from '../database/repositories/abstract.repository';
 import { examplesTable } from '../database/schema/example.schema';
-import { DRIZZLE } from '../database/database.constants';
+import DRIZZLE from '../database/database.constants';
 import type { DrizzleDb } from '../database/types/drizzle.types';
 
 @Injectable()
