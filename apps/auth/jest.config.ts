@@ -30,7 +30,6 @@ const config: Config = {
     '!src/database/database.constants.ts',
     '!src/database/scripts/**',
     '!src/database/config/**',
-    '!src/examples/**',
   ],
   coverageDirectory: './coverage',
   testEnvironment: 'node',

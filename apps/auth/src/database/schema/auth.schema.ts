@@ -7,8 +7,7 @@ import { boolean, index, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 // installed better-auth version. The exported names (`user`, `session`,
 // `account`, `verification`) must stay exactly these: the Drizzle adapter
 // looks tables up by these keys on the schema object, not by SQL table
-// name. Managed entirely by better-auth's own adapter, not by
-// AbstractRepository — no soft delete here, unlike baseColumns.
+// name. Managed entirely by better-auth's own adapter.
 
 export const user = pgTable('user', {
   id: text('id').primaryKey(),
