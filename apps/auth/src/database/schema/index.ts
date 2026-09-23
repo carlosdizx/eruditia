@@ -4,8 +4,9 @@
 // exported here, drizzle-kit doesn't know about it and no migration is
 // generated for it.
 //
-// Empty for now — see example.schema.ts for the reference pattern to follow
-// when adding the first real table:
+// See example.schema.ts for the reference pattern to follow when adding a
+// business table:
 //
 // export * from './example.schema';
-export {};
+
+export * from './auth.schema';
