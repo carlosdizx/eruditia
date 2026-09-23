@@ -11,6 +11,8 @@ const validEnv = {
   OBSERVE_APP_KEY: 'key',
   OBSERVE_APP_SECRET: 'secret',
   OBSERVE_SERVICE_ID: 'service',
+  BETTER_AUTH_SECRET: 'a'.repeat(32),
+  BETTER_AUTH_URL: 'http://localhost:3000',
 };
 
 describe('envSchema', () => {
@@ -21,6 +23,7 @@ describe('envSchema', () => {
       LOG_LEVELS: ['log', 'error'],
       DB_PORT: 5432,
       DB_LOGGING: false,
+      TRUSTED_ORIGINS: [],
     });
   });
 
@@ -81,6 +84,8 @@ describe('envSchema', () => {
       'OBSERVE_APP_KEY',
       'OBSERVE_APP_SECRET',
       'OBSERVE_SERVICE_ID',
+      'BETTER_AUTH_SECRET',
+      'BETTER_AUTH_URL',
     ])('rejects a missing %s', (key) => {
       const env: Record<string, string> = { ...validEnv };
       delete env[key];
