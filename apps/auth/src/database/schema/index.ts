@@ -4,3 +4,4 @@
 // migration is generated for it.
 
 export * from './auth.schema';
+export * from './organization.schema';

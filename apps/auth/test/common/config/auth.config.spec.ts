@@ -9,6 +9,18 @@ jest.mock('@database/config/database-connection.factory', () => ({
   __esModule: true,
   default: jest.fn(),
 }));
+jest.mock('@auth/plugins/admin.plugin', () => ({
+  __esModule: true,
+  default: jest.fn(),
+}));
+jest.mock('@auth/plugins/organization.plugin', () => ({
+  __esModule: true,
+  default: jest.fn(),
+}));
+jest.mock('@auth/hooks/assign-active-organization.hook', () => ({
+  __esModule: true,
+  default: jest.fn(),
+}));
 
 const validEnv = {
   NODE_ENV: 'test',
@@ -29,12 +41,18 @@ const validEnv = {
 const db = { name: 'db' };
 const adapter = { name: 'adapter' };
 const authInstance = { name: 'auth' };
+const adminPluginInstance = { id: 'admin' };
+const organizationPluginInstance = { id: 'organization' };
+const sessionCreateHook = jest.fn();
 
 interface Mocks {
   dotenvConfig: jest.Mock;
   betterAuth: jest.Mock;
   drizzleAdapter: jest.Mock;
   createDrizzleConnection: jest.Mock;
+  adminPlugin: jest.Mock;
+  organizationPlugin: jest.Mock;
+  assignActiveOrganizationHook: jest.Mock;
 }
 
 // auth.config runs everything at import time, so each test loads it in a
@@ -58,8 +76,20 @@ const loadAuthConfig = (setup?: (mocks: Mocks) => void) => {
     mocks.createDrizzleConnection = jest.requireMock<{ default: jest.Mock }>(
       '@database/config/database-connection.factory',
     ).default;
+    mocks.adminPlugin = jest.requireMock<{ default: jest.Mock }>(
+      '@auth/plugins/admin.plugin',
+    ).default;
+    mocks.organizationPlugin = jest.requireMock<{ default: jest.Mock }>(
+      '@auth/plugins/organization.plugin',
+    ).default;
+    mocks.assignActiveOrganizationHook = jest.requireMock<{
+      default: jest.Mock;
+    }>('@auth/hooks/assign-active-organization.hook').default;
 
     mocks.createDrizzleConnection.mockReturnValue(db);
+    mocks.adminPlugin.mockReturnValue(adminPluginInstance);
+    mocks.organizationPlugin.mockReturnValue(organizationPluginInstance);
+    mocks.assignActiveOrganizationHook.mockReturnValue(sessionCreateHook);
     mocks.drizzleAdapter.mockReturnValue(adapter);
     mocks.betterAuth.mockReturnValue(authInstance);
     setup?.(mocks);
@@ -148,8 +178,21 @@ describe('auth.config', () => {
       secret: 'a'.repeat(32),
       baseURL: 'http://localhost:3000',
       trustedOrigins: ['http://localhost:4200', 'http://localhost:5173'],
-      emailAndPassword: { enabled: true, autoSignIn: true },
+      emailAndPassword: { enabled: true, disableSignUp: true },
+      databaseHooks: {
+        session: { create: { before: sessionCreateHook } },
+      },
+      plugins: [adminPluginInstance, organizationPluginInstance],
     });
+  });
+
+  it('builds the plugins and the session hook on the same connection', () => {
+    const { adminPlugin, organizationPlugin, assignActiveOrganizationHook } =
+      loadAuthConfig();
+
+    expect(adminPlugin).toHaveBeenCalledWith();
+    expect(organizationPlugin).toHaveBeenCalledWith(db);
+    expect(assignActiveOrganizationHook).toHaveBeenCalledWith(db);
   });
 
   it('uses no trusted origins when TRUSTED_ORIGINS is not set', () => {

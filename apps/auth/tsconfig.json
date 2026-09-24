@@ -25,7 +25,12 @@
       "@database": ["./src/database"],
       "@database/*": ["./src/database/*"],
       "@controllers/": ["./src/controllers"],
-      "@controllers/*": ["./src/controllers/*"]
+      "@controllers/*": ["./src/controllers/*"],
+      "@auth": ["./src/auth"],
+      "@auth/*": ["./src/auth/*"],
+      "@services/*": ["./src/services/*"],
+      "@dto/*": ["./src/dto/*"],
+      "@modules/*": ["./src/modules/*"]
     }
   }
 }

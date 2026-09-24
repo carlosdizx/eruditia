@@ -1,8 +1,9 @@
 import { boolean, index, pgTable, text, timestamp } from 'drizzle-orm/pg-core';
 
-// Better Auth's own tables (email + password only, no plugins). Field
-// shapes match better-auth@1.7.5's core schema exactly (see
-// @better-auth/core `getAuthTables`) — hand-written instead of generated
+// Better Auth's core tables (email + password), plus the fields the
+// `admin()` and `organization()` plugins add to them. Field shapes match
+// better-auth@1.7.5's schema exactly (see @better-auth/core `getAuthTables`
+// and each plugin's `schema`) — hand-written instead of generated
 // with `@better-auth/cli` because that CLI currently lags behind the
 // installed better-auth version. The exported names (`user`, `session`,
 // `account`, `verification`) must stay exactly these: the Drizzle adapter
@@ -22,6 +23,11 @@ export const user = pgTable('user', {
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date()),
+  // admin() plugin
+  role: text('role'),
+  banned: boolean('banned').default(false),
+  banReason: text('ban_reason'),
+  banExpires: timestamp('ban_expires', { withTimezone: true }),
 });
 
 export const session = pgTable(
@@ -42,6 +48,10 @@ export const session = pgTable(
     userId: text('user_id')
       .notNull()
       .references(() => user.id, { onDelete: 'cascade' }),
+    // admin() plugin
+    impersonatedBy: text('impersonated_by'),
+    // organization() plugin
+    activeOrganizationId: text('active_organization_id'),
   },
   (table) => [index('session_user_id_idx').on(table.userId)],
 );

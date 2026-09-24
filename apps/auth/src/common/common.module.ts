@@ -12,6 +12,6 @@ import DatabaseModule from '@database/database.module';
     }),
     DatabaseModule,
   ],
-  exports: [ConfigModule],
+  exports: [ConfigModule, DatabaseModule],
 })
 export default class CommonModule {}
