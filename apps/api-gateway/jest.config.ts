@@ -27,6 +27,7 @@ const config: Config = {
     '!**/main.ts',
     '!**/*.interface.ts',
     '!src/database/models/**',
+    '!src/database/migrations/**',
     '!src/database/scripts/**',
     '!src/database/config/**',
     '!src/examples/**',
