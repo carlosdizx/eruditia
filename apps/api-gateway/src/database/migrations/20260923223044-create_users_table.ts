@@ -18,7 +18,7 @@ export const up: MigrationFn<QueryInterface> = async ({
         },
         organization_id: {
           type: DataTypes.UUID,
-          allowNull: false,
+          allowNull: true,
           references: { model: 'organizations', key: 'id' },
           onUpdate: 'CASCADE',
           onDelete: 'RESTRICT',
