@@ -18,8 +18,9 @@ import { UserTwoFactorCodeModel } from './user-two-factor-code.model';
 @Table({ tableName: 'users', underscored: true, paranoid: true })
 export class UserModel extends BaseModel {
   @ForeignKey(() => OrganizationModel)
+  @AllowNull
   @Column(DataType.UUID)
-  declare organizationId: string;
+  declare organizationId: string | null;
 
   @BelongsTo(() => OrganizationModel, 'organizationId')
   declare organization?: OrganizationModel;
