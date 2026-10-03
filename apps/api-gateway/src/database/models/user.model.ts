@@ -12,6 +12,7 @@ import UserStatusEnum from '@common/enums/user-status.enum';
 import BaseModel from './base.model';
 import type { Relation } from '@database/types/relation.type';
 import OrganizationModel from './organization.model';
+import RoleModel from './role.model';
 import UserTwoFactorMethodModel from './user-two-factor-method.model';
 import UserPasskeyModel from './user-passkey.model';
 import UserTwoFactorCodeModel from './user-two-factor-code.model';
@@ -25,6 +26,14 @@ export default class UserModel extends BaseModel {
 
   @BelongsTo(() => OrganizationModel, 'organizationId')
   declare organization?: Relation<OrganizationModel>;
+
+  @ForeignKey(() => RoleModel)
+  @AllowNull
+  @Column(DataType.UUID)
+  declare roleId: string | null;
+
+  @BelongsTo(() => RoleModel, 'roleId')
+  declare role?: Relation<RoleModel>;
 
   @Column(DataType.STRING(100))
   declare firstName: string;
