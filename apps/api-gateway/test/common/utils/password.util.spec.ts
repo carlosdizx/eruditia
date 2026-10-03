@@ -10,7 +10,11 @@ jest.mock('node:crypto', () => {
 });
 
 import { randomUUID } from 'node:crypto';
-import { hashPassword, verifyPassword } from '@common/utils/password.util';
+import {
+  hashPassword,
+  verifyPassword,
+  generateFriendlyPassword,
+} from '@common/utils/password.util';
 
 describe('password.util', () => {
   beforeEach(() => {
@@ -159,6 +163,20 @@ describe('password.util', () => {
       const isValid = await verifyPassword(password, 'scrypt$16384$8$1');
 
       expect(isValid).toBe(false);
+    });
+
+    it('should generated different passwords for request', () => {
+      const pass1 = generateFriendlyPassword();
+      const pass2 = generateFriendlyPassword();
+      const pass3 = generateFriendlyPassword();
+
+      expect(pass1).toBeDefined();
+      expect(pass2).toBeDefined();
+      expect(pass3).toBeDefined();
+
+      expect(pass1).not.toEqual(pass2);
+      expect(pass1).not.toEqual(pass3);
+      expect(pass2).not.toEqual(pass3);
     });
   });
 });
