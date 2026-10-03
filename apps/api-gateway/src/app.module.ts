@@ -6,6 +6,7 @@ import Env from './common/schemas/env.schema';
 import OrganizationsModule from './organizations/organizations.module';
 import UsersModule from './users/users.module';
 import TwoFactorModule from './two-factor/two-factor.module';
+import RolesModule from './roles/roles.module';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -24,6 +25,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     OrganizationsModule,
     UsersModule,
     TwoFactorModule,
+    RolesModule,
   ],
 })
 export default class AppModule {}
