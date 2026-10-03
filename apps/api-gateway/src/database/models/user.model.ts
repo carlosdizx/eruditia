@@ -28,9 +28,8 @@ export default class UserModel extends BaseModel {
   declare organization?: Relation<OrganizationModel>;
 
   @ForeignKey(() => RoleModel)
-  @AllowNull
   @Column(DataType.UUID)
-  declare roleId: string | null;
+  declare roleId: string;
 
   @BelongsTo(() => RoleModel, 'roleId')
   declare role?: Relation<RoleModel>;
