@@ -12,6 +12,7 @@ import {
   Table,
   UpdatedAt,
 } from 'sequelize-typescript';
+import type { Relation } from '@database/types/relation.type';
 import UserModel from './user.model';
 
 @Table({ tableName: 'user_two_factor_codes', underscored: true })
@@ -26,7 +27,7 @@ export default class UserTwoFactorCodeModel extends Model {
   declare userId: string;
 
   @BelongsTo(() => UserModel, 'userId')
-  declare user?: UserModel;
+  declare user?: Relation<UserModel>;
 
   @Column
   declare codeHash: string;

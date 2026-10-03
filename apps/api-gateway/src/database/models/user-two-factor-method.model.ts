@@ -9,6 +9,7 @@ import {
 } from 'sequelize-typescript';
 import TwoFactorMethodEnum from '@common/enums/two-factor-method.enum';
 import BaseModel from './base.model';
+import type { Relation } from '@database/types/relation.type';
 import UserModel from './user.model';
 
 @Table({
@@ -22,7 +23,7 @@ export default class UserTwoFactorMethodModel extends BaseModel {
   declare userId: string;
 
   @BelongsTo(() => UserModel, 'userId')
-  declare user?: UserModel;
+  declare user?: Relation<UserModel>;
 
   @Column(DataType.ENUM(...Object.values(TwoFactorMethodEnum)))
   declare type: TwoFactorMethodEnum;

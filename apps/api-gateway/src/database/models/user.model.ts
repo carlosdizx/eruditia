@@ -10,6 +10,7 @@ import {
 } from 'sequelize-typescript';
 import UserStatusEnum from '@common/enums/user-status.enum';
 import BaseModel from './base.model';
+import type { Relation } from '@database/types/relation.type';
 import OrganizationModel from './organization.model';
 import UserTwoFactorMethodModel from './user-two-factor-method.model';
 import UserPasskeyModel from './user-passkey.model';
@@ -23,7 +24,7 @@ export default class UserModel extends BaseModel {
   declare organizationId: string | null;
 
   @BelongsTo(() => OrganizationModel, 'organizationId')
-  declare organization?: OrganizationModel;
+  declare organization?: Relation<OrganizationModel>;
 
   @Column(DataType.STRING(100))
   declare firstName: string;

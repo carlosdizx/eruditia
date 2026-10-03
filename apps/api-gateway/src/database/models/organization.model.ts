@@ -9,6 +9,7 @@ import {
   Table,
 } from 'sequelize-typescript';
 import BaseModel from './base.model';
+import type { Relation } from '@database/types/relation.type';
 import UserModel from './user.model';
 
 @Table({ tableName: 'organizations', underscored: true, paranoid: true })
@@ -73,7 +74,7 @@ export default class OrganizationModel extends BaseModel {
   declare ownerId: string | null;
 
   @BelongsTo(() => UserModel, { foreignKey: 'ownerId', constraints: false })
-  declare owner?: UserModel | null;
+  declare owner?: Relation<UserModel> | null;
 
   @HasMany(() => UserModel, 'organizationId')
   declare users?: UserModel[];

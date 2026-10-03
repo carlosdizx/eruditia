@@ -8,6 +8,7 @@ import {
   Table,
 } from 'sequelize-typescript';
 import BaseModel from './base.model';
+import type { Relation } from '@database/types/relation.type';
 import UserModel from './user.model';
 
 @Table({ tableName: 'user_passkeys', underscored: true, paranoid: true })
@@ -17,7 +18,7 @@ export default class UserPasskeyModel extends BaseModel {
   declare userId: string;
 
   @BelongsTo(() => UserModel, 'userId')
-  declare user?: UserModel;
+  declare user?: Relation<UserModel>;
 
   @AllowNull
   @Column(DataType.STRING(100))
