@@ -3,6 +3,9 @@ import { createObserveModule } from '@nestjs/observe';
 import { ConfigService } from '@nestjs/config';
 import CommonModule from './common/common.module';
 import Env from './common/schemas/env.schema';
+import OrganizationsModule from './organizations/organizations.module';
+import UsersModule from './users/users.module';
+import TwoFactorModule from './two-factor/two-factor.module';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -18,6 +21,9 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
         serviceId: configService.get('OBSERVE_SERVICE_ID', { infer: true }),
       }),
     }),
+    OrganizationsModule,
+    UsersModule,
+    TwoFactorModule,
   ],
 })
 export default class AppModule {}

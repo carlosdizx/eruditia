@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Transaction } from 'sequelize';
-import { OrganizationModel } from '@database/models/organization.model';
+import OrganizationModel from '@database/models/organization.model';
 import CrudService from '@database/services/crud.service';
 import OrganizationRepository from './organization.repository';
 import CreateOrganizationDto from './dto/create-organization.dto';
@@ -10,7 +10,7 @@ export default class OrganizationsService extends CrudService<
   OrganizationModel,
   OrganizationRepository
 > {
-  constructor(repository: OrganizationRepository) {
+  constructor(protected readonly repository: OrganizationRepository) {
     super(repository);
   }
 

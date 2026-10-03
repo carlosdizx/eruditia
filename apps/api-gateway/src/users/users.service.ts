@@ -25,13 +25,13 @@ export default class UsersService extends CrudService<
   public createUser = async (dto: CreateUserDto) => {
     const { email } = dto;
 
-    const user = await this.repository.findOne({ email }, false, {
+    const user = await this.findOne({ email }, false, {
       attributes: ['id'],
     });
     if (user) throw new ConflictException();
 
     const password = await hashPassword(generateFriendlyPassword());
 
-    return this.repository.create({ ...dto, password });
+    return this.create({ ...dto, password });
   };
 }
