@@ -71,8 +71,4 @@ export default class CreateOrganizationDto {
   @IsOptional()
   @IsUrl()
   logoUrl?: string;
-
-  @IsOptional()
-  @IsBoolean()
-  isActive: boolean = true;
 }
