@@ -16,6 +16,7 @@ export const envSchema = z
           .filter(Boolean),
       )
       .pipe(z.array(logLevelSchema).min(1)),
+    SUPER_ADMIN_EMAIL: z.email(),
   })
   .extend(databaseSchema.shape)
   .extend(observeSchema.shape);
