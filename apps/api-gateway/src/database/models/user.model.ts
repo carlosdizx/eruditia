@@ -9,14 +9,14 @@ import {
   Table,
 } from 'sequelize-typescript';
 import UserStatusEnum from '@common/enums/user-status.enum';
-import { BaseModel } from './base.model';
-import { OrganizationModel } from './organization.model';
-import { UserTwoFactorMethodModel } from './user-two-factor-method.model';
-import { UserPasskeyModel } from './user-passkey.model';
-import { UserTwoFactorCodeModel } from './user-two-factor-code.model';
+import BaseModel from './base.model';
+import OrganizationModel from './organization.model';
+import UserTwoFactorMethodModel from './user-two-factor-method.model';
+import UserPasskeyModel from './user-passkey.model';
+import UserTwoFactorCodeModel from './user-two-factor-code.model';
 
 @Table({ tableName: 'users', underscored: true, paranoid: true })
-export class UserModel extends BaseModel {
+export default class UserModel extends BaseModel {
   @ForeignKey(() => OrganizationModel)
   @AllowNull
   @Column(DataType.UUID)

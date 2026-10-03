@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { UserTwoFactorCodeModel } from '@database/models/user-two-factor-code.model';
+import UserTwoFactorCodeModel from '@database/models/user-two-factor-code.model';
 import CrudService from '@database/services/crud.service';
 import UserTwoFactorCodeRepository from '../repositories/user-two-factor-code.repository';
 

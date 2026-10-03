@@ -12,10 +12,10 @@ import {
   Table,
   UpdatedAt,
 } from 'sequelize-typescript';
-import { UserModel } from './user.model';
+import UserModel from './user.model';
 
 @Table({ tableName: 'user_two_factor_codes', underscored: true })
-export class UserTwoFactorCodeModel extends Model {
+export default class UserTwoFactorCodeModel extends Model {
   @PrimaryKey
   @Default(Sequelize.literal('uuidv7()'))
   @Column(DataType.UUID)

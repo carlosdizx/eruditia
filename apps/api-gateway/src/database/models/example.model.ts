@@ -5,10 +5,10 @@ import {
   Default,
   Table,
 } from 'sequelize-typescript';
-import { BaseModel } from './base.model';
+import BaseModel from './base.model';
 
 @Table({ tableName: 'examples', underscored: true, paranoid: true })
-export class ExampleModel extends BaseModel {
+export default class ExampleModel extends BaseModel {
   @Column
   declare title: string;
 

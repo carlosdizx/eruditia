@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { UserPasskeyModel } from '@database/models/user-passkey.model';
+import UserPasskeyModel from '@database/models/user-passkey.model';
 import CrudService from '@database/services/crud.service';
 import UserPasskeyRepository from '../repositories/user-passkey.repository';
 

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import AbstractRepository from '@database/repositories/abstract.repository';
-import { UserModel } from '@database/models/user.model';
+import UserModel from '@database/models/user.model';
 
 @Injectable()
 export default class UserRepository extends AbstractRepository<UserModel> {

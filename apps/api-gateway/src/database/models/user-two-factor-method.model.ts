@@ -8,15 +8,15 @@ import {
   Table,
 } from 'sequelize-typescript';
 import TwoFactorMethodEnum from '@common/enums/two-factor-method.enum';
-import { BaseModel } from './base.model';
-import { UserModel } from './user.model';
+import BaseModel from './base.model';
+import UserModel from './user.model';
 
 @Table({
   tableName: 'user_two_factor_methods',
   underscored: true,
   paranoid: true,
 })
-export class UserTwoFactorMethodModel extends BaseModel {
+export default class UserTwoFactorMethodModel extends BaseModel {
   @ForeignKey(() => UserModel)
   @Column(DataType.UUID)
   declare userId: string;

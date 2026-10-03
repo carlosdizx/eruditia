@@ -10,7 +10,7 @@ import {
   UpdatedAt,
 } from 'sequelize-typescript';
 
-export abstract class BaseModel<
+export default abstract class BaseModel<
   TModelAttributes extends object = any,
   TCreationAttributes extends object = TModelAttributes,
 > extends Model<TModelAttributes, TCreationAttributes> {

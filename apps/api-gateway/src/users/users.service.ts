@@ -1,5 +1,5 @@
 import { ConflictException, Injectable } from '@nestjs/common';
-import { UserModel } from '@database/models/user.model';
+import UserModel from '@database/models/user.model';
 import CrudService from '@database/services/crud.service';
 import UserRepository from './user.repository';
 import CreateUserDto from './dto/create-user.dto';

@@ -7,11 +7,11 @@ import {
   ForeignKey,
   Table,
 } from 'sequelize-typescript';
-import { BaseModel } from './base.model';
-import { UserModel } from './user.model';
+import BaseModel from './base.model';
+import UserModel from './user.model';
 
 @Table({ tableName: 'user_passkeys', underscored: true, paranoid: true })
-export class UserPasskeyModel extends BaseModel {
+export default class UserPasskeyModel extends BaseModel {
   @ForeignKey(() => UserModel)
   @Column(DataType.UUID)
   declare userId: string;

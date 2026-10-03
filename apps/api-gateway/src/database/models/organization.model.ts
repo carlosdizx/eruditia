@@ -8,11 +8,11 @@ import {
   HasMany,
   Table,
 } from 'sequelize-typescript';
-import { BaseModel } from './base.model';
-import { UserModel } from './user.model';
+import BaseModel from './base.model';
+import UserModel from './user.model';
 
 @Table({ tableName: 'organizations', underscored: true, paranoid: true })
-export class OrganizationModel extends BaseModel {
+export default class OrganizationModel extends BaseModel {
   @Column
   declare name: string;
 
