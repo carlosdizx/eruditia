@@ -7,6 +7,7 @@ import {
   generateFriendlyPassword,
   hashPassword,
 } from '@common/utils/password.util';
+import { Transaction } from 'sequelize';
 
 @Injectable()
 export default class UsersService extends CrudService<
@@ -34,4 +35,10 @@ export default class UsersService extends CrudService<
 
     return this.create({ ...dto, password });
   };
+
+  public registerUserToOrganization = async (
+    organizationId: string,
+    dto: CreateUserDto,
+    transaction?: Transaction,
+  ) => {};
 }

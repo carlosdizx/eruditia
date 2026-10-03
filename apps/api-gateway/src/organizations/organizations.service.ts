@@ -16,7 +16,7 @@ export default class OrganizationsService extends CrudService<
 
   public createOrganization = async (
     dto: CreateOrganizationDto,
-    transaction?: Transaction,
+    transaction: Transaction,
   ) => {
     return await this.create(
       { ...dto, slug: dto.slug.toLowerCase() },
