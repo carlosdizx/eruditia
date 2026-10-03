@@ -74,7 +74,7 @@ export default class UsersService extends CrudService<
         { attributes: ['id'], transaction },
       ))!;
 
-      return await this.createUser(
+      await this.createUser(
         {
           firstName: 'Super',
           lastName: 'Admin',
@@ -84,6 +84,8 @@ export default class UsersService extends CrudService<
         },
         transaction,
       );
+
+      this.logger.verbose('Super admin created');
     });
   };
 }
