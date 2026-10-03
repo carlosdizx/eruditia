@@ -11,6 +11,7 @@ const validEnv = {
   OBSERVE_APP_KEY: 'key',
   OBSERVE_APP_SECRET: 'secret',
   OBSERVE_SERVICE_ID: 'service',
+  SUPER_ADMIN_EMAIL: 'superadmin@example.com',
 };
 
 describe('envSchema', () => {
@@ -68,6 +69,22 @@ describe('envSchema', () => {
     it('rejects an invalid level', () => {
       expect(
         envSchema.safeParse({ ...validEnv, LOG_LEVELS: 'log,info' }).success,
+      ).toBe(false);
+    });
+  });
+
+  describe('SUPER_ADMIN_EMAIL', () => {
+    it('rejects a missing SUPER_ADMIN_EMAIL', () => {
+      const env: Record<string, string> = { ...validEnv };
+      delete env.SUPER_ADMIN_EMAIL;
+
+      expect(envSchema.safeParse(env).success).toBe(false);
+    });
+
+    it('rejects an invalid email', () => {
+      expect(
+        envSchema.safeParse({ ...validEnv, SUPER_ADMIN_EMAIL: 'not-an-email' })
+          .success,
       ).toBe(false);
     });
   });

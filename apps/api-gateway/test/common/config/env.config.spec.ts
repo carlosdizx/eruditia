@@ -11,6 +11,7 @@ const validEnv = {
   OBSERVE_APP_KEY: 'key',
   OBSERVE_APP_SECRET: 'secret',
   OBSERVE_SERVICE_ID: 'service',
+  SUPER_ADMIN_EMAIL: 'superadmin@example.com',
 };
 
 describe('validateEnv', () => {
