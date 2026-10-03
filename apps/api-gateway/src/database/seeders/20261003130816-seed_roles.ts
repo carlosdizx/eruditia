@@ -2,10 +2,30 @@ import { Op, QueryInterface } from 'sequelize';
 import { MigrationFn } from 'umzug';
 
 const roles = [
-  { label: 'Super Admin', label_es: 'Super Administrador', category: 'core' },
-  { label: 'Admin', label_es: 'Administrador', category: 'client' },
-  { label: 'Teacher', label_es: 'Profesor', category: 'client' },
-  { label: 'Student', label_es: 'Estudiante', category: 'client' },
+  {
+    label: 'Super Admin',
+    name: 'SUPER_ADMIN',
+    label_es: 'Super Administrador',
+    category: 'core',
+  },
+  {
+    label: 'Admin',
+    name: 'ADMIN',
+    label_es: 'Administrador',
+    category: 'client',
+  },
+  {
+    label: 'Teacher',
+    name: 'TEACHER',
+    label_es: 'Profesor',
+    category: 'client',
+  },
+  {
+    label: 'Student',
+    name: 'STUDENT',
+    label_es: 'Estudiante',
+    category: 'client',
+  },
 ];
 
 export const up: MigrationFn<QueryInterface> = async ({

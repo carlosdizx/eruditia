@@ -16,6 +16,7 @@ export const up: MigrationFn<QueryInterface> = async ({
           primaryKey: true,
           defaultValue: Sequelize.literal('uuidv7()'),
         },
+        name: { type: DataTypes.STRING(100), allowNull: false },
         label: { type: DataTypes.STRING(100), allowNull: false },
         label_es: { type: DataTypes.STRING(100), allowNull: false },
         category: {

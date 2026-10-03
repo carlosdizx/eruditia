@@ -6,6 +6,9 @@ import UserModel from './user.model';
 @Table({ tableName: 'roles', underscored: true, paranoid: true })
 export default class RoleModel extends BaseModel {
   @Column(DataType.STRING(100))
+  declare name: string;
+
+  @Column(DataType.STRING(100))
   declare label: string;
 
   @Column(DataType.STRING(100))
