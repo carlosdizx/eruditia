@@ -4,13 +4,19 @@ import OrganizationModel from '@database/models/organization.model';
 import CrudService from '@database/services/crud.service';
 import OrganizationRepository from './organization.repository';
 import CreateOrganizationDto from './dto/create-organization.dto';
+import CreateUserDto from '../users/dto/create-user.dto';
+import UsersService from '../users/users.service';
+import UserModel from '@database/models/user.model';
 
 @Injectable()
 export default class OrganizationsService extends CrudService<
   OrganizationModel,
   OrganizationRepository
 > {
-  constructor(protected readonly repository: OrganizationRepository) {
+  constructor(
+    protected readonly repository: OrganizationRepository,
+    private readonly usersService: UsersService,
+  ) {
     super(repository);
   }
 
@@ -24,22 +30,26 @@ export default class OrganizationsService extends CrudService<
     );
   };
 
-  public assignOwnerIfMissing = async (
-    organizationId: string,
-    userId: string,
-    transaction: Transaction,
+  public registerOrganizationAndOwner = async (
+    createOrganizationDto: CreateOrganizationDto,
+    createUserDto: CreateUserDto,
   ) => {
-    const organization = await this.findByPk(organizationId, true, {
-      transaction,
-      lock: transaction.LOCK.NO_KEY_UPDATE,
-    });
+    const { organizationId, ownerId } = await this.transaction(
+      async (transaction) => {
+        const organization = await this.createOrganization(
+          createOrganizationDto,
+          transaction,
+        );
+        const owner = await this.usersService.registerUserToOrganization(
+          organization.id,
+          createUserDto,
+          transaction,
+        );
 
-    if (organization!.ownerId) return organization;
-
-    return await this.updateByPk(
-      organizationId,
-      { ownerId: userId },
-      { transaction },
+        return { organizationId: organization.id, ownerId: owner.id };
+      },
     );
+
+    await this.updateByPk(organizationId, { ownerId });
   };
 }

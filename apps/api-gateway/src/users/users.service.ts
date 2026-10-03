@@ -31,7 +31,7 @@ export default class UsersService extends CrudService<
 
   private toSafeUser = (user: UserModel) => {
     const { password: _password, ...safeUser } = user;
-    return safeUser;
+    return safeUser as UserModel;
   };
 
   public createUser = async (
