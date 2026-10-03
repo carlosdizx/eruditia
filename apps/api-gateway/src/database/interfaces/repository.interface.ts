@@ -16,7 +16,7 @@ import { Model } from 'sequelize-typescript';
 import PaginationDto from '../../common/dto/pagination.dto';
 import PaginatedResponseInterface from './paginated-response.interface';
 
-export interface RepositoryInterface<TModel extends Model> {
+export default interface RepositoryInterface<TModel extends Model> {
   create(
     dto: CreationAttributes<TModel>,
     options?: CreateOptions<TModel>,

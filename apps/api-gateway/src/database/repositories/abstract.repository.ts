@@ -16,7 +16,7 @@ import {
 } from 'sequelize';
 import { Model, ModelCtor } from 'sequelize-typescript';
 import { setRangeUtil } from '@common/utils/set-range.util';
-import { RepositoryInterface } from '@database/interfaces/repository.interface';
+import RepositoryInterface from '@database/interfaces/repository.interface';
 import PaginationDto from '@common/dto/pagination.dto';
 import PaginatedResponseInterface from '@database/interfaces/paginated-response.interface';
 import RepositoryOptionsInterface from '@database/interfaces/repository-options.interface';

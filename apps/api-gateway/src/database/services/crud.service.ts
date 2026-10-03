@@ -13,7 +13,7 @@ import {
   WhereOptions,
 } from 'sequelize';
 import { Model } from 'sequelize-typescript';
-import { RepositoryInterface } from '@database/interfaces/repository.interface';
+import RepositoryInterface from '@database/interfaces/repository.interface';
 import PaginationDto from '@common/dto/pagination.dto';
 import PaginatedResponseInterface from '@database/interfaces/paginated-response.interface';
 

@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { Transaction } from 'sequelize';
 import CrudService from '@database/services/crud.service';
-import { RepositoryInterface } from '@database/interfaces/repository.interface';
+import RepositoryInterface from '@database/interfaces/repository.interface';
 import PaginatedResponseInterface from '@database/interfaces/paginated-response.interface';
 import PaginationDto from '@common/dto/pagination.dto';
 import TestEntityModel from './fixtures/test-entity.model';
