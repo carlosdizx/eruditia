@@ -7,6 +7,7 @@ import OrganizationsModule from './organizations/organizations.module';
 import UsersModule from './users/users.module';
 import TwoFactorModule from './two-factor/two-factor.module';
 import RolesModule from './roles/roles.module';
+import EmailModule from './email/email.module';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -26,6 +27,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     UsersModule,
     TwoFactorModule,
     RolesModule,
+    EmailModule,
   ],
 })
 export default class AppModule {}
