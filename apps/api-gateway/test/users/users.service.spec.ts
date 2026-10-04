@@ -14,6 +14,8 @@ import CreateUserDto from '../../src/users/dto/create-user.dto';
 import RoleNameEnum from '@common/enums/role-name.enum';
 import UserStatusEnum from '@common/enums/user-status.enum';
 import Env from '@common/schemas/env.schema';
+import EmailService from '@email/email.service';
+import { TEMPORARY_PASSWORD_SUBJECT } from '@email/templates/temporary-password.template';
 import {
   generateFriendlyPassword,
   hashPassword,
@@ -30,6 +32,7 @@ describe('UsersService', () => {
   };
   let rolesService: { findOne: jest.Mock };
   let configService: { get: jest.Mock };
+  let emailService: { main: jest.Mock };
   let service: UsersService;
 
   const transaction = { id: 'tx' } as unknown as Transaction;
@@ -58,7 +61,12 @@ describe('UsersService', () => {
       ),
     };
     rolesService = { findOne: jest.fn() };
-    configService = { get: jest.fn() };
+    configService = {
+      get: jest.fn((key: string) =>
+        key === 'SMTP_USER' ? 'no-reply@eruditia.com' : undefined,
+      ),
+    };
+    emailService = { main: jest.fn().mockResolvedValue(undefined) };
 
     mockedGenerateFriendlyPassword.mockReturnValue('abcd-efgh-ijkl');
     mockedHashPassword.mockResolvedValue('hashed-password');
@@ -67,6 +75,7 @@ describe('UsersService', () => {
       repository as unknown as UserRepository,
       rolesService as unknown as RolesService,
       configService as unknown as ConfigService<Env, true>,
+      emailService as unknown as EmailService,
     );
   });
 
@@ -118,6 +127,69 @@ describe('UsersService', () => {
         { ...dto, password: 'hashed-password' },
         { transaction: undefined },
       );
+    });
+
+    describe('temporary password email', () => {
+      it('sends the temporary password to the new user', async () => {
+        await service.createUser(dto, transaction);
+
+        expect(emailService.main).toHaveBeenCalledTimes(1);
+        expect(emailService.main).toHaveBeenCalledWith({
+          from: 'no-reply@eruditia.com',
+          to: dto.email,
+          subject: TEMPORARY_PASSWORD_SUBJECT,
+          html: expect.stringContaining('abcd-efgh-ijkl') as unknown,
+        });
+      });
+
+      it('greets the user by first name', async () => {
+        await service.createUser(dto, transaction);
+
+        const [{ html }] = emailService.main.mock.calls[0] as [
+          { html: string },
+        ];
+        expect(html).toContain('Hola, Ana');
+      });
+
+      it('sends the email only after the user is created', async () => {
+        await service.createUser(dto, transaction);
+
+        expect(repository.create.mock.invocationCallOrder[0]).toBeLessThan(
+          emailService.main.mock.invocationCallOrder[0],
+        );
+      });
+
+      it('does not send the email when the user already exists', async () => {
+        repository.findOne.mockResolvedValue({ id: 'existing-id' });
+
+        await expect(service.createUser(dto)).rejects.toBeInstanceOf(
+          ConflictException,
+        );
+        expect(emailService.main).not.toHaveBeenCalled();
+      });
+
+      it('propagates the error so the transaction is rolled back', async () => {
+        const error = new Error('smtp down');
+        emailService.main.mockRejectedValue(error);
+
+        await expect(service.createUser(dto, transaction)).rejects.toBe(error);
+      });
+
+      it('never logs the plain password', async () => {
+        const spies = (
+          ['log', 'debug', 'verbose', 'warn', 'error'] as const
+        ).map((level) =>
+          jest.spyOn(Logger.prototype, level).mockImplementation(() => {}),
+        );
+
+        await service.createUser(dto, transaction);
+
+        for (const spy of spies) {
+          for (const args of spy.mock.calls) {
+            expect(JSON.stringify(args)).not.toContain('abcd-efgh-ijkl');
+          }
+        }
+      });
     });
   });
 
