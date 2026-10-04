@@ -28,6 +28,8 @@ describe('envSchema', () => {
       DB_LOGGING: false,
       SMTP_PORT: 465,
       SMTP_SECURE: true,
+      SESSION_TTL_HOURS: 24,
+      SESSION_IDLE_TIMEOUT_MINUTES: 120,
     });
   });
 
