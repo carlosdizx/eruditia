@@ -1,6 +1,7 @@
 import {
   AllowNull,
   BelongsTo,
+  BelongsToMany,
   Column,
   DataType,
   Default,
@@ -11,6 +12,8 @@ import {
 import BaseModel from './base.model';
 import type { Relation } from '@database/types/relation.type';
 import UserModel from './user.model';
+import PermissionModel from './permission.model';
+import OrganizationPermissionModel from './organization-permission.model';
 
 @Table({ tableName: 'organizations', underscored: true, paranoid: true })
 export default class OrganizationModel extends BaseModel {
@@ -78,4 +81,7 @@ export default class OrganizationModel extends BaseModel {
 
   @HasMany(() => UserModel, 'organizationId')
   declare users?: UserModel[];
+
+  @BelongsToMany(() => PermissionModel, () => OrganizationPermissionModel)
+  declare permissions?: PermissionModel[];
 }
