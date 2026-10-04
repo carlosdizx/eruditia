@@ -8,6 +8,8 @@ import UsersModule from './users/users.module';
 import TwoFactorModule from './two-factor/two-factor.module';
 import RolesModule from './roles/roles.module';
 import EmailModule from './email/email.module';
+import AuthModule from './auth/auth.module';
+import PermissionsModule from './permissions/permissions.module';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -28,6 +30,8 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     TwoFactorModule,
     RolesModule,
     EmailModule,
+    PermissionsModule,
+    AuthModule,
   ],
 })
 export default class AppModule {}
