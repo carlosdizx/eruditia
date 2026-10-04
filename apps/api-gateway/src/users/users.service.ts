@@ -13,6 +13,10 @@ import Env from '@common/schemas/env.schema';
 import RoleNameEnum from '@common/enums/role-name.enum';
 import UserStatusEnum from '@common/enums/user-status.enum';
 import RolesService from '../roles/roles.service';
+import EmailService from '@email/email.service';
+import temporaryPasswordTemplate, {
+  TEMPORARY_PASSWORD_SUBJECT,
+} from '@email/templates/temporary-password.template';
 
 @Injectable()
 export default class UsersService extends CrudService<
@@ -25,6 +29,7 @@ export default class UsersService extends CrudService<
     protected readonly repository: UserRepository,
     private readonly rolesService: RolesService,
     private readonly configService: ConfigService<Env, true>,
+    private readonly emailService: EmailService,
   ) {
     super(repository);
   }
@@ -51,7 +56,18 @@ export default class UsersService extends CrudService<
 
     const user = await this.create({ ...dto, password }, { transaction });
 
-    this.logger.verbose(`password created: ${temporaryPassword}`);
+    // Dentro de la transacción: si el correo no sale, se revierte la creación
+    // y no queda una cuenta cuya contraseña nadie conoce.
+    await this.emailService.main({
+      from: this.configService.get('SMTP_USER', { infer: true }),
+      to: user.email,
+      subject: TEMPORARY_PASSWORD_SUBJECT,
+      html: temporaryPasswordTemplate({
+        firstName: user.firstName,
+        email: user.email,
+        password: temporaryPassword,
+      }),
+    });
 
     return this.toSafeUser(user);
   };
