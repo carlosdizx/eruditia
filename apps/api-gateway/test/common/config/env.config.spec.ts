@@ -12,6 +12,10 @@ const validEnv = {
   OBSERVE_APP_SECRET: 'secret',
   OBSERVE_SERVICE_ID: 'service',
   SUPER_ADMIN_EMAIL: 'superadmin@example.com',
+  SMTP_HOST: 'smtp.gmail.com',
+  SMTP_PORT: '465',
+  SMTP_USER: 'user@gmail.com',
+  SMTP_PASSWORD: 'password',
 };
 
 describe('validateEnv', () => {
@@ -22,6 +26,8 @@ describe('validateEnv', () => {
       LOG_LEVELS: ['log', 'error'],
       DB_PORT: 5432,
       DB_LOGGING: false,
+      SMTP_PORT: 465,
+      SMTP_SECURE: true,
     });
   });
 
