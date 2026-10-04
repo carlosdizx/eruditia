@@ -27,7 +27,7 @@
       "@email": ["./src/email"],
       "@email/*": ["./src/email/*"],
       "@auth": ["./src/auth"],
-      "@atuh/*": ["./src/auth/*"]
+      "@auth/*": ["./src/auth/*"]
     }
   }
 }
