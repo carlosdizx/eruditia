@@ -2,6 +2,7 @@ import { z } from 'zod';
 import logLevelSchema from './log-level.schema';
 import databaseSchema from './database.schema';
 import observeSchema from './observe.schema';
+import smtpSchema from '@common/schemas/smtp.schema';
 
 export const envSchema = z
   .object({
@@ -19,7 +20,8 @@ export const envSchema = z
     SUPER_ADMIN_EMAIL: z.email(),
   })
   .extend(databaseSchema.shape)
-  .extend(observeSchema.shape);
+  .extend(observeSchema.shape)
+  .extend(smtpSchema.shape);
 
 type Env = z.infer<typeof envSchema>;
 
