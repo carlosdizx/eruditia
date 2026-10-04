@@ -1,5 +1,4 @@
 import {
-  IsBoolean,
   IsEmail,
   IsISO31661Alpha2,
   IsNotEmpty,

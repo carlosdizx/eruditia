@@ -25,7 +25,8 @@ describe('EmailService', () => {
   let configService: ConfigService<Env, true>;
 
   // verify() is not awaited by the constructor, so flush pending promises.
-  const flushPromises = () => new Promise(process.nextTick);
+  const flushPromises = () =>
+    new Promise<void>((resolve) => process.nextTick(resolve));
 
   beforeEach(() => {
     transporter = {

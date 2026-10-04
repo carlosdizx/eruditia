@@ -6,7 +6,6 @@ import OrganizationRepository from './organization.repository';
 import CreateOrganizationDto from './dto/create-organization.dto';
 import CreateUserDto from '../users/dto/create-user.dto';
 import UsersService from '../users/users.service';
-import UserModel from '@database/models/user.model';
 
 @Injectable()
 export default class OrganizationsService extends CrudService<
