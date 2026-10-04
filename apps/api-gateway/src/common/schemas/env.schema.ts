@@ -3,6 +3,7 @@ import logLevelSchema from './log-level.schema';
 import databaseSchema from './database.schema';
 import observeSchema from './observe.schema';
 import smtpSchema from '@common/schemas/smtp.schema';
+import sessionSchema from '@common/schemas/session.schema';
 
 export const envSchema = z
   .object({
@@ -21,7 +22,8 @@ export const envSchema = z
   })
   .extend(databaseSchema.shape)
   .extend(observeSchema.shape)
-  .extend(smtpSchema.shape);
+  .extend(smtpSchema.shape)
+  .extend(sessionSchema.shape);
 
 type Env = z.infer<typeof envSchema>;
 
