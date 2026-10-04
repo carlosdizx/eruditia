@@ -40,12 +40,12 @@ const baseTemplate = ({
 </head>
 <body style="margin: 0; padding: 0; background-color: #f4f4f7;">
   <div style="display: none; max-height: 0; overflow: hidden; mso-hide: all;">${escapeHtml(preheader)}</div>
-  <table role="presentation" width="100%" border="0" style="background-color: #f4f4f7;">
+  <table role="presentation" style="background-color: #f4f4f7;">
     <tr>
-      <td align="center" style="padding: 32px 12px;">
-        <table role="presentation" class="email-container" width="600" style="width: 600px; max-width: 600px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+      <td style="padding: 32px 12px;">
+        <table role="presentation" class="email-container" style="width: 600px; max-width: 600px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
           <tr>
-            <td class="email-padding" align="center" style="padding: 24px 40px; background-color: #4f46e5; border-radius: 8px 8px 0 0;">
+            <td class="email-padding" style="padding: 24px 40px; background-color: #4f46e5; border-radius: 8px 8px 0 0;">
               <span style="font-size: 24px; line-height: 32px; font-weight: 700; color: #ffffff; letter-spacing: 0.5px;">${APP_NAME}</span>
             </td>
           </tr>
@@ -55,7 +55,7 @@ const baseTemplate = ({
             </td>
           </tr>
           <tr>
-            <td class="email-padding" align="center" style="padding: 24px 40px; background-color: #f9fafb; border-top: 1px solid #e5e7eb; border-radius: 0 0 8px 8px;">
+            <td class="email-padding" style="padding: 24px 40px; background-color: #f9fafb; border-top: 1px solid #e5e7eb; border-radius: 0 0 8px 8px;">
               <p style="margin: 0 0 8px; font-size: 13px; line-height: 20px; color: #6b7280;">Este es un correo automático, por favor no respondas a este mensaje.</p>
               <p style="margin: 0; font-size: 13px; line-height: 20px; color: #9ca3af;">&copy; ${year} ${APP_NAME}. Todos los derechos reservados.</p>
             </td>
