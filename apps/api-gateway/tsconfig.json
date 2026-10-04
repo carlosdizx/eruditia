@@ -23,7 +23,9 @@
       "@common": ["./src/common"],
       "@common/*": ["./src/common/*"],
       "@database": ["./src/database"],
-      "@database/*": ["./src/database/*"]
+      "@database/*": ["./src/database/*"],
+      "@email": ["./src/email"],
+      "@email/*": ["./src/email/*"]
     }
   }
 }
