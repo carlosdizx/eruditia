@@ -14,6 +14,7 @@
       "name": "api-gateway-eruditia",
       "version": "0.0.1",
       "dependencies": {
+        "@nestjs/cache-manager": "^12.0.0",
         "@nestjs/common": "^12.0.1",
         "@nestjs/config": "^12.0.0",
         "@nestjs/core": "^12.0.1",
@@ -23,9 +24,11 @@
         "@thallesp/nestjs-better-auth": "^2.8.0",
         "@types/validator": "^13.15.10",
         "better-auth": "^1.7.5",
+        "cache-manager": "^7.2.9",
         "class-transformer": "^0.5.1",
         "class-validator": "^0.15.1",
         "dotenv": "^18.0.0",
+        "keyv": "^5.6.0",
         "nodemailer": "^10.0.14",
         "pg": "^8.23.0",
         "pg-hstore": "^2.3.4",
@@ -299,6 +302,8 @@
     "@lukeed/csprng": ["@lukeed/csprng@1.1.0", "", {}, "sha512-Z7C/xXCiGWsg0KuKsHTKJxbWhpI3Vs5GwLfOean7MGyVFGqdRgBbAjOCh6u4bbjPc/8MJ2pZmK/0DLdCbivLDA=="],
 
     "@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@1.1.6", "", { "dependencies": { "@tybys/wasm-util": "^0.10.3" }, "peerDependencies": { "@emnapi/core": "^1.7.1", "@emnapi/runtime": "^1.7.1" } }, "sha512-ZLv/JdUfkvOy9eCnnBaGfiO+XimbjebAeO+MRQqD/B+FR1tnRN0tpKSJHRbE8sFfS6aqsXZ67TQjfwfsxULVbg=="],
+
+    "@nestjs/cache-manager": ["@nestjs/cache-manager@12.0.0", "", { "peerDependencies": { "@nestjs/common": "^9.0.0 || ^10.0.0 || ^11.0.0 || ^12.0.0", "@nestjs/core": "^9.0.0 || ^10.0.0 || ^11.0.0 || ^12.0.0", "cache-manager": ">=6", "keyv": ">=5", "rxjs": "^7.8.1" } }, "sha512-kYn5rgDZXZ6aIS7MxSfx0AwjRtJpq++Uac4ceWNckkYIkvnflv8hWgorhPXoVmLpTGiwrQ6G2gJh6MzsmoTqHg=="],
 
     "@nestjs/cli": ["@nestjs/cli@12.0.5", "", { "dependencies": { "@angular-devkit/core": "22.1.8", "@angular-devkit/schematics": "22.1.8", "@angular-devkit/schematics-cli": "22.1.8", "@inquirer/prompts": "8.7.2", "@nestjs/schematics": "^12.0.0", "ansis": "4.4.0", "chokidar": "5.0.0", "cli-table3": "0.6.5", "commander": "15.0.0", "jsonc-parser": "3.3.1", "minimatch": "10.2.6", "node-emoji": "2.2.0", "ora": "9.4.1", "tsconfig-paths": "4.2.0", "typescript": "~6.0.2" }, "peerDependencies": { "@rspack/core": "^1.7.7 || ^2.1.10", "@swc/cli": "^0.8.0", "@swc/core": "^1.15.18", "fork-ts-checker-webpack-plugin": "^9.1.0", "ts-loader": "^9.5.4", "tsconfig-paths-webpack-plugin": "^4.2.0", "webpack": "^5.105.4", "webpack-node-externals": "^3.0.0" }, "optionalPeers": ["@rspack/core", "@swc/cli", "@swc/core", "fork-ts-checker-webpack-plugin", "ts-loader", "tsconfig-paths-webpack-plugin", "webpack", "webpack-node-externals"], "bin": { "nest": "bin/nest.js" } }, "sha512-28PJP/dYqGdAZoLbGgJORY9CxqkYBN449WKOUiYAXKwtSEAq7jJChtHCJYo1jLMwM0mwKqCjpBYIAWoHzyhSxw=="],
 
@@ -761,6 +766,8 @@
     "busboy": ["busboy@1.6.0", "", { "dependencies": { "streamsearch": "^1.1.0" } }, "sha512-8SFQbg/0hQ9xy3UNTB0YEnsNBbWfhf7RtnzpL7TkBiTBRfrQ9Fxcnz7VJsleJpyp6rVLvXiuORqjlHi5q+PYuA=="],
 
     "bytes": ["bytes@3.1.2", "", {}, "sha512-/Nf7TyzTx6S3yRJObOAV7956r8cr2+Oj8AC5dt8wSP3BQAoeX58NoHyCU8P8zGkNXStjTSi6fzO6F0pBdcYbEg=="],
+
+    "cache-manager": ["cache-manager@7.2.9", "", { "dependencies": { "@cacheable/utils": "^2.5.0", "keyv": "^5.6.0" } }, "sha512-d4vceEyYe95gPxEyQchlEOH9vJlkNRW8G6gzFzzMTxJK9PahYMhC9chrEqgZN0HulROjgw3IzmWVNk7Q7ytiGw=="],
 
     "cacheable": ["cacheable@2.5.0", "", { "dependencies": { "@cacheable/memory": "^2.2.0", "@cacheable/utils": "^2.5.0", "hookified": "^1.15.0", "keyv": "^5.6.0", "qified": "^0.10.1" } }, "sha512-60cyAOytib/OzBw1JNSoSV/boK1AtHryDIjvVBk7XbN4ugfkM3+Sry7fEjNgPMGgOjuaZPAp8ruZ0Cxafwyq9g=="],
 
