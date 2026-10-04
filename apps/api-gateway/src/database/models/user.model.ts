@@ -16,6 +16,7 @@ import RoleModel from './role.model';
 import UserTwoFactorMethodModel from './user-two-factor-method.model';
 import UserPasskeyModel from './user-passkey.model';
 import UserTwoFactorCodeModel from './user-two-factor-code.model';
+import UserSessionModel from './user-session.model';
 
 @Table({ tableName: 'users', underscored: true, paranoid: true })
 export default class UserModel extends BaseModel {
@@ -78,4 +79,7 @@ export default class UserModel extends BaseModel {
 
   @HasMany(() => UserTwoFactorCodeModel, 'userId')
   declare twoFactorCodes?: UserTwoFactorCodeModel[];
+
+  @HasMany(() => UserSessionModel, 'userId')
+  declare sessions?: UserSessionModel[];
 }
