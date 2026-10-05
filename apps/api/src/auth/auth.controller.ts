@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import AuthService from './auth.service';
 import LoginDto from './dto/login.dto';
+import VerifyTwoFactorDto from './dto/verify-two-factor.dto';
 import Public from './decorators/public.decorator';
 import CurrentAuth from './decorators/current-auth.decorator';
 import RequestMetadata from './decorators/request-metadata.decorator';
@@ -26,6 +27,16 @@ export default class AuthController {
     @RequestMetadata() metadata: RequestMetadataInterface,
   ) {
     return await this.authService.login(dto, metadata);
+  }
+
+  @Public()
+  @Post('two-factor/verify')
+  @HttpCode(HttpStatus.OK)
+  public async verifyTwoFactor(
+    @Body() dto: VerifyTwoFactorDto,
+    @RequestMetadata() metadata: RequestMetadataInterface,
+  ) {
+    return await this.authService.verifyTwoFactor(dto, metadata);
   }
 
   @Post('logout')

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import UsersModule from '../users/users.module';
 import PermissionsModule from '../permissions/permissions.module';
+import TwoFactorModule from '../two-factor/two-factor.module';
 import AuthController from './auth.controller';
 import AuthService from './auth.service';
 import AuthGuard from './guards/auth.guard';
@@ -11,7 +12,7 @@ import SessionsService from './sessions/sessions.service';
 import UserSessionRepository from './sessions/user-session.repository';
 
 @Module({
-  imports: [UsersModule, PermissionsModule],
+  imports: [UsersModule, PermissionsModule, TwoFactorModule],
   controllers: [AuthController, SessionsController],
   providers: [
     UserSessionRepository,

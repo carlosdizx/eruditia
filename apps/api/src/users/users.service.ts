@@ -72,6 +72,18 @@ export default class UsersService extends CrudService<
     return this.toSafeUser(user);
   };
 
+  public markAsVerified = async (
+    userId: string,
+    verifiedAt: Date,
+    transaction?: Transaction,
+  ) => {
+    return await this.repository.markAsVerified(
+      userId,
+      verifiedAt,
+      transaction,
+    );
+  };
+
   public registerUserToOrganization = async (
     organizationId: string,
     dto: CreateUserDto,

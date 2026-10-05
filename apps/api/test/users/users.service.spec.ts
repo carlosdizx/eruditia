@@ -193,6 +193,20 @@ describe('UsersService', () => {
     });
   });
 
+  describe('markAsVerified', () => {
+    it('delegates to the repository within the given transaction', async () => {
+      const markAsVerified = jest.fn().mockResolvedValue(true);
+      (repository as unknown as { markAsVerified: jest.Mock }).markAsVerified =
+        markAsVerified;
+      const now = new Date();
+
+      await expect(
+        service.markAsVerified('user-id', now, transaction),
+      ).resolves.toBe(true);
+      expect(markAsVerified).toHaveBeenCalledWith('user-id', now, transaction);
+    });
+  });
+
   describe('registerUserToOrganization', () => {
     it('creates the user linked to the organization inside the transaction', async () => {
       await service.registerUserToOrganization('org-id', dto, transaction);
