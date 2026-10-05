@@ -25,13 +25,9 @@ describe('route protection', () => {
     );
   });
 
-  it('POST /organizations is restricted to the SUPER_ADMIN role', () => {
+  it('/organizations is restricted to the SUPER_ADMIN role', () => {
     expect(
-      metadataOf(
-        OrganizationsController,
-        'registerOrganization',
-        AUTH_WITH_PERMISSIONS_KEY,
-      ),
+      Reflect.getMetadata(AUTH_WITH_PERMISSIONS_KEY, OrganizationsController),
     ).toEqual({
       roles: [RoleNameEnum.SUPER_ADMIN],
       permissions: [],

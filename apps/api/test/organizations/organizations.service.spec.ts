@@ -1,9 +1,11 @@
 import 'reflect-metadata';
-import { ConflictException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Transaction } from 'sequelize';
+import RoleNameEnum from '@common/enums/role-name.enum';
 import OrganizationsService from '../../src/organizations/organizations.service';
 import OrganizationRepository from '../../src/organizations/organization.repository';
 import UsersService from '../../src/users/users.service';
+import RolesService from '../../src/roles/roles.service';
 import CreateOrganizationDto from '../../src/organizations/dto/create-organization.dto';
 import CreateUserDto from '../../src/users/dto/create-user.dto';
 
@@ -14,6 +16,7 @@ describe('OrganizationsService', () => {
     transaction: jest.Mock;
   };
   let usersService: { registerUserToOrganization: jest.Mock };
+  let rolesService: { findOne: jest.Mock };
   let service: OrganizationsService;
 
   const transaction = { id: 'tx' } as unknown as Transaction;
@@ -43,10 +46,14 @@ describe('OrganizationsService', () => {
         .fn()
         .mockResolvedValue({ id: 'owner-id' }),
     };
+    rolesService = {
+      findOne: jest.fn().mockResolvedValue({ id: 'default-admin-role-id' }),
+    };
 
     service = new OrganizationsService(
       repository as unknown as OrganizationRepository,
       usersService as unknown as UsersService,
+      rolesService as unknown as RolesService,
     );
   });
 
@@ -100,6 +107,61 @@ describe('OrganizationsService', () => {
       await expect(
         service.registerOrganizationAndOwner(organizationDto, ownerDto),
       ).resolves.toBeUndefined();
+    });
+
+    it('keeps the role sent for the owner without looking up the default one', async () => {
+      await service.registerOrganizationAndOwner(organizationDto, ownerDto);
+
+      expect(rolesService.findOne).not.toHaveBeenCalled();
+    });
+
+    describe('when the owner has no role', () => {
+      const ownerWithoutRole: CreateUserDto = {
+        ...ownerDto,
+        roleId: undefined,
+      };
+
+      it('assigns the ADMIN role to the owner', async () => {
+        await service.registerOrganizationAndOwner(
+          organizationDto,
+          ownerWithoutRole,
+        );
+
+        expect(rolesService.findOne).toHaveBeenCalledWith(
+          { name: RoleNameEnum.ADMIN },
+          true,
+          { attributes: ['id'] },
+        );
+        expect(usersService.registerUserToOrganization).toHaveBeenCalledWith(
+          'org-id',
+          { ...ownerWithoutRole, roleId: 'default-admin-role-id' },
+          transaction,
+        );
+      });
+
+      it('looks up the role before opening the transaction', async () => {
+        await service.registerOrganizationAndOwner(
+          organizationDto,
+          ownerWithoutRole,
+        );
+
+        expect(rolesService.findOne.mock.invocationCallOrder[0]).toBeLessThan(
+          repository.transaction.mock.invocationCallOrder[0],
+        );
+      });
+
+      it('creates nothing when the ADMIN role does not exist', async () => {
+        rolesService.findOne.mockRejectedValue(new NotFoundException());
+
+        await expect(
+          service.registerOrganizationAndOwner(
+            organizationDto,
+            ownerWithoutRole,
+          ),
+        ).rejects.toBeInstanceOf(NotFoundException);
+        expect(repository.transaction).not.toHaveBeenCalled();
+        expect(repository.updateByPk).not.toHaveBeenCalled();
+      });
     });
 
     it('does not register the owner when the organization cannot be created', async () => {
