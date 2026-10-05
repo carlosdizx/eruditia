@@ -1,6 +1,7 @@
 import {
   IsEmail,
   IsNotEmpty,
+  IsOptional,
   IsString,
   IsUUID,
   MaxLength,
@@ -20,6 +21,7 @@ export default class CreateUserDto {
   @IsEmail()
   email: string;
 
+  @IsOptional()
   @IsUUID()
-  roleId: string;
+  roleId?: string;
 }

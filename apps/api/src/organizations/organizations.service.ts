@@ -6,6 +6,8 @@ import OrganizationRepository from './organization.repository';
 import CreateOrganizationDto from './dto/create-organization.dto';
 import CreateUserDto from '../users/dto/create-user.dto';
 import UsersService from '../users/users.service';
+import RolesService from '../roles/roles.service';
+import RoleNameEnum from '@common/enums/role-name.enum';
 
 @Injectable()
 export default class OrganizationsService extends CrudService<
@@ -15,6 +17,7 @@ export default class OrganizationsService extends CrudService<
   constructor(
     protected readonly repository: OrganizationRepository,
     private readonly usersService: UsersService,
+    private readonly rolesService: RolesService,
   ) {
     super(repository);
   }
@@ -33,6 +36,15 @@ export default class OrganizationsService extends CrudService<
     createOrganizationDto: CreateOrganizationDto,
     createUserDto: CreateUserDto,
   ) => {
+    let { roleId } = createUserDto;
+    if (!roleId) {
+      const { id } = (await this.rolesService.findOne(
+        { name: RoleNameEnum.ADMIN },
+        true,
+        { attributes: ['id'] },
+      ))!;
+      roleId = id;
+    }
     const { organizationId, ownerId } = await this.transaction(
       async (transaction) => {
         const organization = await this.createOrganization(
@@ -41,7 +53,7 @@ export default class OrganizationsService extends CrudService<
         );
         const owner = await this.usersService.registerUserToOrganization(
           organization.id,
-          createUserDto,
+          { ...createUserDto, roleId },
           transaction,
         );
 
