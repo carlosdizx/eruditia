@@ -112,7 +112,13 @@ export default class SessionsService extends CrudService<
     if (!session || !user || !role || !this.isUsable(session, now))
       throw new UnauthorizedException(INVALID_SESSION_MESSAGE);
 
-    if (!canAuthenticate({ ...user, organization: session.organization }))
+    if (
+      !canAuthenticate({
+        ...user,
+        organizationId: session.organizationId,
+        organization: session.organization,
+      })
+    )
       throw new UnauthorizedException(INVALID_SESSION_MESSAGE);
 
     if (

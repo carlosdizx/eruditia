@@ -8,10 +8,11 @@ const ALLOWED_STATUSES: readonly UserStatusEnum[] = [
 const canAuthenticate = (user: {
   status: UserStatusEnum;
   isActive: boolean;
+  organizationId?: string | null;
   organization?: { isActive: boolean } | null;
 }): boolean =>
   user.isActive &&
   ALLOWED_STATUSES.includes(user.status) &&
-  (user.organization?.isActive ?? true);
+  (user.organization ? user.organization.isActive : !user.organizationId);
 
 export default canAuthenticate;
