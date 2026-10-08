@@ -1,5 +1,18 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import CreateOrganizationDto from './dto/create-organization.dto';
+import UpdateOrganizationDto from './dto/update-organization.dto';
 import CreateUserDto from '../users/dto/create-user.dto';
 import OrganizationsService from './organizations.service';
 import AuthWithPermissions from '@auth/decorators/auth-with-permissions.decorator';
@@ -25,5 +38,28 @@ export default class OrganizationsController {
   @Get()
   public listOrganizations(@Query() dto: PaginationDto) {
     return this.organizationsService.findAllPaginated(dto);
+  }
+
+  @Get(':organizationId')
+  public findOrganization(
+    @Param('organizationId', ParseUUIDPipe) organizationId: string,
+  ) {
+    return this.organizationsService.findOrganization(organizationId);
+  }
+
+  @Patch(':organizationId')
+  public updateOrganization(
+    @Param('organizationId', ParseUUIDPipe) organizationId: string,
+    @Body() dto: UpdateOrganizationDto,
+  ) {
+    return this.organizationsService.updateOrganization(organizationId, dto);
+  }
+
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Delete(':organizationId')
+  public deleteOrganization(
+    @Param('organizationId', ParseUUIDPipe) organizationId: string,
+  ) {
+    return this.organizationsService.deleteOrganization(organizationId);
   }
 }

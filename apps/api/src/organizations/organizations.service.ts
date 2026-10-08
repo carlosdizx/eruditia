@@ -8,6 +8,8 @@ import CreateUserDto from '../users/dto/create-user.dto';
 import UsersService from '../users/users.service';
 import RolesService from '../roles/roles.service';
 import RoleNameEnum from '@common/enums/role-name.enum';
+import UserModel from '@database/models/user.model';
+import UpdateOrganizationDto from './dto/update-organization.dto';
 
 @Injectable()
 export default class OrganizationsService extends CrudService<
@@ -62,5 +64,34 @@ export default class OrganizationsService extends CrudService<
     );
 
     await this.updateByPk(organizationId, { ownerId });
+  };
+
+  public findOrganization = async (organizationId: string) => {
+    return await this.findByPk(organizationId, true, {
+      include: [
+        {
+          model: UserModel,
+          as: 'owner',
+          attributes: ['id', 'firstName', 'lastName', 'email'],
+        },
+      ],
+    });
+  };
+
+  public updateOrganization = async (
+    organizationId: string,
+    dto: UpdateOrganizationDto,
+  ) => {
+    await this.findByPk(organizationId, true, { attributes: ['id'] });
+
+    return await this.updateByPk(organizationId, {
+      ...dto,
+      ...(dto.slug && { slug: dto.slug.toLowerCase() }),
+    });
+  };
+
+  public deleteOrganization = async (organizationId: string) => {
+    await this.findByPk(organizationId, true, { attributes: ['id'] });
+    await this.deleteByPk(organizationId);
   };
 }
