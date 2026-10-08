@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Transaction } from 'sequelize';
 import RoleNameEnum from '@common/enums/role-name.enum';
+import UserModel from '@database/models/user.model';
 import OrganizationsService from '../../src/organizations/organizations.service';
 import OrganizationRepository from '../../src/organizations/organization.repository';
 import UsersService from '../../src/users/users.service';
@@ -12,7 +13,10 @@ import CreateUserDto from '../../src/users/dto/create-user.dto';
 describe('OrganizationsService', () => {
   let repository: {
     create: jest.Mock;
+    findByPk: jest.Mock;
     updateByPk: jest.Mock;
+    deleteByPk: jest.Mock;
+    restoreByPk: jest.Mock;
     transaction: jest.Mock;
   };
   let usersService: { registerUserToOrganization: jest.Mock };
@@ -36,7 +40,10 @@ describe('OrganizationsService', () => {
   beforeEach(() => {
     repository = {
       create: jest.fn().mockResolvedValue({ id: 'org-id' }),
+      findByPk: jest.fn().mockResolvedValue({ id: 'org-id' }),
       updateByPk: jest.fn().mockResolvedValue({ id: 'org-id' }),
+      deleteByPk: jest.fn().mockResolvedValue({ id: 'org-id' }),
+      restoreByPk: jest.fn().mockResolvedValue({ id: 'org-id' }),
       transaction: jest.fn((run: (tx: Transaction) => unknown) =>
         run(transaction),
       ),
@@ -183,6 +190,101 @@ describe('OrganizationsService', () => {
         service.registerOrganizationAndOwner(organizationDto, ownerDto),
       ).rejects.toBeInstanceOf(ConflictException);
       expect(repository.updateByPk).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('findOrganization', () => {
+    it('returns the organization with its owner', async () => {
+      await expect(service.findOrganization('org-id')).resolves.toEqual({
+        id: 'org-id',
+      });
+      expect(repository.findByPk).toHaveBeenCalledWith('org-id', true, {
+        include: [
+          {
+            model: UserModel,
+            as: 'owner',
+            attributes: ['id', 'firstName', 'lastName', 'email'],
+          },
+        ],
+      });
+    });
+
+    it('propagates NotFoundException for an unknown organization', async () => {
+      repository.findByPk.mockRejectedValue(new NotFoundException());
+
+      await expect(service.findOrganization('org-id')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+  });
+
+  describe('updateOrganization', () => {
+    it('updates the organization lowercasing the slug', async () => {
+      await expect(
+        service.updateOrganization('org-id', {
+          name: 'Nuevo',
+          slug: 'Nuevo-Slug',
+        }),
+      ).resolves.toEqual({ id: 'org-id' });
+      expect(repository.updateByPk).toHaveBeenCalledWith(
+        'org-id',
+        { name: 'Nuevo', slug: 'nuevo-slug' },
+        undefined,
+      );
+    });
+
+    it('does not add a slug when it is not sent', async () => {
+      await service.updateOrganization('org-id', { isActive: false });
+
+      expect(repository.updateByPk).toHaveBeenCalledWith(
+        'org-id',
+        { isActive: false },
+        undefined,
+      );
+    });
+
+    it('does not update an unknown organization', async () => {
+      repository.findByPk.mockRejectedValue(new NotFoundException());
+
+      await expect(
+        service.updateOrganization('org-id', { name: 'x' }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(repository.updateByPk).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('deleteOrganization', () => {
+    it('soft deletes the organization and returns nothing', async () => {
+      await expect(
+        service.deleteOrganization('org-id'),
+      ).resolves.toBeUndefined();
+      expect(repository.deleteByPk).toHaveBeenCalledWith('org-id', undefined);
+    });
+
+    it('does not delete an unknown organization', async () => {
+      repository.findByPk.mockRejectedValue(new NotFoundException());
+
+      await expect(service.deleteOrganization('org-id')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(repository.deleteByPk).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('restoreOrganization', () => {
+    it('restores the soft deleted organization', async () => {
+      await expect(service.restoreOrganization('org-id')).resolves.toEqual({
+        id: 'org-id',
+      });
+      expect(repository.restoreByPk).toHaveBeenCalledWith('org-id', undefined);
+    });
+
+    it('rejects an unknown organization', async () => {
+      repository.restoreByPk.mockResolvedValue(null);
+
+      await expect(
+        service.restoreOrganization('org-id'),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 });

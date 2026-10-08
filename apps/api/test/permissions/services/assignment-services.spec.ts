@@ -22,8 +22,10 @@ const permissionsServiceMock = () => ({
   invalidateOrganization: jest.fn().mockResolvedValue(undefined),
 });
 
-const repositoryMock = (method: string): Record<string, jest.Mock> => ({
-  [method]: jest.fn().mockResolvedValue(undefined),
+const repositoryMock = (...methods: string[]): Record<string, jest.Mock> => ({
+  ...Object.fromEntries(
+    methods.map((method) => [method, jest.fn().mockResolvedValue(undefined)]),
+  ),
   transaction: jest.fn((run: (tx: Transaction) => unknown) => run(transaction)),
 });
 

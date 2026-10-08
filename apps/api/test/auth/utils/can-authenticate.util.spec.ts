@@ -32,4 +32,24 @@ describe('canAuthenticate', () => {
       canAuthenticate({ ...user, organization: { isActive: false } }),
     ).toBe(false);
   });
+
+  it('rejects a user whose organization was deleted', () => {
+    expect(
+      canAuthenticate({
+        ...user,
+        organizationId: 'org-id',
+        organization: null,
+      }),
+    ).toBe(false);
+  });
+
+  it('allows a user of an active organization', () => {
+    expect(
+      canAuthenticate({
+        ...user,
+        organizationId: 'org-id',
+        organization: { isActive: true },
+      }),
+    ).toBe(true);
+  });
 });

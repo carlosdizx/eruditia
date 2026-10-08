@@ -19,6 +19,10 @@ describe('OrganizationsController', () => {
   let organizationsService: {
     registerOrganizationAndOwner: jest.Mock;
     findAllPaginated: jest.Mock;
+    findOrganization: jest.Mock;
+    updateOrganization: jest.Mock;
+    deleteOrganization: jest.Mock;
+    restoreOrganization: jest.Mock;
   };
   let controller: OrganizationsController;
 
@@ -38,6 +42,10 @@ describe('OrganizationsController', () => {
     organizationsService = {
       registerOrganizationAndOwner: jest.fn().mockResolvedValue(undefined),
       findAllPaginated: jest.fn().mockResolvedValue({ rows: [], count: 0 }),
+      findOrganization: jest.fn().mockResolvedValue({ id: 'org-id' }),
+      updateOrganization: jest.fn().mockResolvedValue({ id: 'org-id' }),
+      deleteOrganization: jest.fn().mockResolvedValue(undefined),
+      restoreOrganization: jest.fn().mockResolvedValue({ id: 'org-id' }),
     };
     controller = new OrganizationsController(
       organizationsService as unknown as OrganizationsService,
@@ -55,7 +63,14 @@ describe('OrganizationsController', () => {
       });
     });
 
-    it.each(['registerOrganization', 'listOrganizations'])(
+    it.each([
+      'registerOrganization',
+      'listOrganizations',
+      'findOrganization',
+      'updateOrganization',
+      'deleteOrganization',
+      'restoreOrganization',
+    ])(
       '%s inherits the controller requirement without overriding it',
       (handler) => {
         expect(
@@ -117,6 +132,54 @@ describe('OrganizationsController', () => {
       await expect(controller.listOrganizations(pagination)).rejects.toBe(
         error,
       );
+    });
+  });
+
+  describe('findOrganization', () => {
+    it('delegates to the service', async () => {
+      await expect(controller.findOrganization('org-id')).resolves.toEqual({
+        id: 'org-id',
+      });
+      expect(organizationsService.findOrganization).toHaveBeenCalledWith(
+        'org-id',
+      );
+    });
+  });
+
+  describe('updateOrganization', () => {
+    it('passes the id and body to the service', async () => {
+      const dto = { name: 'Nuevo' };
+
+      await expect(
+        controller.updateOrganization('org-id', dto),
+      ).resolves.toEqual({ id: 'org-id' });
+      expect(organizationsService.updateOrganization).toHaveBeenCalledWith(
+        'org-id',
+        dto,
+      );
+    });
+  });
+
+  describe('deleteOrganization', () => {
+    it('delegates to the service', async () => {
+      await expect(
+        controller.deleteOrganization('org-id'),
+      ).resolves.toBeUndefined();
+      expect(organizationsService.deleteOrganization).toHaveBeenCalledWith(
+        'org-id',
+      );
+    });
+  });
+
+  describe('restoreOrganization', () => {
+    it('delegates to the restore, not the delete', async () => {
+      await expect(controller.restoreOrganization('org-id')).resolves.toEqual({
+        id: 'org-id',
+      });
+      expect(organizationsService.restoreOrganization).toHaveBeenCalledWith(
+        'org-id',
+      );
+      expect(organizationsService.deleteOrganization).not.toHaveBeenCalled();
     });
   });
 });
