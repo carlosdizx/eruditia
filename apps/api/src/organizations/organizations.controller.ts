@@ -62,4 +62,11 @@ export default class OrganizationsController {
   ) {
     return this.organizationsService.deleteOrganization(organizationId);
   }
+
+  @Patch(':organizationId/restore')
+  public restoreOrganization(
+    @Param('organizationId', ParseUUIDPipe) organizationId: string,
+  ) {
+    return this.organizationsService.restoreOrganization(organizationId);
+  }
 }

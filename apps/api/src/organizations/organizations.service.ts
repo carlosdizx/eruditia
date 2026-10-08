@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Transaction } from 'sequelize';
 import OrganizationModel from '@database/models/organization.model';
 import CrudService from '@database/services/crud.service';
@@ -93,5 +93,13 @@ export default class OrganizationsService extends CrudService<
   public deleteOrganization = async (organizationId: string) => {
     await this.findByPk(organizationId, true, { attributes: ['id'] });
     await this.deleteByPk(organizationId);
+  };
+
+  public restoreOrganization = async (organizationId: string) => {
+    const organization = await this.restoreByPk(organizationId);
+    if (!organization)
+      throw new NotFoundException('No se encontró la organización');
+
+    return organization;
   };
 }
