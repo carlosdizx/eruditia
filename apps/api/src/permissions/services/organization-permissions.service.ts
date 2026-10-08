@@ -20,22 +20,24 @@ export default class OrganizationPermissionsService extends CrudService<
   }
 
   public listOrganizationPermissions = async (organizationId: string) => {
-    await this.organizationsService.findByPk(organizationId, true, {
-      attributes: ['id'],
-    });
+    await this.ensureOrganizationExists(organizationId);
 
     return await this.permissionsService.getOrganizationPermissions(
       organizationId,
     );
   };
 
+  private ensureOrganizationExists = async (organizationId: string) => {
+    await this.organizationsService.findByPk(organizationId, true, {
+      attributes: ['id'],
+    });
+  };
+
   public setOrganizationPermissions = async (
     organizationId: string,
     permissions: PermissionEnum[],
   ) => {
-    await this.organizationsService.findByPk(organizationId, true, {
-      attributes: ['id'],
-    });
+    await this.ensureOrganizationExists(organizationId);
 
     const permissionIds = await this.permissionsService.resolveIds(permissions);
 
