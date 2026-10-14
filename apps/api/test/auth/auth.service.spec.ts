@@ -442,7 +442,6 @@ describe('AuthService', () => {
         expect.objectContaining({ attributes: { exclude: ['password'] } }),
       );
       expect(permissionsService.getEffectivePermissions).toHaveBeenCalledWith(
-        'role-id',
         'org-id',
       );
     });

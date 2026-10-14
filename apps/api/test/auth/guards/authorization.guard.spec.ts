@@ -166,7 +166,6 @@ describe('AuthorizationGuard', () => {
       await run('allPermissionsHandler', admin);
 
       expect(permissionsService.getEffectivePermissions).toHaveBeenCalledWith(
-        'role-id',
         'org-id',
       );
     });

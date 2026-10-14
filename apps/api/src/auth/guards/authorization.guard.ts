@@ -68,7 +68,6 @@ export default class AuthorizationGuard implements CanActivate {
 
     const granted = new Set(
       await this.permissionsService.getEffectivePermissions(
-        auth.roleId,
         auth.organizationId,
       ),
     );

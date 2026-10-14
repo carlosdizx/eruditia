@@ -193,10 +193,7 @@ export default class AuthService {
       }),
       isCoreRole(auth)
         ? Object.values(PermissionEnum)
-        : this.permissionsService.getEffectivePermissions(
-            auth.roleId,
-            auth.organizationId,
-          ),
+        : this.permissionsService.getEffectivePermissions(auth.organizationId),
     ]);
 
     return { ...user, permissions };

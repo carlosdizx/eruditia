@@ -87,20 +87,14 @@ export default class PermissionsService extends CrudService<
       PERMISSIONS_CACHE_TTL_MS,
     );
 
-  // Efectivo = lo que el rol permite ∩ lo que la organización tiene contratado.
+  // Por ahora los permisos se asignan solo a la organización: todos sus
+  // usuarios reciben lo que tiene contratado, sin importar el rol.
   public getEffectivePermissions = async (
-    roleId: string,
     organizationId: string | null,
   ): Promise<string[]> => {
     if (!organizationId) return [];
 
-    const [rolePermissions, organizationPermissions] = await Promise.all([
-      this.getRolePermissions(roleId),
-      this.getOrganizationPermissions(organizationId),
-    ]);
-
-    const contracted = new Set(organizationPermissions);
-    return rolePermissions.filter((key) => contracted.has(key));
+    return await this.getOrganizationPermissions(organizationId);
   };
 
   public invalidateRole = async (roleId: string) => {

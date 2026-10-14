@@ -125,25 +125,25 @@ describe('PermissionsService', () => {
   });
 
   describe('getEffectivePermissions', () => {
-    it('returns the intersection of role and organization permissions', async () => {
-      await expect(
-        service.getEffectivePermissions('role-id', 'org-id'),
-      ).resolves.toEqual(['user:list']);
+    it('returns the organization permissions, ignoring the role', async () => {
+      await expect(service.getEffectivePermissions('org-id')).resolves.toEqual([
+        'user:list',
+        'role:list',
+      ]);
+      expect(rolePermissionRepository.findAll).not.toHaveBeenCalled();
     });
 
     it('grants nothing to a user without organization', async () => {
-      await expect(
-        service.getEffectivePermissions('role-id', null),
-      ).resolves.toEqual([]);
-      expect(rolePermissionRepository.findAll).not.toHaveBeenCalled();
+      await expect(service.getEffectivePermissions(null)).resolves.toEqual([]);
+      expect(organizationPermissionRepository.findAll).not.toHaveBeenCalled();
     });
 
     it('grants nothing when the organization has nothing contracted', async () => {
       organizationPermissionRepository.findAll.mockResolvedValue([]);
 
-      await expect(
-        service.getEffectivePermissions('role-id', 'org-id'),
-      ).resolves.toEqual([]);
+      await expect(service.getEffectivePermissions('org-id')).resolves.toEqual(
+        [],
+      );
     });
   });
 
