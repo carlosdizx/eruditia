@@ -1,4 +1,4 @@
-import { Button } from '@/components/ui/button';
+import { LogoutButton } from '@/components/auth/logout-button';
 import {
   Card,
   CardContent,
@@ -18,7 +18,7 @@ export default function Home() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button className="w-full">Continuar</Button>
+          <LogoutButton variant="outline" className="w-full" />
         </CardContent>
       </Card>
     </main>
