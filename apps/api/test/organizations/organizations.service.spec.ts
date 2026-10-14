@@ -1,13 +1,15 @@
 import 'reflect-metadata';
 import { ConflictException, NotFoundException } from '@nestjs/common';
-import { Transaction } from 'sequelize';
+import { Op, Transaction } from 'sequelize';
 import RoleNameEnum from '@common/enums/role-name.enum';
+import DeletedFilterEnum from '@common/enums/deleted-filter.enum';
 import UserModel from '@database/models/user.model';
 import OrganizationsService from '../../src/organizations/organizations.service';
 import OrganizationRepository from '../../src/organizations/organization.repository';
 import UsersService from '../../src/users/users.service';
 import RolesService from '../../src/roles/roles.service';
 import CreateOrganizationDto from '../../src/organizations/dto/create-organization.dto';
+import ListOrganizationsDto from '../../src/organizations/dto/list-organizations.dto';
 import CreateUserDto from '../../src/users/dto/create-user.dto';
 
 describe('OrganizationsService', () => {
@@ -17,6 +19,7 @@ describe('OrganizationsService', () => {
     updateByPk: jest.Mock;
     deleteByPk: jest.Mock;
     restoreByPk: jest.Mock;
+    findAllPaginated: jest.Mock;
     transaction: jest.Mock;
   };
   let usersService: { registerUserToOrganization: jest.Mock };
@@ -44,6 +47,7 @@ describe('OrganizationsService', () => {
       updateByPk: jest.fn().mockResolvedValue({ id: 'org-id' }),
       deleteByPk: jest.fn().mockResolvedValue({ id: 'org-id' }),
       restoreByPk: jest.fn().mockResolvedValue({ id: 'org-id' }),
+      findAllPaginated: jest.fn().mockResolvedValue({ data: [], meta: {} }),
       transaction: jest.fn((run: (tx: Transaction) => unknown) =>
         run(transaction),
       ),
@@ -190,6 +194,50 @@ describe('OrganizationsService', () => {
         service.registerOrganizationAndOwner(organizationDto, ownerDto),
       ).rejects.toBeInstanceOf(ConflictException);
       expect(repository.updateByPk).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('listOrganizations', () => {
+    const listDto = (deleted?: DeletedFilterEnum) =>
+      Object.assign(new ListOrganizationsDto(), {
+        page: 1,
+        pageSize: 10,
+        ...(deleted && { deleted }),
+      });
+
+    it('excludes deleted organizations by default', async () => {
+      const dto = listDto();
+
+      await expect(service.listOrganizations(dto)).resolves.toEqual({
+        data: [],
+        meta: {},
+      });
+      expect(dto.deleted).toBe(DeletedFilterEnum.EXCLUDE);
+      expect(repository.findAllPaginated).toHaveBeenCalledWith(dto, undefined, {
+        paranoid: true,
+      });
+    });
+
+    it('includes deleted organizations when asked to', async () => {
+      const dto = listDto(DeletedFilterEnum.INCLUDE);
+
+      await service.listOrganizations(dto);
+
+      expect(repository.findAllPaginated).toHaveBeenCalledWith(dto, undefined, {
+        paranoid: false,
+      });
+    });
+
+    it('lists only deleted organizations', async () => {
+      const dto = listDto(DeletedFilterEnum.ONLY);
+
+      await service.listOrganizations(dto);
+
+      expect(repository.findAllPaginated).toHaveBeenCalledWith(
+        dto,
+        { deletedAt: { [Op.ne]: null } },
+        { paranoid: false },
+      );
     });
   });
 

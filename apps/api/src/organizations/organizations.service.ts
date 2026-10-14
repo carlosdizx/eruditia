@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Transaction } from 'sequelize';
+import { Op, Transaction } from 'sequelize';
+import DeletedFilterEnum from '@common/enums/deleted-filter.enum';
 import OrganizationModel from '@database/models/organization.model';
 import CrudService from '@database/services/crud.service';
 import OrganizationRepository from './organization.repository';
@@ -10,6 +11,7 @@ import RolesService from '../roles/roles.service';
 import RoleNameEnum from '@common/enums/role-name.enum';
 import UserModel from '@database/models/user.model';
 import UpdateOrganizationDto from './dto/update-organization.dto';
+import ListOrganizationsDto from './dto/list-organizations.dto';
 
 @Injectable()
 export default class OrganizationsService extends CrudService<
@@ -64,6 +66,18 @@ export default class OrganizationsService extends CrudService<
     );
 
     await this.updateByPk(organizationId, { ownerId });
+  };
+
+  public listOrganizations = async (dto: ListOrganizationsDto) => {
+    const { deleted } = dto;
+
+    return await this.findAllPaginated(
+      dto,
+      deleted === DeletedFilterEnum.ONLY
+        ? { deletedAt: { [Op.ne]: null } }
+        : undefined,
+      { paranoid: deleted === DeletedFilterEnum.EXCLUDE },
+    );
   };
 
   public findOrganization = async (organizationId: string) => {

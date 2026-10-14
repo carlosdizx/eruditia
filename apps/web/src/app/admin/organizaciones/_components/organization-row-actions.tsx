@@ -2,7 +2,12 @@
 
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
-import { MoreHorizontalIcon, PencilIcon, Trash2Icon } from 'lucide-react';
+import {
+  ArchiveRestoreIcon,
+  MoreHorizontalIcon,
+  PencilIcon,
+  Trash2Icon,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -22,13 +27,18 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Spinner } from '@/components/ui/spinner';
-import { deleteOrganization } from '../actions';
+import { deleteOrganization, restoreOrganization } from '../actions';
 
-type OrganizationRowActionsProps = { id: string; name: string };
+type OrganizationRowActionsProps = {
+  id: string;
+  name: string;
+  deleted: boolean;
+};
 
 export function OrganizationRowActions({
   id,
   name,
+  deleted,
 }: OrganizationRowActionsProps) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -45,6 +55,28 @@ export function OrganizationRowActions({
       setConfirmOpen(false);
       toast.success(`Se eliminó ${name}`);
     });
+
+  const onRestore = () =>
+    startTransition(async () => {
+      const result = await restoreOrganization(id);
+
+      if (result.ok) toast.success(`Se restauró ${name}`);
+      else toast.error(result.message);
+    });
+
+  // Una organización eliminada no se puede consultar ni editar hasta
+  // restaurarla.
+  if (deleted)
+    return (
+      <Button variant="ghost" size="sm" onClick={onRestore} disabled={pending}>
+        {pending ? (
+          <Spinner data-icon="inline-start" />
+        ) : (
+          <ArchiveRestoreIcon data-icon="inline-start" />
+        )}
+        Restaurar
+      </Button>
+    );
 
   return (
     <>
@@ -82,8 +114,8 @@ export function OrganizationRowActions({
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar {name}?</AlertDialogTitle>
             <AlertDialogDescription>
-              La organización dejará de aparecer en el listado y sus usuarios
-              perderán el acceso.
+              Sus usuarios perderán el acceso. Podrás restaurarla desde la
+              pestaña Eliminadas.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

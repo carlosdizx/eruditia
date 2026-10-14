@@ -101,3 +101,20 @@ export async function deleteOrganization(
   refresh();
   return { ok: true };
 }
+
+export async function restoreOrganization(
+  organizationId: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  await requireSuperAdmin();
+
+  try {
+    await authFetch(`/organizations/${organizationId}/restore`, {
+      method: 'PATCH',
+    });
+  } catch (error) {
+    return { ok: false, message: toMessage(error) };
+  }
+
+  refresh();
+  return { ok: true };
+}

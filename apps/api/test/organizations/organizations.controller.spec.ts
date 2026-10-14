@@ -1,11 +1,12 @@
 import 'reflect-metadata';
 import RoleNameEnum from '@common/enums/role-name.enum';
-import PaginationDto from '@common/dto/pagination.dto';
+import DeletedFilterEnum from '@common/enums/deleted-filter.enum';
 import { IS_PUBLIC_KEY } from '@auth/decorators/public.decorator';
 import { AUTH_WITH_PERMISSIONS_KEY } from '@auth/decorators/auth-with-permissions.decorator';
 import OrganizationsController from '../../src/organizations/organizations.controller';
 import OrganizationsService from '../../src/organizations/organizations.service';
 import CreateOrganizationDto from '../../src/organizations/dto/create-organization.dto';
+import ListOrganizationsDto from '../../src/organizations/dto/list-organizations.dto';
 import CreateUserDto from '../../src/users/dto/create-user.dto';
 
 const handlerMetadata = (handler: string, key: string): unknown =>
@@ -18,7 +19,7 @@ const handlerMetadata = (handler: string, key: string): unknown =>
 describe('OrganizationsController', () => {
   let organizationsService: {
     registerOrganizationAndOwner: jest.Mock;
-    findAllPaginated: jest.Mock;
+    listOrganizations: jest.Mock;
     findOrganization: jest.Mock;
     updateOrganization: jest.Mock;
     deleteOrganization: jest.Mock;
@@ -41,7 +42,7 @@ describe('OrganizationsController', () => {
   beforeEach(() => {
     organizationsService = {
       registerOrganizationAndOwner: jest.fn().mockResolvedValue(undefined),
-      findAllPaginated: jest.fn().mockResolvedValue({ rows: [], count: 0 }),
+      listOrganizations: jest.fn().mockResolvedValue({ rows: [], count: 0 }),
       findOrganization: jest.fn().mockResolvedValue({ id: 'org-id' }),
       updateOrganization: jest.fn().mockResolvedValue({ id: 'org-id' }),
       deleteOrganization: jest.fn().mockResolvedValue(undefined),
@@ -109,25 +110,26 @@ describe('OrganizationsController', () => {
   });
 
   describe('listOrganizations', () => {
-    const pagination = Object.assign(new PaginationDto(), {
+    const pagination = Object.assign(new ListOrganizationsDto(), {
       page: 2,
       pageSize: 5,
       search: 'colegio',
+      deleted: DeletedFilterEnum.INCLUDE,
     });
 
-    it('delegates the pagination query to the service', async () => {
+    it('delegates the pagination and deleted filter to the service', async () => {
       await expect(controller.listOrganizations(pagination)).resolves.toEqual({
         rows: [],
         count: 0,
       });
-      expect(organizationsService.findAllPaginated).toHaveBeenCalledWith(
+      expect(organizationsService.listOrganizations).toHaveBeenCalledWith(
         pagination,
       );
     });
 
     it('propagates service errors', async () => {
       const error = new Error('boom');
-      organizationsService.findAllPaginated.mockRejectedValue(error);
+      organizationsService.listOrganizations.mockRejectedValue(error);
 
       await expect(controller.listOrganizations(pagination)).rejects.toBe(
         error,

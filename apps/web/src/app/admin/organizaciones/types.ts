@@ -16,6 +16,7 @@ export type Organization = {
   isActive: boolean;
   ownerId: string | null;
   createdAt: string;
+  deletedAt: string | null;
   owner?: {
     id: string;
     firstName: string;
@@ -23,6 +24,20 @@ export type Organization = {
     email: string;
   } | null;
 };
+
+// Filtro ?deleted= de GET /organizations (DeletedFilterEnum en la API).
+export const DELETED_FILTERS = [
+  { value: 'exclude', label: 'Vigentes' },
+  { value: 'only', label: 'Eliminadas' },
+  { value: 'include', label: 'Todas' },
+] as const;
+
+export type DeletedFilter = (typeof DELETED_FILTERS)[number]['value'];
+
+export const parseDeletedFilter = (
+  value: string | string[] | undefined,
+): DeletedFilter =>
+  DELETED_FILTERS.find((filter) => filter.value === value)?.value ?? 'exclude';
 
 // Campos editables de la organización (CreateOrganizationDto / UpdateOrganizationDto).
 export const ORGANIZATION_FIELDS = [

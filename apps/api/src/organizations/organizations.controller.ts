@@ -17,7 +17,7 @@ import CreateUserDto from '../users/dto/create-user.dto';
 import OrganizationsService from './organizations.service';
 import AuthWithPermissions from '@auth/decorators/auth-with-permissions.decorator';
 import RoleNameEnum from '@common/enums/role-name.enum';
-import PaginationDto from '@common/dto/pagination.dto';
+import ListOrganizationsDto from './dto/list-organizations.dto';
 
 @Controller('organizations')
 @AuthWithPermissions({ roles: [RoleNameEnum.SUPER_ADMIN] })
@@ -36,8 +36,8 @@ export default class OrganizationsController {
   }
 
   @Get()
-  public listOrganizations(@Query() dto: PaginationDto) {
-    return this.organizationsService.findAllPaginated(dto);
+  public listOrganizations(@Query() dto: ListOrganizationsDto) {
+    return this.organizationsService.listOrganizations(dto);
   }
 
   @Get(':organizationId')
