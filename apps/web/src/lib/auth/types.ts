@@ -14,3 +14,26 @@ export type TwoFactorChallengeResponse = {
 };
 
 export type LoginResponse = SessionResponse | TwoFactorChallengeResponse;
+
+// Contrato de GET /auth/me.
+export type CurrentUser = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  status: 'pending' | 'active' | 'suspended' | 'blocked';
+  isActive: boolean;
+  isVerified: boolean;
+  twoFactorEnabled: boolean;
+  lastLoginAt: string | null;
+  createdAt: string;
+  role: {
+    id: string;
+    name: string;
+    label: string;
+    labelEs: string;
+    category: 'core' | 'client';
+  };
+  organization: { id: string; name: string; slug: string } | null;
+  permissions: string[];
+};

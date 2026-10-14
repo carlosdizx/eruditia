@@ -67,7 +67,8 @@ export async function apiFetch<T>(
   if (!response.ok)
     throw new ApiError(response.status, await readErrorMessage(response));
 
-  if (response.status === 204) return undefined as T;
+  // Algunos endpoints (204, o 201 sin retorno) responden sin cuerpo.
+  const text = await response.text();
 
-  return (await response.json()) as T;
+  return (text ? JSON.parse(text) : undefined) as T;
 }
