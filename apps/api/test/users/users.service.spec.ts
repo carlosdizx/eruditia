@@ -4,7 +4,13 @@ jest.mock('@common/utils/password.util', () => ({
 }));
 
 import 'reflect-metadata';
-import { ConflictException, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Transaction } from 'sequelize';
 import UsersService from '../../src/users/users.service';
@@ -13,6 +19,9 @@ import RolesService from '../../src/roles/roles.service';
 import CreateUserDto from '../../src/users/dto/create-user.dto';
 import RoleNameEnum from '@common/enums/role-name.enum';
 import UserStatusEnum from '@common/enums/user-status.enum';
+import RoleCategoryEnum from '@common/enums/role-category.enum';
+import OrganizationModel from '@database/models/organization.model';
+import { EMAIL_IN_USE_MESSAGE } from '../../src/users/constants/user-messages.constant';
 import Env from '@common/schemas/env.schema';
 import EmailService from '@email/email.service';
 import { TEMPORARY_PASSWORD_SUBJECT } from '@email/templates/temporary-password.template';
@@ -28,6 +37,8 @@ describe('UsersService', () => {
   let repository: {
     findOne: jest.Mock;
     create: jest.Mock;
+    updateByPk: jest.Mock;
+    deleteByPk: jest.Mock;
     transaction: jest.Mock;
   };
   let rolesService: { findOne: jest.Mock };
@@ -56,6 +67,8 @@ describe('UsersService', () => {
     repository = {
       findOne: jest.fn().mockResolvedValue(null),
       create: jest.fn().mockResolvedValue(createdUser),
+      updateByPk: jest.fn(),
+      deleteByPk: jest.fn().mockResolvedValue({ id: 'target-id' }),
       transaction: jest.fn((run: (tx: Transaction) => unknown) =>
         run(transaction),
       ),
@@ -97,8 +110,8 @@ describe('UsersService', () => {
     it('throws ConflictException when the email is already registered', async () => {
       repository.findOne.mockResolvedValue({ id: 'existing-id' });
 
-      await expect(service.createUser(dto)).rejects.toBeInstanceOf(
-        ConflictException,
+      await expect(service.createUser(dto)).rejects.toThrow(
+        new ConflictException(EMAIL_IN_USE_MESSAGE),
       );
       expect(repository.create).not.toHaveBeenCalled();
     });
@@ -302,6 +315,210 @@ describe('UsersService', () => {
         ConflictException,
       );
       expect(repository.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('organization user management', () => {
+    const actor = { userId: 'admin-id', organizationId: 'org-id' };
+
+    const target = (overrides: Record<string, unknown> = {}) => ({
+      id: 'target-id',
+      roleId: 'teacher-role-id',
+      isActive: true,
+      organization: { id: 'org-id', ownerId: 'owner-id' },
+      ...overrides,
+    });
+
+    // findOne se usa para el usuario objetivo y para el correo al crear.
+    const mockTarget = (user: ReturnType<typeof target> | null) =>
+      repository.findOne.mockImplementation((query: { id?: string }) => {
+        if (query.id && !user) throw new NotFoundException();
+        return Promise.resolve(query.id ? user : null);
+      });
+
+    beforeEach(() => {
+      rolesService.findOne.mockResolvedValue({ id: 'teacher-role-id' });
+      repository.updateByPk.mockImplementation((id: string, data: object) =>
+        Promise.resolve({ id, ...data, password: 'hashed' }),
+      );
+    });
+
+    describe('createOrganizationUser', () => {
+      const newUser = { ...dto, roleId: 'teacher-role-id' };
+
+      it('creates the user in the actor organization inside a transaction', async () => {
+        await service.createOrganizationUser(actor, newUser);
+
+        expect(repository.transaction).toHaveBeenCalledTimes(1);
+        expect(repository.create).toHaveBeenCalledWith(
+          { ...newUser, organizationId: 'org-id', password: 'hashed-password' },
+          { transaction },
+        );
+      });
+
+      it('only accepts organization (client) roles', async () => {
+        await service.createOrganizationUser(actor, newUser);
+
+        expect(rolesService.findOne).toHaveBeenCalledWith(
+          { id: 'teacher-role-id', category: RoleCategoryEnum.CLIENT },
+          false,
+          { attributes: ['id'] },
+        );
+      });
+
+      it('rejects a system role such as SUPER_ADMIN', async () => {
+        rolesService.findOne.mockResolvedValue(null);
+
+        await expect(
+          service.createOrganizationUser(actor, newUser),
+        ).rejects.toBeInstanceOf(BadRequestException);
+        expect(repository.create).not.toHaveBeenCalled();
+      });
+
+      it('rejects an actor without organization', async () => {
+        await expect(
+          service.createOrganizationUser(
+            { ...actor, organizationId: null },
+            newUser,
+          ),
+        ).rejects.toBeInstanceOf(ForbiddenException);
+        expect(repository.create).not.toHaveBeenCalled();
+      });
+    });
+
+    describe('updateOrganizationUser', () => {
+      it('looks the user up only inside the actor organization', async () => {
+        mockTarget(target());
+
+        await service.updateOrganizationUser(actor, 'target-id', {
+          firstName: 'Eva',
+        });
+
+        expect(repository.findOne).toHaveBeenCalledWith(
+          { id: 'target-id', organizationId: 'org-id' },
+          true,
+          {
+            attributes: ['id', 'roleId', 'isActive'],
+            include: [
+              { model: OrganizationModel, attributes: ['id', 'ownerId'] },
+            ],
+          },
+        );
+      });
+
+      it('returns 404 for a user of another organization', async () => {
+        mockTarget(null);
+
+        await expect(
+          service.updateOrganizationUser(actor, 'target-id', {
+            firstName: 'Eva',
+          }),
+        ).rejects.toBeInstanceOf(NotFoundException);
+        expect(repository.updateByPk).not.toHaveBeenCalled();
+      });
+
+      it('updates and returns the user without the password', async () => {
+        mockTarget(target());
+
+        const result = await service.updateOrganizationUser(
+          actor,
+          'target-id',
+          { firstName: 'Eva', isActive: false },
+        );
+
+        expect(repository.updateByPk).toHaveBeenCalledWith(
+          'target-id',
+          { firstName: 'Eva', isActive: false },
+          undefined,
+        );
+        expect(result).toEqual({
+          id: 'target-id',
+          firstName: 'Eva',
+          isActive: false,
+        });
+      });
+
+      it('validates the new role', async () => {
+        mockTarget(target());
+        rolesService.findOne.mockResolvedValue(null);
+
+        await expect(
+          service.updateOrganizationUser(actor, 'target-id', {
+            roleId: 'super-admin-role-id',
+          }),
+        ).rejects.toBeInstanceOf(BadRequestException);
+        expect(repository.updateByPk).not.toHaveBeenCalled();
+      });
+
+      it.each([
+        ['their own account', target({ id: 'admin-id' })],
+        [
+          'the organization owner',
+          target({ organization: { id: 'org-id', ownerId: 'target-id' } }),
+        ],
+      ])('does not let the admin deactivate or re-role %s', async (_, user) => {
+        mockTarget(user);
+
+        await expect(
+          service.updateOrganizationUser(actor, user.id, { isActive: false }),
+        ).rejects.toBeInstanceOf(ForbiddenException);
+        await expect(
+          service.updateOrganizationUser(actor, user.id, {
+            roleId: 'student-role-id',
+          }),
+        ).rejects.toBeInstanceOf(ForbiddenException);
+        expect(repository.updateByPk).not.toHaveBeenCalled();
+      });
+
+      it('lets the admin rename their own account', async () => {
+        mockTarget(target({ id: 'admin-id' }));
+
+        await service.updateOrganizationUser(actor, 'admin-id', {
+          firstName: 'Eva',
+          roleId: 'teacher-role-id',
+          isActive: true,
+        });
+
+        expect(repository.updateByPk).toHaveBeenCalled();
+      });
+    });
+
+    describe('deleteOrganizationUser', () => {
+      it('soft deletes a user of the organization', async () => {
+        mockTarget(target());
+
+        await expect(
+          service.deleteOrganizationUser(actor, 'target-id'),
+        ).resolves.toBeUndefined();
+        expect(repository.deleteByPk).toHaveBeenCalledWith(
+          'target-id',
+          undefined,
+        );
+      });
+
+      it.each([
+        ['their own account', target({ id: 'admin-id' })],
+        [
+          'the organization owner',
+          target({ organization: { id: 'org-id', ownerId: 'target-id' } }),
+        ],
+      ])('does not let the admin delete %s', async (_, user) => {
+        mockTarget(user);
+
+        await expect(
+          service.deleteOrganizationUser(actor, user.id),
+        ).rejects.toBeInstanceOf(ForbiddenException);
+        expect(repository.deleteByPk).not.toHaveBeenCalled();
+      });
+
+      it('returns 404 for a user of another organization', async () => {
+        mockTarget(null);
+
+        await expect(
+          service.deleteOrganizationUser(actor, 'target-id'),
+        ).rejects.toBeInstanceOf(NotFoundException);
+        expect(repository.deleteByPk).not.toHaveBeenCalled();
+      });
     });
   });
 });

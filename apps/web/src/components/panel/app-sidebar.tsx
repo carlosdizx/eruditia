@@ -11,7 +11,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from '@/components/ui/sidebar';
-import { hasPermission } from '@/lib/auth/permissions';
+import { isGranted } from '@/lib/auth/permissions';
 import { NAV, type PanelKind } from './nav-config';
 import { NavMain } from './nav-main';
 import { NavUser, type SidebarUser } from './nav-user';
@@ -20,7 +20,8 @@ type AppSidebarProps = {
   panel: PanelKind;
   title: string;
   subtitle: string;
-  permissions: string[];
+  // Rol y permisos efectivos de /auth/me, para filtrar el menú.
+  access: { role: { name: string }; permissions: string[] };
   user: SidebarUser;
 };
 
@@ -29,12 +30,12 @@ export function AppSidebar({
   panel,
   title,
   subtitle,
-  permissions,
+  access,
   user,
 }: AppSidebarProps) {
   const { label, items } = NAV[panel];
   const visibleItems = items.filter(
-    (item) => !item.permission || hasPermission(permissions, item.permission),
+    (item) => !item.grant || isGranted(access, item.grant),
   );
 
   return (

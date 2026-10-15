@@ -1,7 +1,7 @@
 import { cache } from 'react';
 import { redirect } from 'next/navigation';
 import { authFetch } from '@/lib/api/auth-fetch';
-import { hasPermission, type Permission } from './permissions';
+import { isGranted, type Grant } from './permissions';
 import type { CurrentUser } from './types';
 
 export const ORG_HOME = '/perfil';
@@ -32,8 +32,8 @@ export async function requireSuperAdmin() {
   return user;
 }
 
-export async function requirePermission(permission: Permission) {
+export async function requireGrant(grant: Grant) {
   const user = await requireOrgUser();
-  if (!hasPermission(user.permissions, permission)) redirect(ORG_HOME);
+  if (!isGranted(user, grant)) redirect(ORG_HOME);
   return user;
 }

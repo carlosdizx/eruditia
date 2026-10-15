@@ -35,13 +35,17 @@ describe('route protection', () => {
     });
   });
 
-  it('GET /roles requires role:list', () => {
+  it('GET /roles requires role:list or a permission to create/edit users', () => {
     expect(
       metadataOf(RolesController, 'getRoles', AUTH_WITH_PERMISSIONS_KEY),
     ).toEqual({
       roles: [],
-      permissions: [PermissionEnum.ROLE_LIST],
-      mode: 'all',
+      permissions: [
+        PermissionEnum.ROLE_LIST,
+        PermissionEnum.USER_CREATE,
+        PermissionEnum.USER_UPDATE,
+      ],
+      mode: 'any',
     });
   });
 });

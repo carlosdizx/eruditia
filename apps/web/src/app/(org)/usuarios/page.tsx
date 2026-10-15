@@ -7,6 +7,7 @@ import { PanelContent, PanelHeader } from '@/components/panel/panel-header';
 import { Badge } from '@/components/ui/badge';
 import {
   Empty,
+  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
@@ -22,31 +23,40 @@ import {
 } from '@/components/ui/table';
 import { authFetch } from '@/lib/api/auth-fetch';
 import { DEFAULT_PAGE_SIZE, parsePage, type Paginated } from '@/lib/api/types';
-import { requirePermission } from '@/lib/auth/current-user';
-import { Permission } from '@/lib/auth/permissions';
+import { requireGrant } from '@/lib/auth/current-user';
+import { isGranted, USER_GRANTS } from '@/lib/auth/permissions';
+import { CreateUserDialog } from './_components/create-user-dialog';
+import { UserRowActions } from './_components/user-row-actions';
+import type { AssignableRole, OrganizationUser } from './types';
 
 export const metadata: Metadata = { title: 'Usuarios' };
-
-type OrganizationUser = {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  isActive: boolean;
-};
 
 async function UsersTable({
   searchParams,
 }: {
   searchParams: PageProps<'/usuarios'>['searchParams'];
 }) {
-  // Sin el permiso en su organización, no puede ver esta sección.
-  await requirePermission(Permission.USER_LIST);
+  // Sin el permiso (y el rol que exige la API) no puede ver esta sección.
+  const me = await requireGrant(USER_GRANTS.list);
+
+  const can = {
+    create: isGranted(me, USER_GRANTS.create),
+    update: isGranted(me, USER_GRANTS.update),
+    delete: isGranted(me, USER_GRANTS.delete),
+  };
 
   const page = parsePage((await searchParams).page);
-  const { data, meta } = await authFetch<Paginated<OrganizationUser>>(
-    `/users?page=${page}&pageSize=${DEFAULT_PAGE_SIZE}`,
-  );
+  const [{ data, meta }, roles] = await Promise.all([
+    authFetch<Paginated<OrganizationUser>>(
+      `/users?page=${page}&pageSize=${DEFAULT_PAGE_SIZE}`,
+    ),
+    // Los roles solo hacen falta para crear o editar.
+    can.create || can.update
+      ? authFetch<AssignableRole[]>('/roles')
+      : Promise.resolve([]),
+  ]);
+
+  const createButton = can.create && <CreateUserDialog roles={roles} />;
 
   if (!data.length)
     return (
@@ -60,36 +70,72 @@ async function UsersTable({
             Tu organización todavía no tiene usuarios registrados.
           </EmptyDescription>
         </EmptyHeader>
+        {createButton && <EmptyContent>{createButton}</EmptyContent>}
       </Empty>
     );
 
+  const showActions = can.update || can.delete;
+
   return (
     <>
+      {createButton && <div className="flex justify-end">{createButton}</div>}
       <div className="rounded-xl border">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="pl-4">Nombre</TableHead>
-              <TableHead>Correo</TableHead>
-              <TableHead className="pr-4 text-right">Estado</TableHead>
+              <TableHead className="hidden md:table-cell">Correo</TableHead>
+              <TableHead>Rol</TableHead>
+              <TableHead>Estado</TableHead>
+              {showActions && <TableHead className="w-12 pr-4" />}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell className="pl-4 font-medium">
-                  {user.firstName} {user.lastName}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {user.email}
-                </TableCell>
-                <TableCell className="pr-4 text-right">
-                  <Badge variant={user.isActive ? 'secondary' : 'outline'}>
-                    {user.isActive ? 'Activo' : 'Inactivo'}
-                  </Badge>
-                </TableCell>
-              </TableRow>
-            ))}
+            {data.map((user) => {
+              const isSelf = user.id === me.id;
+
+              return (
+                <TableRow key={user.id}>
+                  <TableCell className="pl-4">
+                    <div className="flex flex-col">
+                      <span className="font-medium">
+                        {user.firstName} {user.lastName}
+                        {isSelf && (
+                          <span className="text-muted-foreground ml-1.5 text-xs font-normal">
+                            (tú)
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-muted-foreground text-xs md:hidden">
+                        {user.email}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground hidden md:table-cell">
+                    {user.email}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{user.role?.labelEs ?? '—'}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={user.isActive ? 'secondary' : 'outline'}>
+                      {user.isActive ? 'Activo' : 'Inactivo'}
+                    </Badge>
+                  </TableCell>
+                  {showActions && (
+                    <TableCell className="pr-4 text-right">
+                      <UserRowActions
+                        user={user}
+                        roles={roles}
+                        isSelf={isSelf}
+                        canUpdate={can.update}
+                        canDelete={can.delete}
+                      />
+                    </TableCell>
+                  )}
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>

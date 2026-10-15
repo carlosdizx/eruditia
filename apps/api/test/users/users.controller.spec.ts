@@ -4,7 +4,10 @@ import RoleNameEnum from '@common/enums/role-name.enum';
 import PaginationDto from '@common/dto/pagination.dto';
 import { IS_PUBLIC_KEY } from '@auth/decorators/public.decorator';
 import { AUTH_WITH_PERMISSIONS_KEY } from '@auth/decorators/auth-with-permissions.decorator';
+import RoleModel from '@database/models/role.model';
 import UsersController from '../../src/users/users.controller';
+import CreateOrganizationUserDto from '../../src/users/dto/create-organization-user.dto';
+import UpdateOrganizationUserDto from '../../src/users/dto/update-organization-user.dto';
 import UsersService from '../../src/users/users.service';
 import authContextFixture from '../auth/fixtures/auth-context.fixture';
 
@@ -19,6 +22,9 @@ describe('UsersController', () => {
   let usersService: {
     createSuperAdmin: jest.Mock;
     findAllPaginated: jest.Mock;
+    createOrganizationUser: jest.Mock;
+    updateOrganizationUser: jest.Mock;
+    deleteOrganizationUser: jest.Mock;
   };
   let controller: UsersController;
 
@@ -26,6 +32,9 @@ describe('UsersController', () => {
     usersService = {
       createSuperAdmin: jest.fn().mockResolvedValue(undefined),
       findAllPaginated: jest.fn().mockResolvedValue({ rows: [], count: 0 }),
+      createOrganizationUser: jest.fn().mockResolvedValue({ id: 'new-id' }),
+      updateOrganizationUser: jest.fn().mockResolvedValue({ id: 'target-id' }),
+      deleteOrganizationUser: jest.fn().mockResolvedValue(undefined),
     };
     controller = new UsersController(usersService as unknown as UsersService);
   });
@@ -65,7 +74,7 @@ describe('UsersController', () => {
       expect(handlerMetadata('listUsers', IS_PUBLIC_KEY)).toBeUndefined();
     });
 
-    it('lists only the users of the current organization with public attributes', async () => {
+    it('lists only the users of the current organization with public attributes and role', async () => {
       await expect(controller.listUsers(pagination, auth)).resolves.toEqual({
         rows: [],
         count: 0,
@@ -73,7 +82,12 @@ describe('UsersController', () => {
       expect(usersService.findAllPaginated).toHaveBeenCalledWith(
         pagination,
         { organizationId: 'org-id' },
-        { attributes: ['id', 'firstName', 'lastName', 'email', 'isActive'] },
+        {
+          attributes: ['id', 'firstName', 'lastName', 'email', 'isActive'],
+          include: [
+            { model: RoleModel, attributes: ['id', 'name', 'labelEs'] },
+          ],
+        },
       );
     });
 
@@ -82,6 +96,65 @@ describe('UsersController', () => {
       usersService.findAllPaginated.mockRejectedValue(error);
 
       await expect(controller.listUsers(pagination, auth)).rejects.toBe(error);
+    });
+  });
+
+  describe.each([
+    ['createUser', PermissionEnum.USER_CREATE],
+    ['updateUser', PermissionEnum.USER_UPDATE],
+    ['deleteUser', PermissionEnum.USER_DELETE],
+  ])('%s', (handler, permission) => {
+    it(`requires the ADMIN role and the ${permission} permission`, () => {
+      expect(handlerMetadata(handler, AUTH_WITH_PERMISSIONS_KEY)).toEqual({
+        roles: [RoleNameEnum.ADMIN],
+        permissions: [permission],
+        mode: 'all',
+      });
+      expect(handlerMetadata(handler, IS_PUBLIC_KEY)).toBeUndefined();
+    });
+  });
+
+  describe('user management', () => {
+    const auth = authContextFixture();
+
+    it('creates the user in the organization of the current admin', async () => {
+      const dto: CreateOrganizationUserDto = {
+        firstName: 'Ana',
+        lastName: 'Lopez',
+        email: 'ana@example.com',
+        roleId: 'role-id',
+      };
+
+      await expect(controller.createUser(dto, auth)).resolves.toEqual({
+        id: 'new-id',
+      });
+      expect(usersService.createOrganizationUser).toHaveBeenCalledWith(
+        auth,
+        dto,
+      );
+    });
+
+    it('updates a user of the organization', async () => {
+      const dto: UpdateOrganizationUserDto = { isActive: false };
+
+      await expect(
+        controller.updateUser('target-id', dto, auth),
+      ).resolves.toEqual({ id: 'target-id' });
+      expect(usersService.updateOrganizationUser).toHaveBeenCalledWith(
+        auth,
+        'target-id',
+        dto,
+      );
+    });
+
+    it('deletes a user of the organization and returns nothing', async () => {
+      await expect(
+        controller.deleteUser('target-id', auth),
+      ).resolves.toBeUndefined();
+      expect(usersService.deleteOrganizationUser).toHaveBeenCalledWith(
+        auth,
+        'target-id',
+      );
     });
   });
 });

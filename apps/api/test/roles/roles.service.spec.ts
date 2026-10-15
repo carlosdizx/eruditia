@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import RoleCategoryEnum from '@common/enums/role-category.enum';
 import RolesService from '../../src/roles/roles.service';
 import RoleRepository from '../../src/roles/role.repository';
 
@@ -17,11 +18,12 @@ describe('RolesService', () => {
   });
 
   describe('listRoles', () => {
-    it('lists every role exposing only id, label and labelEs', async () => {
+    it('lists only organization (client) roles with their public fields', async () => {
       await expect(service.listRoles()).resolves.toBe(roles);
-      expect(repository.findAll).toHaveBeenCalledWith(undefined, {
-        attributes: ['id', 'label', 'labelEs'],
-      });
+      expect(repository.findAll).toHaveBeenCalledWith(
+        { category: RoleCategoryEnum.CLIENT },
+        { attributes: ['id', 'name', 'label', 'labelEs'] },
+      );
     });
   });
 });

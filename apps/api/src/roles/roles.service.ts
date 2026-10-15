@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import RoleModel from '@database/models/role.model';
+import RoleCategoryEnum from '@common/enums/role-category.enum';
 import CrudService from '@database/services/crud.service';
 import RoleRepository from './role.repository';
 
@@ -12,7 +13,12 @@ export default class RolesService extends CrudService<
     super(repository);
   }
 
+  // Solo los asignables dentro de una organización: los de sistema (core)
+  // no se ofrecen.
   public listRoles = async () => {
-    return this.findAll(undefined, { attributes: ['id', 'label', 'labelEs'] });
+    return this.findAll(
+      { category: RoleCategoryEnum.CLIENT },
+      { attributes: ['id', 'name', 'label', 'labelEs'] },
+    );
   };
 }

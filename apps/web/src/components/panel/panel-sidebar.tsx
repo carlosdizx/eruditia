@@ -16,6 +16,12 @@ const toSidebarUser = (user: CurrentUser, profileUrl: string): SidebarUser => ({
   profileUrl,
 });
 
+// Solo lo necesario para filtrar el menú en el cliente.
+const toAccess = (user: CurrentUser) => ({
+  role: { name: user.role.name },
+  permissions: user.permissions,
+});
+
 // Leen la sesión, así que se renderizan dentro de <Suspense> en cada layout.
 export async function OrgSidebar() {
   const user = await requireOrgUser();
@@ -25,7 +31,7 @@ export async function OrgSidebar() {
       panel="org"
       title={user.organization?.name ?? 'Eruditia'}
       subtitle={user.role.labelEs}
-      permissions={user.permissions}
+      access={toAccess(user)}
       user={toSidebarUser(user, ORG_HOME)}
     />
   );
@@ -39,7 +45,7 @@ export async function AdminSidebar() {
       panel="admin"
       title="Eruditia"
       subtitle="Administración del sistema"
-      permissions={user.permissions}
+      access={toAccess(user)}
       user={toSidebarUser(user, ADMIN_HOME)}
     />
   );

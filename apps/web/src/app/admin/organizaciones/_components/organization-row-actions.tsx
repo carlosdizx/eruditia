@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import {
   ArchiveRestoreIcon,
+  KeyRoundIcon,
   MoreHorizontalIcon,
   PencilIcon,
   Trash2Icon,
@@ -94,6 +95,12 @@ export function OrganizationRowActions({
           >
             <PencilIcon />
             Editar
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            render={<Link href={`/admin/organizaciones/${id}/permisos`} />}
+          >
+            <KeyRoundIcon />
+            Permisos
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem

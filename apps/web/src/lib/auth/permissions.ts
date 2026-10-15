@@ -21,3 +21,22 @@ export const hasPermission = (
   permissions: readonly string[],
   permission: Permission,
 ) => permissions.includes(permission);
+
+// Lo que exige un endpoint: el permiso de la organización y, si la API lo pide,
+// además un rol concreto.
+export type Grant = { permission: Permission; role?: string };
+
+export const isGranted = (
+  user: { role: { name: string }; permissions: readonly string[] },
+  { permission, role }: Grant,
+) =>
+  (!role || user.role.name === role) &&
+  hasPermission(user.permissions, permission);
+
+// Espejo de los @AuthWithPermissions de UsersController.
+export const USER_GRANTS = {
+  list: { permission: Permission.USER_LIST, role: 'ADMIN' },
+  create: { permission: Permission.USER_CREATE, role: 'ADMIN' },
+  update: { permission: Permission.USER_UPDATE, role: 'ADMIN' },
+  delete: { permission: Permission.USER_DELETE, role: 'ADMIN' },
+} satisfies Record<string, Grant>;

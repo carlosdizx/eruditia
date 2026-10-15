@@ -7,14 +7,14 @@ import {
   UsersIcon,
   type LucideIcon,
 } from 'lucide-react';
-import { Permission } from '@/lib/auth/permissions';
+import { USER_GRANTS, type Grant } from '@/lib/auth/permissions';
 
 export type NavItem = {
   title: string;
   url: string;
   icon: LucideIcon;
-  // Si se define, el item solo aparece cuando la organización tiene el permiso.
-  permission?: Permission;
+  // Si se define, el item solo aparece cuando el usuario lo cumple.
+  grant?: Grant;
 };
 
 export type PanelKind = 'org' | 'admin';
@@ -28,7 +28,7 @@ export const NAV: Record<PanelKind, { label: string; items: NavItem[] }> = {
         title: 'Usuarios',
         url: '/usuarios',
         icon: UsersIcon,
-        permission: Permission.USER_LIST,
+        grant: USER_GRANTS.list,
       },
     ],
   },
