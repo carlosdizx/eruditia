@@ -12,6 +12,11 @@ const permissionDescriptions: Record<PermissionEnum, string> = {
   [PermissionEnum.STUDENT_UPDATE]:
     'Editar estudiantes y cambiar su estado en la organización',
   [PermissionEnum.STUDENT_IMPORT]: 'Importar estudiantes desde un archivo CSV',
+  [PermissionEnum.ACADEMIC_YEAR_LIST]: 'Listar años lectivos y sus periodos',
+  [PermissionEnum.ACADEMIC_YEAR_CREATE]: 'Crear años lectivos con sus periodos',
+  [PermissionEnum.ACADEMIC_YEAR_UPDATE]:
+    'Editar años lectivos, sus periodos y abrir o cerrar el ingreso de notas',
+  [PermissionEnum.ACADEMIC_YEAR_DELETE]: 'Eliminar años lectivos',
 };
 
 export interface PermissionCatalogEntry {

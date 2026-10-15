@@ -2,6 +2,7 @@
 
 import {
   Building2Icon,
+  CalendarRangeIcon,
   GraduationCapIcon,
   ShieldCheckIcon,
   UserIcon,
@@ -9,6 +10,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import {
+  ACADEMIC_YEAR_GRANTS,
   STUDENT_GRANTS,
   USER_GRANTS,
   type Grant,
@@ -40,6 +42,12 @@ export const NAV: Record<PanelKind, { label: string; items: NavItem[] }> = {
         url: '/estudiantes',
         icon: GraduationCapIcon,
         grant: STUDENT_GRANTS.list,
+      },
+      {
+        title: 'Años lectivos',
+        url: '/anios-lectivos',
+        icon: CalendarRangeIcon,
+        grant: ACADEMIC_YEAR_GRANTS.list,
       },
     ],
   },

@@ -18,11 +18,12 @@ import {
 import type { StudentsImportSummary } from './interfaces/students-import-summary.interface';
 import StudentAccessService from './student-access.service';
 import { generateAccessPin } from './utils/access-pin.util';
+import organizationOf, {
+  type OrganizationActor,
+} from '@common/utils/organization-of.util';
 import {
-  organizationOf,
   STUDENT_USER_INCLUDE,
   toPublicStudent,
-  type OrganizationActor,
 } from './utils/public-student.util';
 
 const SEARCHABLE_FIELDS = [

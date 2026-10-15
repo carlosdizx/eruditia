@@ -11,6 +11,7 @@ import EmailModule from './email/email.module';
 import AuthModule from './auth/auth.module';
 import PermissionsModule from './permissions/permissions.module';
 import StudentsModule from './students/students.module';
+import AcademicYearsModule from './academic-years/academic-years.module';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -33,6 +34,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     EmailModule,
     PermissionsModule,
     StudentsModule,
+    AcademicYearsModule,
     AuthModule,
   ],
 })

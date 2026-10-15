@@ -9,6 +9,10 @@ export const Permission = {
   STUDENT_CREATE: 'student:create',
   STUDENT_UPDATE: 'student:update',
   STUDENT_IMPORT: 'student:import',
+  ACADEMIC_YEAR_LIST: 'academic-year:list',
+  ACADEMIC_YEAR_CREATE: 'academic-year:create',
+  ACADEMIC_YEAR_UPDATE: 'academic-year:update',
+  ACADEMIC_YEAR_DELETE: 'academic-year:delete',
 } as const;
 
 export type Permission = (typeof Permission)[keyof typeof Permission];
@@ -23,6 +27,10 @@ export const PERMISSION_LABELS: Record<string, string> = {
   [Permission.STUDENT_CREATE]: 'Matricular estudiantes',
   [Permission.STUDENT_UPDATE]: 'Editar estudiantes',
   [Permission.STUDENT_IMPORT]: 'Importar estudiantes (CSV)',
+  [Permission.ACADEMIC_YEAR_LIST]: 'Ver años lectivos',
+  [Permission.ACADEMIC_YEAR_CREATE]: 'Crear años lectivos',
+  [Permission.ACADEMIC_YEAR_UPDATE]: 'Editar años lectivos y periodos',
+  [Permission.ACADEMIC_YEAR_DELETE]: 'Eliminar años lectivos',
 };
 
 export const hasPermission = (
@@ -55,4 +63,12 @@ export const STUDENT_GRANTS = {
   create: { permission: Permission.STUDENT_CREATE, role: 'ADMIN' },
   update: { permission: Permission.STUDENT_UPDATE, role: 'ADMIN' },
   import: { permission: Permission.STUDENT_IMPORT, role: 'ADMIN' },
+} satisfies Record<string, Grant>;
+
+// Espejo de los @AuthWithPermissions de AcademicYearsController.
+export const ACADEMIC_YEAR_GRANTS = {
+  list: { permission: Permission.ACADEMIC_YEAR_LIST, role: 'ADMIN' },
+  create: { permission: Permission.ACADEMIC_YEAR_CREATE, role: 'ADMIN' },
+  update: { permission: Permission.ACADEMIC_YEAR_UPDATE, role: 'ADMIN' },
+  delete: { permission: Permission.ACADEMIC_YEAR_DELETE, role: 'ADMIN' },
 } satisfies Record<string, Grant>;
