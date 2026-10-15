@@ -187,7 +187,7 @@ function AcademicYearsSkeleton() {
 export default function AcademicYearsPage() {
   return (
     <>
-      <PanelHeader crumbs={[{ label: 'Años lectivos' }]} />
+      <PanelHeader crumbs={[{ label: 'Años lectivos' }]} yearSelector />
       <PanelContent>
         <Suspense fallback={<AcademicYearsSkeleton />}>
           <AcademicYears />

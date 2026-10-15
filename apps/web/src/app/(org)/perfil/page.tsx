@@ -16,7 +16,7 @@ async function Profile() {
 export default function ProfilePage() {
   return (
     <>
-      <PanelHeader crumbs={[{ label: 'Perfil' }]} />
+      <PanelHeader crumbs={[{ label: 'Perfil' }]} yearSelector />
       <PanelContent>
         <Suspense fallback={<ProfileSkeleton />}>
           <Profile />

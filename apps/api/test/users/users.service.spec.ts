@@ -40,6 +40,7 @@ const mockedHashPassword = jest.mocked(hashPassword);
 describe('UsersService', () => {
   let repository: {
     findOne: jest.Mock;
+    findAll: jest.Mock;
     create: jest.Mock;
     updateByPk: jest.Mock;
     deleteByPk: jest.Mock;
@@ -70,6 +71,7 @@ describe('UsersService', () => {
 
     repository = {
       findOne: jest.fn().mockResolvedValue(null),
+      findAll: jest.fn().mockResolvedValue([]),
       create: jest.fn().mockResolvedValue(createdUser),
       updateByPk: jest.fn(),
       deleteByPk: jest.fn().mockResolvedValue({ id: 'target-id' }),
@@ -251,6 +253,43 @@ describe('UsersService', () => {
       await expect(
         service.registerUserToOrganization('org-id', dto, transaction),
       ).rejects.toBeInstanceOf(ConflictException);
+    });
+  });
+
+  describe('findOrganizationTeachers', () => {
+    beforeEach(() => {
+      rolesService.findOne.mockResolvedValue({ id: 'teacher-role-id' });
+    });
+
+    it('lists the active TEACHER users of the organization by name', async () => {
+      await service.findOrganizationTeachers('org-id');
+
+      expect(rolesService.findOne).toHaveBeenCalledWith(
+        { name: RoleNameEnum.TEACHER },
+        true,
+        { attributes: ['id'] },
+      );
+      expect(repository.findAll).toHaveBeenCalledWith(
+        { organizationId: 'org-id', roleId: 'teacher-role-id', isActive: true },
+        {
+          attributes: ['id', 'firstName', 'lastName', 'email'],
+          order: [
+            ['lastName', 'ASC'],
+            ['firstName', 'ASC'],
+          ],
+        },
+      );
+    });
+
+    it('narrows the search to the given ids', async () => {
+      await service.findOrganizationTeachers('org-id', ['teacher-id']);
+
+      expect(repository.findAll.mock.calls[0][0]).toEqual({
+        organizationId: 'org-id',
+        roleId: 'teacher-role-id',
+        isActive: true,
+        id: ['teacher-id'],
+      });
     });
   });
 

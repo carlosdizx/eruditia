@@ -113,7 +113,7 @@ export default class ClassroomsService extends CrudService<
     classroomId: string,
   ) =>
     (await this.findOne({ id: classroomId, organizationId }, true, {
-      attributes: ['id', 'academicYearId'],
+      attributes: ['id', 'academicYearId', 'homeroomTeacherId'],
     }))!;
 
   public listClassrooms = async (
@@ -171,7 +171,11 @@ export default class ClassroomsService extends CrudService<
     await this.assertEditableYear(organizationId, classroom.academicYearId);
     if (dto.gradeLevelId)
       await this.assertGradeLevel(organizationId, dto.gradeLevelId);
-    if (dto.homeroomTeacherId)
+    // Si el director no cambia no se revalida (pudo quedar inactivo).
+    if (
+      dto.homeroomTeacherId &&
+      dto.homeroomTeacherId !== classroom.homeroomTeacherId
+    )
       await this.assertTeacher(organizationId, dto.homeroomTeacherId);
     if (dto.name)
       await this.assertNameAvailable(

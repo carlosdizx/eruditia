@@ -164,7 +164,7 @@ async function GradeLevelsTable() {
 export default function GradeLevelsPage() {
   return (
     <>
-      <PanelHeader crumbs={[{ label: 'Grados' }]} />
+      <PanelHeader crumbs={[{ label: 'Grados' }]} yearSelector />
       <PanelContent>
         <Suspense fallback={<TableSkeleton />}>
           <GradeLevelsTable />
