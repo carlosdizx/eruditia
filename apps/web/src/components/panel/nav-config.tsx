@@ -3,6 +3,7 @@
 import {
   Building2Icon,
   CalendarRangeIcon,
+  DoorOpenIcon,
   LayersIcon,
   GraduationCapIcon,
   ShieldCheckIcon,
@@ -12,6 +13,7 @@ import {
 } from 'lucide-react';
 import {
   ACADEMIC_YEAR_GRANTS,
+  CLASSROOM_GRANTS,
   GRADE_LEVEL_GRANTS,
   STUDENT_GRANTS,
   USER_GRANTS,
@@ -56,6 +58,12 @@ export const NAV: Record<PanelKind, { label: string; items: NavItem[] }> = {
         url: '/grados',
         icon: LayersIcon,
         grant: GRADE_LEVEL_GRANTS.list,
+      },
+      {
+        title: 'Salones',
+        url: '/salones',
+        icon: DoorOpenIcon,
+        grant: CLASSROOM_GRANTS.list,
       },
     ],
   },

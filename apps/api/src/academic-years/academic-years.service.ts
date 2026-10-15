@@ -13,6 +13,8 @@ import organizationOf, {
 } from '@common/utils/organization-of.util';
 import AcademicYearRepository from './repositories/academic-year.repository';
 import AcademicPeriodRepository from './repositories/academic-period.repository';
+import ClassroomRepository from '../classrooms/classroom.repository';
+import { ACADEMIC_YEAR_HAS_CLASSROOMS_MESSAGE } from '../classrooms/constants/classroom-messages.constant';
 import CreateAcademicYearDto from './dto/create-academic-year.dto';
 import UpdateAcademicYearDto from './dto/update-academic-year.dto';
 import SetAcademicPeriodsDto from './dto/set-academic-periods.dto';
@@ -58,6 +60,7 @@ export default class AcademicYearsService extends CrudService<
   constructor(
     protected readonly repository: AcademicYearRepository,
     private readonly periodRepository: AcademicPeriodRepository,
+    private readonly classroomRepository: ClassroomRepository,
   ) {
     super(repository);
   }
@@ -279,6 +282,14 @@ export default class AcademicYearsService extends CrudService<
   ) => {
     const year = await this.findOwnYear(actor, yearId);
     if (year.isActive) throw new ConflictException(ACTIVE_YEAR_DELETE_MESSAGE);
+
+    const classroom = await this.classroomRepository.findOne(
+      { academicYearId: year.id },
+      false,
+      { attributes: ['id'] },
+    );
+    if (classroom)
+      throw new ConflictException(ACADEMIC_YEAR_HAS_CLASSROOMS_MESSAGE);
 
     await this.transaction(async (transaction) => {
       await this.periodRepository.deleteOthers(year.id, [], transaction);

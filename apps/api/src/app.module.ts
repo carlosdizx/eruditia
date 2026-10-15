@@ -13,6 +13,7 @@ import PermissionsModule from './permissions/permissions.module';
 import StudentsModule from './students/students.module';
 import AcademicYearsModule from './academic-years/academic-years.module';
 import GradeLevelsModule from './grade-levels/grade-levels.module';
+import ClassroomsModule from './classrooms/classrooms.module';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -37,6 +38,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     StudentsModule,
     AcademicYearsModule,
     GradeLevelsModule,
+    ClassroomsModule,
     AuthModule,
   ],
 })

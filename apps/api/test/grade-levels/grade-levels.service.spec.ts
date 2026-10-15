@@ -3,6 +3,8 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Op, Transaction } from 'sequelize';
 import GradeLevelsService from '../../src/grade-levels/grade-levels.service';
 import GradeLevelRepository from '../../src/grade-levels/grade-level.repository';
+import ClassroomRepository from '../../src/classrooms/classroom.repository';
+import { GRADE_LEVEL_HAS_CLASSROOMS_MESSAGE } from '../../src/classrooms/constants/classroom-messages.constant';
 import STANDARD_GRADE_LEVELS from '../../src/grade-levels/constants/standard-grade-levels.constant';
 import { GRADE_LEVEL_NAME_IN_USE_MESSAGE } from '../../src/grade-levels/constants/grade-level-messages.constant';
 
@@ -16,6 +18,7 @@ describe('GradeLevelsService', () => {
     deleteByPk: jest.Mock;
     transaction: jest.Mock;
   };
+  let classroomRepository: { findOne: jest.Mock };
   let service: GradeLevelsService;
 
   const transaction = { id: 'tx' } as unknown as Transaction;
@@ -38,8 +41,10 @@ describe('GradeLevelsService', () => {
         run(transaction),
       ),
     };
+    classroomRepository = { findOne: jest.fn().mockResolvedValue(null) };
     service = new GradeLevelsService(
       repository as unknown as GradeLevelRepository,
+      classroomRepository as unknown as ClassroomRepository,
     );
   });
 
@@ -147,7 +152,22 @@ describe('GradeLevelsService', () => {
       true,
       { attributes: ['id'] },
     );
+    expect(classroomRepository.findOne).toHaveBeenCalledWith(
+      { gradeLevelId: 'grade-id' },
+      false,
+      { attributes: ['id'] },
+    );
     expect(repository.deleteByPk).toHaveBeenCalledWith('grade-id', undefined);
+  });
+
+  it('does not delete a grade with classrooms', async () => {
+    repository.findOne.mockResolvedValue({ id: 'grade-id' });
+    classroomRepository.findOne.mockResolvedValue({ id: 'classroom-id' });
+
+    await expect(service.deleteGradeLevel(actor, 'grade-id')).rejects.toThrow(
+      GRADE_LEVEL_HAS_CLASSROOMS_MESSAGE,
+    );
+    expect(repository.deleteByPk).not.toHaveBeenCalled();
   });
 
   describe('loadStandardGradeLevels', () => {

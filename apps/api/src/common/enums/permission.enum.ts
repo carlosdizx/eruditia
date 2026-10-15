@@ -22,6 +22,11 @@ enum PermissionEnum {
   GRADE_LEVEL_CREATE = 'grade-level:create',
   GRADE_LEVEL_UPDATE = 'grade-level:update',
   GRADE_LEVEL_DELETE = 'grade-level:delete',
+
+  CLASSROOM_LIST = 'classroom:list',
+  CLASSROOM_CREATE = 'classroom:create',
+  CLASSROOM_UPDATE = 'classroom:update',
+  CLASSROOM_DELETE = 'classroom:delete',
 }
 
 export default PermissionEnum;

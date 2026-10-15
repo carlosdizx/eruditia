@@ -221,6 +221,35 @@ export default class UsersService extends CrudService<
     await this.deleteByPk(user.id);
   };
 
+  // Profesores activos de la organización; con ids, solo esos (para validar
+  // asignaciones como director de grupo o docente de una materia).
+  public findOrganizationTeachers = async (
+    organizationId: string,
+    ids?: string[],
+  ) => {
+    const role = (await this.rolesService.findOne(
+      { name: RoleNameEnum.TEACHER },
+      true,
+      { attributes: ['id'] },
+    ))!;
+
+    return await this.findAll(
+      {
+        organizationId,
+        roleId: role.id,
+        isActive: true,
+        ...(ids && { id: ids }),
+      },
+      {
+        attributes: ['id', 'firstName', 'lastName', 'email'],
+        order: [
+          ['lastName', 'ASC'],
+          ['firstName', 'ASC'],
+        ],
+      },
+    );
+  };
+
   public createSuperAdmin = async () => {
     const email = this.configService.get('SUPER_ADMIN_EMAIL', { infer: true });
 

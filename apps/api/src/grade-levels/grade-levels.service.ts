@@ -6,6 +6,8 @@ import organizationOf, {
   type OrganizationActor,
 } from '@common/utils/organization-of.util';
 import GradeLevelRepository from './grade-level.repository';
+import ClassroomRepository from '../classrooms/classroom.repository';
+import { GRADE_LEVEL_HAS_CLASSROOMS_MESSAGE } from '../classrooms/constants/classroom-messages.constant';
 import CreateGradeLevelDto from './dto/create-grade-level.dto';
 import UpdateGradeLevelDto from './dto/update-grade-level.dto';
 import STANDARD_GRADE_LEVELS from './constants/standard-grade-levels.constant';
@@ -19,7 +21,10 @@ export default class GradeLevelsService extends CrudService<
   GradeLevelModel,
   GradeLevelRepository
 > {
-  constructor(protected readonly repository: GradeLevelRepository) {
+  constructor(
+    protected readonly repository: GradeLevelRepository,
+    private readonly classroomRepository: ClassroomRepository,
+  ) {
     super(repository);
   }
 
@@ -94,6 +99,15 @@ export default class GradeLevelsService extends CrudService<
       true,
       { attributes: ['id'] },
     );
+
+    const classroom = await this.classroomRepository.findOne(
+      { gradeLevelId },
+      false,
+      { attributes: ['id'] },
+    );
+    if (classroom)
+      throw new ConflictException(GRADE_LEVEL_HAS_CLASSROOMS_MESSAGE);
+
     await this.deleteByPk(gradeLevelId);
   };
 

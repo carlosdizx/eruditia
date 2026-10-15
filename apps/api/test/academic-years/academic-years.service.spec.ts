@@ -11,6 +11,8 @@ import AcademicPeriodModel from '@database/models/academic-period.model';
 import AcademicYearsService from '../../src/academic-years/academic-years.service';
 import AcademicYearRepository from '../../src/academic-years/repositories/academic-year.repository';
 import AcademicPeriodRepository from '../../src/academic-years/repositories/academic-period.repository';
+import ClassroomRepository from '../../src/classrooms/classroom.repository';
+import { ACADEMIC_YEAR_HAS_CLASSROOMS_MESSAGE } from '../../src/classrooms/constants/classroom-messages.constant';
 import {
   ACTIVE_YEAR_DELETE_MESSAGE,
   ACADEMIC_YEAR_NAME_IN_USE_MESSAGE,
@@ -37,6 +39,7 @@ describe('AcademicYearsService', () => {
     closeGradingOfYear: jest.Mock;
     deleteOthers: jest.Mock;
   };
+  let classroomRepository: { findOne: jest.Mock };
   let service: AcademicYearsService;
 
   const transaction = { id: 'tx' } as unknown as Transaction;
@@ -94,9 +97,11 @@ describe('AcademicYearsService', () => {
       closeGradingOfYear: jest.fn().mockResolvedValue(undefined),
       deleteOthers: jest.fn().mockResolvedValue(undefined),
     };
+    classroomRepository = { findOne: jest.fn().mockResolvedValue(null) };
     service = new AcademicYearsService(
       repository as unknown as AcademicYearRepository,
       periodRepository as unknown as AcademicPeriodRepository,
+      classroomRepository as unknown as ClassroomRepository,
     );
   });
 
@@ -394,6 +399,21 @@ describe('AcademicYearsService', () => {
       expect(repository.deleteByPk).toHaveBeenCalledWith('year-id', {
         transaction,
       });
+    });
+
+    it('does not delete a year with classrooms', async () => {
+      mockYear(year({ isActive: false }));
+      classroomRepository.findOne.mockResolvedValue({ id: 'classroom-id' });
+
+      await expect(
+        service.deleteAcademicYear(actor, 'year-id'),
+      ).rejects.toThrow(ACADEMIC_YEAR_HAS_CLASSROOMS_MESSAGE);
+      expect(classroomRepository.findOne).toHaveBeenCalledWith(
+        { academicYearId: 'year-id' },
+        false,
+        { attributes: ['id'] },
+      );
+      expect(repository.deleteByPk).not.toHaveBeenCalled();
     });
 
     it('does not delete the active year', async () => {

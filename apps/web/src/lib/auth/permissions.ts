@@ -17,6 +17,10 @@ export const Permission = {
   GRADE_LEVEL_CREATE: 'grade-level:create',
   GRADE_LEVEL_UPDATE: 'grade-level:update',
   GRADE_LEVEL_DELETE: 'grade-level:delete',
+  CLASSROOM_LIST: 'classroom:list',
+  CLASSROOM_CREATE: 'classroom:create',
+  CLASSROOM_UPDATE: 'classroom:update',
+  CLASSROOM_DELETE: 'classroom:delete',
 } as const;
 
 export type Permission = (typeof Permission)[keyof typeof Permission];
@@ -39,6 +43,10 @@ export const PERMISSION_LABELS: Record<string, string> = {
   [Permission.GRADE_LEVEL_CREATE]: 'Crear grados',
   [Permission.GRADE_LEVEL_UPDATE]: 'Editar grados',
   [Permission.GRADE_LEVEL_DELETE]: 'Eliminar grados',
+  [Permission.CLASSROOM_LIST]: 'Ver salones',
+  [Permission.CLASSROOM_CREATE]: 'Crear salones',
+  [Permission.CLASSROOM_UPDATE]: 'Editar salones',
+  [Permission.CLASSROOM_DELETE]: 'Eliminar salones',
 };
 
 export const hasPermission = (
@@ -87,4 +95,12 @@ export const GRADE_LEVEL_GRANTS = {
   create: { permission: Permission.GRADE_LEVEL_CREATE, role: 'ADMIN' },
   update: { permission: Permission.GRADE_LEVEL_UPDATE, role: 'ADMIN' },
   delete: { permission: Permission.GRADE_LEVEL_DELETE, role: 'ADMIN' },
+} satisfies Record<string, Grant>;
+
+// Espejo de los @AuthWithPermissions de ClassroomsController.
+export const CLASSROOM_GRANTS = {
+  list: { permission: Permission.CLASSROOM_LIST, role: 'ADMIN' },
+  create: { permission: Permission.CLASSROOM_CREATE, role: 'ADMIN' },
+  update: { permission: Permission.CLASSROOM_UPDATE, role: 'ADMIN' },
+  delete: { permission: Permission.CLASSROOM_DELETE, role: 'ADMIN' },
 } satisfies Record<string, Grant>;

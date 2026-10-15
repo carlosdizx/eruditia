@@ -22,6 +22,11 @@ const permissionDescriptions: Record<PermissionEnum, string> = {
     'Crear grados escolares y cargar la plantilla estándar',
   [PermissionEnum.GRADE_LEVEL_UPDATE]: 'Editar grados escolares',
   [PermissionEnum.GRADE_LEVEL_DELETE]: 'Eliminar grados escolares',
+  [PermissionEnum.CLASSROOM_LIST]: 'Listar salones por año lectivo',
+  [PermissionEnum.CLASSROOM_CREATE]:
+    'Crear salones y asignar director de grupo',
+  [PermissionEnum.CLASSROOM_UPDATE]: 'Editar salones y su director de grupo',
+  [PermissionEnum.CLASSROOM_DELETE]: 'Eliminar salones',
 };
 
 export interface PermissionCatalogEntry {
