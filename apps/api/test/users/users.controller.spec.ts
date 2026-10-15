@@ -83,7 +83,15 @@ describe('UsersController', () => {
         pagination,
         { organizationId: 'org-id' },
         {
-          attributes: ['id', 'firstName', 'lastName', 'email', 'isActive'],
+          attributes: [
+            'id',
+            'firstName',
+            'lastName',
+            'email',
+            'documentNumber',
+            'phone',
+            'isActive',
+          ],
           include: [
             { model: RoleModel, attributes: ['id', 'name', 'labelEs'] },
           ],

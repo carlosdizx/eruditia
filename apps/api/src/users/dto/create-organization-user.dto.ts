@@ -1,10 +1,18 @@
 import {
   IsEmail,
   IsNotEmpty,
+  IsOptional,
   IsString,
   IsUUID,
+  Matches,
   MaxLength,
 } from 'class-validator';
+import {
+  DOCUMENT_NUMBER_PATTERN,
+  INVALID_DOCUMENT_NUMBER_MESSAGE,
+  INVALID_PHONE_MESSAGE,
+  PHONE_PATTERN,
+} from '../constants/user-validation.constant';
 
 // Alta de un usuario por el admin de su organización: a diferencia de
 // CreateUserDto, el rol es obligatorio (no hay uno por defecto).
@@ -24,4 +32,14 @@ export default class CreateOrganizationUserDto {
 
   @IsUUID()
   roleId: string;
+
+  @IsOptional()
+  @Matches(DOCUMENT_NUMBER_PATTERN, {
+    message: INVALID_DOCUMENT_NUMBER_MESSAGE,
+  })
+  documentNumber?: string;
+
+  @IsOptional()
+  @Matches(PHONE_PATTERN, { message: INVALID_PHONE_MESSAGE })
+  phone?: string;
 }

@@ -117,6 +117,34 @@ export function UserForm({
           </FieldDescription>
         </Field>
 
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field>
+            <FieldLabel htmlFor="documentNumber">Documento</FieldLabel>
+            <Input
+              id="documentNumber"
+              name="documentNumber"
+              maxLength={30}
+              pattern="[A-Za-z0-9\-]{3,30}"
+              title="Solo letras, números y guiones"
+              placeholder="Opcional"
+              defaultValue={values.documentNumber ?? ''}
+            />
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="phone">Teléfono</FieldLabel>
+            <Input
+              id="phone"
+              name="phone"
+              type="tel"
+              maxLength={20}
+              pattern="\+?[0-9 ]{7,20}"
+              title="Solo números, espacios y un + inicial"
+              placeholder="Opcional"
+              defaultValue={values.phone ?? ''}
+            />
+          </Field>
+        </div>
+
         <Field>
           <FieldLabel htmlFor="roleId">Rol</FieldLabel>
           <Select

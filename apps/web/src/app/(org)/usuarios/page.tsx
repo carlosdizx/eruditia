@@ -85,6 +85,8 @@ async function UsersTable({
             <TableRow>
               <TableHead className="pl-4">Nombre</TableHead>
               <TableHead className="hidden md:table-cell">Correo</TableHead>
+              <TableHead className="hidden lg:table-cell">Documento</TableHead>
+              <TableHead className="hidden lg:table-cell">Teléfono</TableHead>
               <TableHead>Rol</TableHead>
               <TableHead>Estado</TableHead>
               {showActions && <TableHead className="w-12 pr-4" />}
@@ -113,6 +115,12 @@ async function UsersTable({
                   </TableCell>
                   <TableCell className="text-muted-foreground hidden md:table-cell">
                     {user.email}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground hidden lg:table-cell">
+                    {user.documentNumber ?? '—'}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground hidden lg:table-cell">
+                    {user.phone ?? '—'}
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline">{user.role?.labelEs ?? '—'}</Badge>

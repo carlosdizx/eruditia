@@ -58,6 +58,8 @@ export function ProfileView({ user }: { user: CurrentUser }) {
         <Separator />
         <CardContent>
           <dl className="grid gap-4 sm:grid-cols-2">
+            <Detail label="Documento" value={user.documentNumber ?? '—'} />
+            <Detail label="Teléfono" value={user.phone ?? '—'} />
             <Detail
               label="Verificación en dos pasos"
               value={
