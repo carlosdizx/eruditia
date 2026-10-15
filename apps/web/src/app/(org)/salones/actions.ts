@@ -4,10 +4,14 @@ import { refresh } from 'next/cache';
 import { ApiError } from '@/lib/api/api-fetch';
 import { authFetch } from '@/lib/api/auth-fetch';
 import { requireGrant } from '@/lib/auth/current-user';
-import { CLASSROOM_GRANTS } from '@/lib/auth/permissions';
+import {
+  CLASSROOM_GRANTS,
+  CLASSROOM_SUBJECT_GRANTS,
+} from '@/lib/auth/permissions';
 import {
   NO_TEACHER,
   type ClassroomActionResult,
+  type CopyStructureResult,
   type ClassroomFormState,
   type ClassroomFormValues,
 } from './types';
@@ -102,4 +106,40 @@ export async function deleteClassroom(
 
   refresh();
   return { ok: true };
+}
+
+export async function copyStructure(
+  sourceAcademicYearId: string,
+  targetAcademicYearId: string,
+): Promise<CopyStructureResult> {
+  await requireGrant(CLASSROOM_GRANTS.create);
+  await requireGrant(CLASSROOM_SUBJECT_GRANTS.assign);
+
+  let classrooms: number, subjects: number, skipped: string[];
+  try {
+    ({ classrooms, subjects, skipped } = await authFetch<{
+      classrooms: number;
+      subjects: number;
+      skipped: string[];
+    }>('/classrooms/copy-structure', {
+      method: 'POST',
+      body: { sourceAcademicYearId, targetAcademicYearId },
+    }));
+  } catch (error) {
+    return { ok: false, message: toMessage(error) };
+  }
+
+  if (!classrooms)
+    return {
+      ok: true,
+      message: 'No había salones nuevos para copiar: ya existen todos.',
+    };
+
+  refresh();
+  return {
+    ok: true,
+    message: `Se copiaron ${classrooms} salones y ${subjects} materias asignadas${
+      skipped.length ? ` (omitidos: ${skipped.join(', ')})` : ''
+    }.`,
+  };
 }

@@ -43,6 +43,7 @@ export default class ClassroomsController {
     permissions: [
       PermissionEnum.CLASSROOM_CREATE,
       PermissionEnum.CLASSROOM_UPDATE,
+      PermissionEnum.CLASSROOM_SUBJECT_ASSIGN,
     ],
     mode: 'any',
   })

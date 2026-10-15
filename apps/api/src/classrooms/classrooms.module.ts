@@ -5,11 +5,16 @@ import UsersModule from '../users/users.module';
 import ClassroomsController from './classrooms.controller';
 import ClassroomsService from './classrooms.service';
 import ClassroomRepository from './classroom.repository';
+import ClassroomSubjectRepository from '../classroom-subjects/classroom-subject.repository';
 
 @Module({
   imports: [AcademicYearsModule, GradeLevelsModule, UsersModule],
   controllers: [ClassroomsController],
-  providers: [ClassroomRepository, ClassroomsService],
+  providers: [
+    ClassroomRepository,
+    ClassroomSubjectRepository,
+    ClassroomsService,
+  ],
   exports: [ClassroomsService],
 })
 export default class ClassroomsModule {}

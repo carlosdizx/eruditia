@@ -3,7 +3,9 @@
 import {
   Building2Icon,
   CalendarRangeIcon,
+  BookOpenIcon,
   DoorOpenIcon,
+  PresentationIcon,
   LayersIcon,
   GraduationCapIcon,
   ShieldCheckIcon,
@@ -14,6 +16,8 @@ import {
 import {
   ACADEMIC_YEAR_GRANTS,
   CLASSROOM_GRANTS,
+  CLASSROOM_SUBJECT_GRANTS,
+  SUBJECT_GRANTS,
   GRADE_LEVEL_GRANTS,
   STUDENT_GRANTS,
   USER_GRANTS,
@@ -64,6 +68,18 @@ export const NAV: Record<PanelKind, { label: string; items: NavItem[] }> = {
         url: '/salones',
         icon: DoorOpenIcon,
         grant: CLASSROOM_GRANTS.list,
+      },
+      {
+        title: 'Materias',
+        url: '/materias',
+        icon: BookOpenIcon,
+        grant: SUBJECT_GRANTS.list,
+      },
+      {
+        title: 'Mis clases',
+        url: '/mis-clases',
+        icon: PresentationIcon,
+        grant: CLASSROOM_SUBJECT_GRANTS.mine,
       },
     ],
   },

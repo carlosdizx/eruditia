@@ -16,6 +16,7 @@ import AcademicYearsService from '../academic-years/academic-years.service';
 import GradeLevelsService from '../grade-levels/grade-levels.service';
 import UsersService from '../users/users.service';
 import ClassroomRepository from './classroom.repository';
+import ClassroomSubjectRepository from '../classroom-subjects/classroom-subject.repository';
 import CreateClassroomDto from './dto/create-classroom.dto';
 import UpdateClassroomDto from './dto/update-classroom.dto';
 import ListClassroomsDto from './dto/list-classrooms.dto';
@@ -53,6 +54,7 @@ export default class ClassroomsService extends CrudService<
     private readonly academicYearsService: AcademicYearsService,
     private readonly gradeLevelsService: GradeLevelsService,
     private readonly usersService: UsersService,
+    private readonly classroomSubjectRepository: ClassroomSubjectRepository,
   ) {
     super(repository);
   }
@@ -197,6 +199,14 @@ export default class ClassroomsService extends CrudService<
     const classroom = await this.findOwnClassroom(organizationId, classroomId);
 
     await this.assertEditableYear(organizationId, classroom.academicYearId);
-    await this.deleteByPk(classroom.id);
+
+    // Su carga académica (materias asignadas) se elimina con él.
+    await this.transaction(async (transaction) => {
+      await this.classroomSubjectRepository.deleteByClassroom(
+        classroom.id,
+        transaction,
+      );
+      await this.deleteByPk(classroom.id, { transaction });
+    });
   };
 }

@@ -27,10 +27,12 @@ import { authFetch } from '@/lib/api/auth-fetch';
 import { requireGrant } from '@/lib/auth/current-user';
 import {
   CLASSROOM_GRANTS,
+  CLASSROOM_SUBJECT_GRANTS,
   GRADE_LEVEL_GRANTS,
   isGranted,
 } from '@/lib/auth/permissions';
 import { ClassroomRowActions } from './_components/classroom-row-actions';
+import { CopyStructureDialog } from './_components/copy-structure-dialog';
 import { CreateClassroomDialog } from './_components/create-classroom-dialog';
 import type { Classroom, GradeLevelOption, Teacher } from './types';
 
@@ -64,7 +66,7 @@ function MissingYear({ allowed }: { allowed: boolean }) {
 async function ClassroomsTable() {
   // Sin el permiso (y el rol que exige la API) no puede ver esta sección.
   const me = await requireGrant(CLASSROOM_GRANTS.list);
-  const { allowed, selected: year } = await getSelectedAcademicYear();
+  const { allowed, years, selected: year } = await getSelectedAcademicYear();
 
   if (!year) return <MissingYear allowed={allowed} />;
 
@@ -76,6 +78,11 @@ async function ClassroomsTable() {
     delete: !closed && isGranted(me, CLASSROOM_GRANTS.delete),
   };
   const edits = can.create || can.update;
+  const otherYears = years.filter(({ id }) => id !== year.id);
+  const canCopy =
+    can.create &&
+    isGranted(me, CLASSROOM_SUBJECT_GRANTS.assign) &&
+    otherYears.length > 0;
 
   const [classrooms, gradeLevels, teachers] = await Promise.all([
     authFetch<Classroom[]>(`/classrooms?academicYearId=${year.id}`),
@@ -108,7 +115,14 @@ async function ClassroomsTable() {
           </Badge>
         )}
       </p>
-      {createButton}
+      {(createButton || canCopy) && (
+        <div className="flex flex-col gap-2 sm:flex-row">
+          {canCopy && (
+            <CopyStructureDialog target={year} sources={otherYears} />
+          )}
+          {createButton}
+        </div>
+      )}
     </div>
   );
 
@@ -161,7 +175,12 @@ async function ClassroomsTable() {
             {classrooms.map((classroom) => (
               <TableRow key={classroom.id}>
                 <TableCell className="pl-4 font-medium">
-                  {classroom.name}
+                  <Link
+                    href={`/salones/${classroom.id}`}
+                    className="hover:underline"
+                  >
+                    {classroom.name}
+                  </Link>
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {classroom.gradeLevel?.name ?? '—'}

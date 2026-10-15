@@ -11,6 +11,8 @@ import ClassroomsService, {
   CLASSROOM_INCLUDE,
 } from '../../src/classrooms/classrooms.service';
 import ClassroomRepository from '../../src/classrooms/classroom.repository';
+import ClassroomSubjectRepository from '../../src/classroom-subjects/classroom-subject.repository';
+import { Transaction } from 'sequelize';
 import AcademicYearsService from '../../src/academic-years/academic-years.service';
 import GradeLevelsService from '../../src/grade-levels/grade-levels.service';
 import UsersService from '../../src/users/users.service';
@@ -28,7 +30,10 @@ describe('ClassroomsService', () => {
     create: jest.Mock;
     updateByPk: jest.Mock;
     deleteByPk: jest.Mock;
+    transaction: jest.Mock;
   };
+  let classroomSubjectRepository: { deleteByClassroom: jest.Mock };
+  const transaction = { id: 'tx' } as unknown as Transaction;
   let academicYearsService: { findOne: jest.Mock };
   let gradeLevelsService: { findOne: jest.Mock };
   let usersService: { findOrganizationTeachers: jest.Mock };
@@ -67,6 +72,12 @@ describe('ClassroomsService', () => {
       ),
       updateByPk: jest.fn().mockResolvedValue({}),
       deleteByPk: jest.fn().mockResolvedValue({}),
+      transaction: jest.fn((run: (tx: Transaction) => unknown) =>
+        run(transaction),
+      ),
+    };
+    classroomSubjectRepository = {
+      deleteByClassroom: jest.fn().mockResolvedValue(undefined),
     };
     academicYearsService = {
       findOne: jest.fn().mockResolvedValue({
@@ -87,6 +98,7 @@ describe('ClassroomsService', () => {
       academicYearsService as unknown as AcademicYearsService,
       gradeLevelsService as unknown as GradeLevelsService,
       usersService as unknown as UsersService,
+      classroomSubjectRepository as unknown as ClassroomSubjectRepository,
     );
   });
 
@@ -297,7 +309,7 @@ describe('ClassroomsService', () => {
   });
 
   describe('deleteClassroom', () => {
-    it('deletes a classroom of an open year', async () => {
+    it('deletes a classroom of an open year with its subjects', async () => {
       mockClassroom();
 
       await service.deleteClassroom(actor, 'classroom-id');
@@ -307,10 +319,13 @@ describe('ClassroomsService', () => {
         true,
         { attributes: ['id', 'academicYearId', 'homeroomTeacherId'] },
       );
-      expect(repository.deleteByPk).toHaveBeenCalledWith(
+      expect(classroomSubjectRepository.deleteByClassroom).toHaveBeenCalledWith(
         'classroom-id',
-        undefined,
+        transaction,
       );
+      expect(repository.deleteByPk).toHaveBeenCalledWith('classroom-id', {
+        transaction,
+      });
     });
 
     it('does not delete classrooms of a closed year', async () => {

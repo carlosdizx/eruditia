@@ -21,6 +21,12 @@ export const Permission = {
   CLASSROOM_CREATE: 'classroom:create',
   CLASSROOM_UPDATE: 'classroom:update',
   CLASSROOM_DELETE: 'classroom:delete',
+  SUBJECT_LIST: 'subject:list',
+  SUBJECT_CREATE: 'subject:create',
+  SUBJECT_UPDATE: 'subject:update',
+  SUBJECT_DELETE: 'subject:delete',
+  CLASSROOM_SUBJECT_LIST: 'classroom-subject:list',
+  CLASSROOM_SUBJECT_ASSIGN: 'classroom-subject:assign',
 } as const;
 
 export type Permission = (typeof Permission)[keyof typeof Permission];
@@ -47,6 +53,12 @@ export const PERMISSION_LABELS: Record<string, string> = {
   [Permission.CLASSROOM_CREATE]: 'Crear salones',
   [Permission.CLASSROOM_UPDATE]: 'Editar salones',
   [Permission.CLASSROOM_DELETE]: 'Eliminar salones',
+  [Permission.SUBJECT_LIST]: 'Ver materias',
+  [Permission.SUBJECT_CREATE]: 'Crear materias',
+  [Permission.SUBJECT_UPDATE]: 'Editar materias',
+  [Permission.SUBJECT_DELETE]: 'Eliminar materias',
+  [Permission.CLASSROOM_SUBJECT_LIST]: 'Ver carga académica',
+  [Permission.CLASSROOM_SUBJECT_ASSIGN]: 'Asignar materias a salones',
 };
 
 export const hasPermission = (
@@ -103,4 +115,20 @@ export const CLASSROOM_GRANTS = {
   create: { permission: Permission.CLASSROOM_CREATE, role: 'ADMIN' },
   update: { permission: Permission.CLASSROOM_UPDATE, role: 'ADMIN' },
   delete: { permission: Permission.CLASSROOM_DELETE, role: 'ADMIN' },
+} satisfies Record<string, Grant>;
+
+// Espejo de los @AuthWithPermissions de SubjectsController.
+export const SUBJECT_GRANTS = {
+  list: { permission: Permission.SUBJECT_LIST, role: 'ADMIN' },
+  create: { permission: Permission.SUBJECT_CREATE, role: 'ADMIN' },
+  update: { permission: Permission.SUBJECT_UPDATE, role: 'ADMIN' },
+  delete: { permission: Permission.SUBJECT_DELETE, role: 'ADMIN' },
+} satisfies Record<string, Grant>;
+
+// Espejo de los @AuthWithPermissions de ClassroomSubjectsController.
+export const CLASSROOM_SUBJECT_GRANTS = {
+  list: { permission: Permission.CLASSROOM_SUBJECT_LIST, role: 'ADMIN' },
+  assign: { permission: Permission.CLASSROOM_SUBJECT_ASSIGN, role: 'ADMIN' },
+  // "Mis clases" del profesor.
+  mine: { permission: Permission.CLASSROOM_SUBJECT_LIST, role: 'TEACHER' },
 } satisfies Record<string, Grant>;

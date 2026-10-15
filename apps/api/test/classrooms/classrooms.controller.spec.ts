@@ -66,12 +66,13 @@ describe('ClassroomsController', () => {
     });
   });
 
-  it('lists teachers with either the create or the update permission', () => {
+  it('lists teachers with any permission that assigns them', () => {
     expect(handlerMetadata('listTeachers', AUTH_WITH_PERMISSIONS_KEY)).toEqual({
       roles: [RoleNameEnum.ADMIN],
       permissions: [
         PermissionEnum.CLASSROOM_CREATE,
         PermissionEnum.CLASSROOM_UPDATE,
+        PermissionEnum.CLASSROOM_SUBJECT_ASSIGN,
       ],
       mode: 'any',
     });

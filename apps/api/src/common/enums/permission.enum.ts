@@ -27,6 +27,14 @@ enum PermissionEnum {
   CLASSROOM_CREATE = 'classroom:create',
   CLASSROOM_UPDATE = 'classroom:update',
   CLASSROOM_DELETE = 'classroom:delete',
+
+  SUBJECT_LIST = 'subject:list',
+  SUBJECT_CREATE = 'subject:create',
+  SUBJECT_UPDATE = 'subject:update',
+  SUBJECT_DELETE = 'subject:delete',
+
+  CLASSROOM_SUBJECT_LIST = 'classroom-subject:list',
+  CLASSROOM_SUBJECT_ASSIGN = 'classroom-subject:assign',
 }
 
 export default PermissionEnum;

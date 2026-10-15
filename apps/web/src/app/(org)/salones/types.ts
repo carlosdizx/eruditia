@@ -42,3 +42,6 @@ export type ClassroomFormState =
 
 export type ClassroomActionResult =
   { ok: true } | { ok: false; message: string };
+
+export type CopyStructureResult =
+  { ok: true; message: string } | { ok: false; message: string };
