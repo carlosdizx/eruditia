@@ -17,6 +17,8 @@ import {
   PHONE_PATTERN,
 } from '@common/constants/contact-validation.constant';
 import {
+  BIRTH_DATE_PATTERN,
+  INVALID_BIRTH_DATE_MESSAGE,
   INVALID_STUDENT_CODE_MESSAGE,
   STUDENT_CODE_PATTERN,
 } from '../constants/student-validation.constant';
@@ -50,8 +52,8 @@ export default class UpdateStudentDto {
   studentCode?: string;
 
   @IsOptional()
-  @IsISO8601({ strict: true })
-  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  @IsISO8601({ strict: true }, { message: INVALID_BIRTH_DATE_MESSAGE })
+  @Matches(BIRTH_DATE_PATTERN, { message: INVALID_BIRTH_DATE_MESSAGE })
   birthDate?: string | null;
 
   @IsOptional()

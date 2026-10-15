@@ -23,6 +23,7 @@ describe('StudentsController', () => {
     findStudent: jest.Mock;
     createStudent: jest.Mock;
     updateStudent: jest.Mock;
+    importStudents: jest.Mock;
   };
   let controller: StudentsController;
 
@@ -34,6 +35,7 @@ describe('StudentsController', () => {
       findStudent: jest.fn().mockResolvedValue({ id: 'student-id' }),
       createStudent: jest.fn().mockResolvedValue({ id: 'new-id' }),
       updateStudent: jest.fn().mockResolvedValue({ id: 'student-id' }),
+      importStudents: jest.fn().mockResolvedValue({ created: 1 }),
     };
     controller = new StudentsController(
       studentsService as unknown as StudentsService,
@@ -45,6 +47,7 @@ describe('StudentsController', () => {
     ['findStudent', PermissionEnum.STUDENT_LIST],
     ['createStudent', PermissionEnum.STUDENT_CREATE],
     ['updateStudent', PermissionEnum.STUDENT_UPDATE],
+    ['importStudents', PermissionEnum.STUDENT_IMPORT],
   ])('%s', (handler, permission) => {
     it(`requires the ADMIN role and the ${permission} permission`, () => {
       expect(handlerMetadata(handler, AUTH_WITH_PERMISSIONS_KEY)).toEqual({
@@ -98,5 +101,14 @@ describe('StudentsController', () => {
       'student-id',
       dto,
     );
+  });
+
+  it('imports the uploaded file into the current organization', async () => {
+    const buffer = Buffer.from('csv');
+
+    await expect(controller.importStudents({ buffer }, auth)).resolves.toEqual({
+      created: 1,
+    });
+    expect(studentsService.importStudents).toHaveBeenCalledWith(auth, buffer);
   });
 });

@@ -11,6 +11,7 @@ const permissionDescriptions: Record<PermissionEnum, string> = {
   [PermissionEnum.STUDENT_CREATE]: 'Matricular estudiantes en la organización',
   [PermissionEnum.STUDENT_UPDATE]:
     'Editar estudiantes y cambiar su estado en la organización',
+  [PermissionEnum.STUDENT_IMPORT]: 'Importar estudiantes desde un archivo CSV',
 };
 
 export interface PermissionCatalogEntry {

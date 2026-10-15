@@ -26,6 +26,7 @@ import { DEFAULT_PAGE_SIZE, parsePage, type Paginated } from '@/lib/api/types';
 import { requireGrant } from '@/lib/auth/current-user';
 import { isGranted, STUDENT_GRANTS } from '@/lib/auth/permissions';
 import { CreateStudentDialog } from './_components/create-student-dialog';
+import { ImportStudentsDialog } from './_components/import-students-dialog';
 import { StudentRowActions } from './_components/student-row-actions';
 import { StudentsFilter } from './_components/students-filter';
 import {
@@ -60,6 +61,7 @@ async function StudentsTable({
   const can = {
     create: isGranted(me, STUDENT_GRANTS.create),
     update: isGranted(me, STUDENT_GRANTS.update),
+    import: isGranted(me, STUDENT_GRANTS.import),
   };
 
   const params = await searchParams;
@@ -80,7 +82,12 @@ async function StudentsTable({
     })}`,
   );
 
-  const createButton = can.create && <CreateStudentDialog />;
+  const createButtons = (can.create || can.import) && (
+    <div className="flex flex-col gap-2 sm:flex-row">
+      {can.import && <ImportStudentsDialog />}
+      {can.create && <CreateStudentDialog />}
+    </div>
+  );
   const filtered = Object.keys(filters).length > 0;
 
   const toolbar = (
@@ -88,7 +95,7 @@ async function StudentsTable({
       <div className="flex-1">
         <StudentsFilter basePath={BASE_PATH} search={search} status={status} />
       </div>
-      {createButton}
+      {createButtons}
     </div>
   );
 
@@ -119,7 +126,7 @@ async function StudentsTable({
             Tu organización todavía no tiene estudiantes matriculados.
           </EmptyDescription>
         </EmptyHeader>
-        {createButton && <EmptyContent>{createButton}</EmptyContent>}
+        {createButtons && <EmptyContent>{createButtons}</EmptyContent>}
       </Empty>
     );
 

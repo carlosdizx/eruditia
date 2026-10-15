@@ -11,6 +11,7 @@ enum PermissionEnum {
   STUDENT_LIST = 'student:list',
   STUDENT_CREATE = 'student:create',
   STUDENT_UPDATE = 'student:update',
+  STUDENT_IMPORT = 'student:import',
 }
 
 export default PermissionEnum;

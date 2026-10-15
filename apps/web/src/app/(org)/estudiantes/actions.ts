@@ -9,6 +9,8 @@ import type {
   StudentActionResult,
   StudentFormState,
   StudentFormValues,
+  StudentsImportState,
+  StudentsImportSummary,
   StudentStatus,
 } from './types';
 
@@ -127,4 +129,31 @@ export async function changeStudentStatus(
 
   refresh();
   return { ok: true };
+}
+
+export async function importStudents(
+  _prev: StudentsImportState,
+  formData: FormData,
+): Promise<StudentsImportState> {
+  await requireGrant(STUDENT_GRANTS.import);
+
+  const file = formData.get('file');
+  if (!(file instanceof File) || !file.size)
+    return { status: 'error', message: 'Selecciona un archivo CSV' };
+
+  const body = new FormData();
+  body.append('file', file);
+
+  let summary: StudentsImportSummary;
+  try {
+    summary = await authFetch<StudentsImportSummary>('/students/import', {
+      method: 'POST',
+      body,
+    });
+  } catch (error) {
+    return { status: 'error', message: toMessage(error) };
+  }
+
+  if (summary.created) refresh();
+  return { status: 'done', summary };
 }

@@ -63,4 +63,17 @@ export type StudentFormState =
   | { status: 'success'; message: string }
   | { status: 'error'; message: string; values: StudentFormValues };
 
+// Respuesta de POST /students/import.
+export type StudentsImportSummary = {
+  total: number;
+  created: number;
+  failed: number;
+  errors: { line: number; documentNumber: string | null; messages: string[] }[];
+};
+
+export type StudentsImportState =
+  | { status: 'idle' }
+  | { status: 'done'; summary: StudentsImportSummary }
+  | { status: 'error'; message: string };
+
 export type StudentActionResult = { ok: true } | { ok: false; message: string };

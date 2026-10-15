@@ -16,6 +16,12 @@ import {
   DOCUMENT_IN_USE_MESSAGE,
   STUDENT_CODE_IN_USE_MESSAGE,
 } from './constants/student-messages.constant';
+import { DUPLICATED_IN_FILE_MESSAGE } from './constants/students-import.constant';
+import {
+  parseStudentsCsv,
+  toCreateStudentDto,
+} from './utils/students-csv.util';
+import type { StudentsImportSummary } from './interfaces/students-import-summary.interface';
 
 type OrganizationActor = Pick<AuthContextInterface, 'organizationId'>;
 
@@ -159,5 +165,98 @@ export default class StudentsService extends CrudService<
     await this.assertUnique(organizationId, dto, studentId);
 
     return this.toPublicStudent((await this.updateByPk(studentId, dto))!);
+  };
+
+  // Importa las filas válidas y reporta el resto; una fila con errores no
+  // impide que se importen las demás.
+  public importStudents = async (
+    actor: OrganizationActor,
+    content: Buffer,
+  ): Promise<StudentsImportSummary> => {
+    const organizationId = this.organizationOf(actor);
+    const rows = parseStudentsCsv(content);
+
+    const errors: StudentsImportSummary['errors'] = [];
+    const valid: { line: number; dto: CreateStudentDto }[] = [];
+    const firstLineOf = new Map<string, number>();
+
+    for (const row of rows) {
+      const result = await toCreateStudentDto(row);
+      const documentNumber = row.values.documento ?? null;
+
+      if (!result.ok) {
+        errors.push({
+          line: row.line,
+          documentNumber,
+          messages: result.messages,
+        });
+        continue;
+      }
+
+      const firstLine = firstLineOf.get(result.dto.documentNumber);
+      if (firstLine) {
+        errors.push({
+          line: row.line,
+          documentNumber,
+          messages: [DUPLICATED_IN_FILE_MESSAGE(firstLine)],
+        });
+        continue;
+      }
+
+      firstLineOf.set(result.dto.documentNumber, row.line);
+      valid.push({ line: row.line, dto: result.dto });
+    }
+
+    // El código de los importados es su documento: ambos deben estar libres.
+    const documents = valid.map(({ dto }) => dto.documentNumber);
+    const existing = documents.length
+      ? await this.findAll(
+          {
+            organizationId,
+            [Op.or]: [
+              { documentNumber: documents },
+              { studentCode: documents },
+            ],
+          },
+          { attributes: ['documentNumber', 'studentCode'] },
+        )
+      : [];
+    const usedDocuments = new Set(existing.map((s) => s.documentNumber));
+    const usedCodes = new Set(existing.map((s) => s.studentCode));
+
+    const toCreate = valid.filter(({ line, dto }) => {
+      const message = usedDocuments.has(dto.documentNumber)
+        ? DOCUMENT_IN_USE_MESSAGE
+        : usedCodes.has(dto.documentNumber)
+          ? STUDENT_CODE_IN_USE_MESSAGE
+          : null;
+      if (!message) return true;
+
+      errors.push({
+        line,
+        documentNumber: dto.documentNumber,
+        messages: [message],
+      });
+      return false;
+    });
+
+    if (toCreate.length)
+      await this.transaction((transaction) =>
+        this.insertMany(
+          toCreate.map(({ dto }) => ({
+            ...dto,
+            studentCode: dto.documentNumber,
+            organizationId,
+          })),
+          { transaction },
+        ),
+      );
+
+    return {
+      total: rows.length,
+      created: toCreate.length,
+      failed: errors.length,
+      errors: errors.sort((a, b) => a.line - b.line),
+    };
   };
 }

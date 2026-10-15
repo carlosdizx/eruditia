@@ -1,10 +1,11 @@
 import 'reflect-metadata';
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import { Op } from 'sequelize';
+import { Op, Transaction } from 'sequelize';
 import StudentDocumentTypeEnum from '@common/enums/student-document-type.enum';
 import StudentStatusEnum from '@common/enums/student-status.enum';
 import StudentsService from '../../src/students/students.service';
@@ -22,7 +23,11 @@ describe('StudentsService', () => {
     findAllPaginated: jest.Mock;
     create: jest.Mock;
     updateByPk: jest.Mock;
+    findAll: jest.Mock;
+    insertMany: jest.Mock;
+    transaction: jest.Mock;
   };
+  const transaction = { id: 'tx' } as unknown as Transaction;
   let service: StudentsService;
 
   const actor = { organizationId: 'org-id' };
@@ -44,6 +49,11 @@ describe('StudentsService', () => {
       ),
       updateByPk: jest.fn((id: string, data: object) =>
         Promise.resolve({ id, ...data, accessPin: 'hash' }),
+      ),
+      findAll: jest.fn().mockResolvedValue([]),
+      insertMany: jest.fn().mockResolvedValue([]),
+      transaction: jest.fn((run: (tx: Transaction) => unknown) =>
+        run(transaction),
       ),
     };
     service = new StudentsService(repository as unknown as StudentRepository);
@@ -237,6 +247,124 @@ describe('StudentsService', () => {
         service.updateStudent(actor, 'student-id', { firstName: 'Eva' }),
       ).rejects.toBeInstanceOf(NotFoundException);
       expect(repository.updateByPk).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('importStudents', () => {
+    const csv = (...rows: string[]) =>
+      Buffer.from(
+        ['documento;tipo_documento;nombres;apellidos', ...rows].join('\n'),
+      );
+
+    it('creates the valid rows in the organization using the document as code', async () => {
+      const summary = await service.importStudents(
+        actor,
+        csv('1020;TI;Sofía;Pérez', '3040;rc;Juan;Díaz'),
+      );
+
+      expect(repository.insertMany).toHaveBeenCalledWith(
+        [
+          expect.objectContaining({
+            documentNumber: '1020',
+            documentType: 'TI',
+            studentCode: '1020',
+            organizationId: 'org-id',
+          }),
+          expect.objectContaining({
+            documentNumber: '3040',
+            documentType: 'RC',
+            studentCode: '3040',
+            organizationId: 'org-id',
+          }),
+        ],
+        { transaction },
+      );
+      expect(summary).toEqual({ total: 2, created: 2, failed: 0, errors: [] });
+    });
+
+    it('looks for existing documents or codes only inside the organization', async () => {
+      await service.importStudents(actor, csv('1020;TI;Sofía;Pérez'));
+
+      expect(repository.findAll).toHaveBeenCalledWith(
+        {
+          organizationId: 'org-id',
+          [Op.or]: [{ documentNumber: ['1020'] }, { studentCode: ['1020'] }],
+        },
+        { attributes: ['documentNumber', 'studentCode'] },
+      );
+    });
+
+    it('reports invalid, repeated and already registered rows and imports the rest', async () => {
+      repository.findAll.mockResolvedValue([
+        { documentNumber: '5060', studentCode: 'X' },
+        { documentNumber: '9', studentCode: '7080' },
+      ]);
+
+      const summary = await service.importStudents(
+        actor,
+        csv(
+          '1020;TI;Sofía;Pérez',
+          '1020;TI;Sofía;Repetida',
+          '5060;TI;Ya;Existe',
+          '7080;TI;Código;Usado',
+          '9999;PASAPORTE;Mal;Tipo',
+        ),
+      );
+
+      expect(repository.insertMany).toHaveBeenCalledWith(
+        [expect.objectContaining({ documentNumber: '1020' })],
+        { transaction },
+      );
+      expect(summary).toEqual({
+        total: 5,
+        created: 1,
+        failed: 4,
+        errors: [
+          {
+            line: 3,
+            documentNumber: '1020',
+            messages: ['documento repetido en el archivo (línea 2)'],
+          },
+          {
+            line: 4,
+            documentNumber: '5060',
+            messages: [DOCUMENT_IN_USE_MESSAGE],
+          },
+          {
+            line: 5,
+            documentNumber: '7080',
+            messages: [STUDENT_CODE_IN_USE_MESSAGE],
+          },
+          {
+            line: 6,
+            documentNumber: '9999',
+            messages: ['tipo_documento no es válido ("PASAPORTE")'],
+          },
+        ],
+      });
+    });
+
+    it('does not write anything when no row is valid', async () => {
+      const summary = await service.importStudents(
+        actor,
+        csv('1020;XX;Sofía;Pérez'),
+      );
+
+      expect(repository.findAll).not.toHaveBeenCalled();
+      expect(repository.insertMany).not.toHaveBeenCalled();
+      expect(summary).toMatchObject({ total: 1, created: 0, failed: 1 });
+    });
+
+    it('rejects a file that is not a valid CSV', async () => {
+      await expect(
+        service.importStudents(actor, Buffer.from('nombre\nAna')),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('rejects an actor without organization', async () => {
+      await expect(
+        service.importStudents(noOrganization, csv('1020;TI;Sofía;Pérez')),
+      ).rejects.toBeInstanceOf(ForbiddenException);
     });
   });
 });

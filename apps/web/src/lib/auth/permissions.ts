@@ -8,6 +8,7 @@ export const Permission = {
   STUDENT_LIST: 'student:list',
   STUDENT_CREATE: 'student:create',
   STUDENT_UPDATE: 'student:update',
+  STUDENT_IMPORT: 'student:import',
 } as const;
 
 export type Permission = (typeof Permission)[keyof typeof Permission];
@@ -21,6 +22,7 @@ export const PERMISSION_LABELS: Record<string, string> = {
   [Permission.STUDENT_LIST]: 'Ver estudiantes',
   [Permission.STUDENT_CREATE]: 'Matricular estudiantes',
   [Permission.STUDENT_UPDATE]: 'Editar estudiantes',
+  [Permission.STUDENT_IMPORT]: 'Importar estudiantes (CSV)',
 };
 
 export const hasPermission = (
@@ -52,4 +54,5 @@ export const STUDENT_GRANTS = {
   list: { permission: Permission.STUDENT_LIST, role: 'ADMIN' },
   create: { permission: Permission.STUDENT_CREATE, role: 'ADMIN' },
   update: { permission: Permission.STUDENT_UPDATE, role: 'ADMIN' },
+  import: { permission: Permission.STUDENT_IMPORT, role: 'ADMIN' },
 } satisfies Record<string, Grant>;

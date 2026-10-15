@@ -2,12 +2,19 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
+  MaxFileSizeValidator,
   Param,
+  ParseFilePipe,
   ParseUUIDPipe,
   Patch,
   Post,
   Query,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import CurrentAuth from '@auth/decorators/current-auth.decorator';
 import type AuthContextInterface from '@auth/interfaces/auth-context.interface';
 import AuthWithPermissions from '@auth/decorators/auth-with-permissions.decorator';
@@ -17,6 +24,7 @@ import StudentsService from './students.service';
 import CreateStudentDto from './dto/create-student.dto';
 import UpdateStudentDto from './dto/update-student.dto';
 import ListStudentsDto from './dto/list-students.dto';
+import { CSV_MAX_FILE_SIZE } from './constants/students-import.constant';
 
 @Controller('students')
 export default class StudentsController {
@@ -56,6 +64,26 @@ export default class StudentsController {
     @CurrentAuth() auth: AuthContextInterface,
   ) {
     return await this.studentsService.createStudent(auth, dto);
+  }
+
+  // multipart/form-data con el archivo en el campo "file".
+  @AuthWithPermissions({
+    roles: [RoleNameEnum.ADMIN],
+    permissions: [PermissionEnum.STUDENT_IMPORT],
+  })
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(FileInterceptor('file'))
+  @Post('import')
+  public async importStudents(
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [new MaxFileSizeValidator({ maxSize: CSV_MAX_FILE_SIZE })],
+      }),
+    )
+    file: { buffer: Buffer },
+    @CurrentAuth() auth: AuthContextInterface,
+  ) {
+    return await this.studentsService.importStudents(auth, file.buffer);
   }
 
   // También cambia el estado (activo, retirado, graduado, suspendido).
