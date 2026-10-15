@@ -4,12 +4,17 @@ import { refresh } from 'next/cache';
 import { ApiError } from '@/lib/api/api-fetch';
 import { authFetch } from '@/lib/api/auth-fetch';
 import { requireGrant } from '@/lib/auth/current-user';
-import { CLASSROOM_SUBJECT_GRANTS } from '@/lib/auth/permissions';
+import {
+  CLASSROOM_SUBJECT_GRANTS,
+  ENROLLMENT_GRANTS,
+} from '@/lib/auth/permissions';
 import { NO_TEACHER } from '../types';
 import type {
   AssignmentActionResult,
   AssignmentFormState,
   AssignmentFormValues,
+  EnrollmentActionResult,
+  EnrollmentStatus,
 } from './types';
 
 const toMessage = (error: unknown) =>
@@ -101,4 +106,75 @@ export async function removeAssignment(
 
   refresh();
   return { ok: true };
+}
+
+export async function enrollStudents(
+  classroomId: string,
+  studentIds: string[],
+  enrollmentDate: string,
+): Promise<EnrollmentActionResult> {
+  await requireGrant(ENROLLMENT_GRANTS.create);
+
+  let enrolled: number;
+  try {
+    ({ enrolled } = await authFetch<{ enrolled: number }>(
+      `/classrooms/${classroomId}/enrollments`,
+      { method: 'POST', body: { studentIds, enrollmentDate } },
+    ));
+  } catch (error) {
+    return { ok: false, message: toMessage(error) };
+  }
+
+  refresh();
+  return {
+    ok: true,
+    message:
+      enrolled === 1
+        ? 'Se matriculó 1 estudiante'
+        : `Se matricularon ${enrolled} estudiantes`,
+  };
+}
+
+// Cambio de salón, retiro, traslado o reactivación.
+export async function updateEnrollment(
+  classroomId: string,
+  enrollmentId: string,
+  body: {
+    classroomId?: string;
+    status?: EnrollmentStatus;
+    promotionNotes?: string | null;
+  },
+  message: string,
+): Promise<EnrollmentActionResult> {
+  await requireGrant(ENROLLMENT_GRANTS.update);
+
+  try {
+    await authFetch(`/classrooms/${classroomId}/enrollments/${enrollmentId}`, {
+      method: 'PATCH',
+      body,
+    });
+  } catch (error) {
+    return { ok: false, message: toMessage(error) };
+  }
+
+  refresh();
+  return { ok: true, message };
+}
+
+export async function removeEnrollment(
+  classroomId: string,
+  enrollmentId: string,
+): Promise<EnrollmentActionResult> {
+  await requireGrant(ENROLLMENT_GRANTS.delete);
+
+  try {
+    await authFetch(`/classrooms/${classroomId}/enrollments/${enrollmentId}`, {
+      method: 'DELETE',
+    });
+  } catch (error) {
+    return { ok: false, message: toMessage(error) };
+  }
+
+  refresh();
+  return { ok: true, message: 'Se anuló la matrícula' };
 }

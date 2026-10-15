@@ -35,6 +35,12 @@ const permissionDescriptions: Record<PermissionEnum, string> = {
     'Ver la carga académica de los salones (los profesores, solo la suya)',
   [PermissionEnum.CLASSROOM_SUBJECT_ASSIGN]:
     'Asignar materias y profesores a los salones y copiar la estructura de otro año',
+  [PermissionEnum.ENROLLMENT_LIST]: 'Ver las listas de clase de los salones',
+  [PermissionEnum.ENROLLMENT_CREATE]:
+    'Matricular estudiantes en los salones de un año lectivo',
+  [PermissionEnum.ENROLLMENT_UPDATE]:
+    'Cambiar de salón, retirar o trasladar estudiantes matriculados',
+  [PermissionEnum.ENROLLMENT_DELETE]: 'Anular matrículas hechas por error',
 };
 
 export interface PermissionCatalogEntry {

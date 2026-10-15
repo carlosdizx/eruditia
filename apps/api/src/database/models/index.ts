@@ -16,6 +16,7 @@ import GradeLevelModel from './grade-level.model';
 import ClassroomModel from './classroom.model';
 import SubjectModel from './subject.model';
 import ClassroomSubjectModel from './classroom-subject.model';
+import EnrollmentModel from './enrollment.model';
 
 // Register every @Table model here (never BaseModel/SoftDeleteModel).
 // Consumed by databaseOptionsUtil so both the Nest app and the CLI
@@ -38,6 +39,7 @@ const models: ModelCtor[] = [
   ClassroomModel,
   SubjectModel,
   ClassroomSubjectModel,
+  EnrollmentModel,
 ];
 
 export default models;

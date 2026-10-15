@@ -54,6 +54,7 @@ const RESOURCE_LABELS: Record<string, string> = {
   classroom: 'Salones',
   subject: 'Materias',
   'classroom-subject': 'Carga académica',
+  enrollment: 'Matrículas',
 };
 
 type PermissionsFormProps = {

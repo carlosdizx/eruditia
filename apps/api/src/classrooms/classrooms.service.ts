@@ -17,6 +17,8 @@ import GradeLevelsService from '../grade-levels/grade-levels.service';
 import UsersService from '../users/users.service';
 import ClassroomRepository from './classroom.repository';
 import ClassroomSubjectRepository from '../classroom-subjects/classroom-subject.repository';
+import EnrollmentRepository from '../enrollments/enrollment.repository';
+import { CLASSROOM_HAS_ENROLLMENTS_MESSAGE } from '../enrollments/constants/enrollment-messages.constant';
 import CreateClassroomDto from './dto/create-classroom.dto';
 import UpdateClassroomDto from './dto/update-classroom.dto';
 import ListClassroomsDto from './dto/list-classrooms.dto';
@@ -55,6 +57,7 @@ export default class ClassroomsService extends CrudService<
     private readonly gradeLevelsService: GradeLevelsService,
     private readonly usersService: UsersService,
     private readonly classroomSubjectRepository: ClassroomSubjectRepository,
+    private readonly enrollmentRepository: EnrollmentRepository,
   ) {
     super(repository);
   }
@@ -199,6 +202,15 @@ export default class ClassroomsService extends CrudService<
     const classroom = await this.findOwnClassroom(organizationId, classroomId);
 
     await this.assertEditableYear(organizationId, classroom.academicYearId);
+
+    // Las matrículas son historial: primero hay que anularlas o moverlas.
+    const enrollment = await this.enrollmentRepository.findOne(
+      { classroomId: classroom.id },
+      false,
+      { attributes: ['id'] },
+    );
+    if (enrollment)
+      throw new ConflictException(CLASSROOM_HAS_ENROLLMENTS_MESSAGE);
 
     // Su carga académica (materias asignadas) se elimina con él.
     await this.transaction(async (transaction) => {

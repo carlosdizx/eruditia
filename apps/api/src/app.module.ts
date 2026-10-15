@@ -16,6 +16,7 @@ import GradeLevelsModule from './grade-levels/grade-levels.module';
 import ClassroomsModule from './classrooms/classrooms.module';
 import SubjectsModule from './subjects/subjects.module';
 import ClassroomSubjectsModule from './classroom-subjects/classroom-subjects.module';
+import EnrollmentsModule from './enrollments/enrollments.module';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -43,6 +44,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     ClassroomsModule,
     SubjectsModule,
     ClassroomSubjectsModule,
+    EnrollmentsModule,
     AuthModule,
   ],
 })

@@ -6,6 +6,7 @@ import ClassroomsController from './classrooms.controller';
 import ClassroomsService from './classrooms.service';
 import ClassroomRepository from './classroom.repository';
 import ClassroomSubjectRepository from '../classroom-subjects/classroom-subject.repository';
+import EnrollmentRepository from '../enrollments/enrollment.repository';
 
 @Module({
   imports: [AcademicYearsModule, GradeLevelsModule, UsersModule],
@@ -13,6 +14,7 @@ import ClassroomSubjectRepository from '../classroom-subjects/classroom-subject.
   providers: [
     ClassroomRepository,
     ClassroomSubjectRepository,
+    EnrollmentRepository,
     ClassroomsService,
   ],
   exports: [ClassroomsService],
