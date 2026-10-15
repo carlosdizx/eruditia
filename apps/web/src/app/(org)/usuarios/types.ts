@@ -4,6 +4,8 @@ export type OrganizationUser = {
   firstName: string;
   lastName: string;
   email: string;
+  documentNumber: string | null;
+  phone: string | null;
   isActive: boolean;
   role: { id: string; name: string; labelEs: string } | null;
 };
@@ -17,7 +19,16 @@ export type AssignableRole = {
 };
 
 export type UserFormValues = Partial<
-  Record<'firstName' | 'lastName' | 'email' | 'roleId' | 'isActive', string>
+  Record<
+    | 'firstName'
+    | 'lastName'
+    | 'email'
+    | 'documentNumber'
+    | 'phone'
+    | 'roleId'
+    | 'isActive',
+    string
+  >
 >;
 
 export type UserFormState =

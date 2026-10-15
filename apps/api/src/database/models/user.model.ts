@@ -44,6 +44,14 @@ export default class UserModel extends BaseModel {
   @Column
   declare email: string;
 
+  @AllowNull
+  @Column(DataType.STRING(30))
+  declare documentNumber: string | null;
+
+  @AllowNull
+  @Column(DataType.STRING(20))
+  declare phone: string | null;
+
   @Column
   declare password: string;
 

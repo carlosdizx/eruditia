@@ -113,6 +113,8 @@ export function UserRowActions({
                 firstName: user.firstName,
                 lastName: user.lastName,
                 email: user.email,
+                documentNumber: user.documentNumber ?? '',
+                phone: user.phone ?? '',
                 roleId: user.role?.id ?? '',
                 isActive: user.isActive ? 'on' : 'off',
               }}

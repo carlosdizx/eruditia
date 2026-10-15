@@ -48,6 +48,7 @@ export type CatalogPermission = {
 const RESOURCE_LABELS: Record<string, string> = {
   user: 'Usuarios',
   role: 'Roles',
+  student: 'Estudiantes',
 };
 
 type PermissionsFormProps = {

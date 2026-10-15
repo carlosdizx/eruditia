@@ -2,12 +2,17 @@
 
 import {
   Building2Icon,
+  GraduationCapIcon,
   ShieldCheckIcon,
   UserIcon,
   UsersIcon,
   type LucideIcon,
 } from 'lucide-react';
-import { USER_GRANTS, type Grant } from '@/lib/auth/permissions';
+import {
+  STUDENT_GRANTS,
+  USER_GRANTS,
+  type Grant,
+} from '@/lib/auth/permissions';
 
 export type NavItem = {
   title: string;
@@ -29,6 +34,12 @@ export const NAV: Record<PanelKind, { label: string; items: NavItem[] }> = {
         url: '/usuarios',
         icon: UsersIcon,
         grant: USER_GRANTS.list,
+      },
+      {
+        title: 'Estudiantes',
+        url: '/estudiantes',
+        icon: GraduationCapIcon,
+        grant: STUDENT_GRANTS.list,
       },
     ],
   },

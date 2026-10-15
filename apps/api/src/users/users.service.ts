@@ -15,7 +15,7 @@ import {
   generateFriendlyPassword,
   hashPassword,
 } from '@common/utils/password.util';
-import { Transaction } from 'sequelize';
+import { Op, Transaction } from 'sequelize';
 import Env from '@common/schemas/env.schema';
 import RoleNameEnum from '@common/enums/role-name.enum';
 import UserStatusEnum from '@common/enums/user-status.enum';
@@ -29,6 +29,7 @@ import temporaryPasswordTemplate, {
 import CreateOrganizationUserDto from './dto/create-organization-user.dto';
 import UpdateOrganizationUserDto from './dto/update-organization-user.dto';
 import {
+  DOCUMENT_IN_USE_MESSAGE,
   EMAIL_IN_USE_MESSAGE,
   INVALID_ROLE_MESSAGE,
   NO_ORGANIZATION_MESSAGE,
@@ -130,6 +131,23 @@ export default class UsersService extends CrudService<
     if (!role) throw new BadRequestException(INVALID_ROLE_MESSAGE);
   };
 
+  private assertDocumentAvailable = async (
+    organizationId: string,
+    documentNumber: string,
+    exceptUserId?: string,
+  ) => {
+    const existing = await this.findOne(
+      {
+        organizationId,
+        documentNumber,
+        ...(exceptUserId && { id: { [Op.ne]: exceptUserId } }),
+      },
+      false,
+      { attributes: ['id'] },
+    );
+    if (existing) throw new ConflictException(DOCUMENT_IN_USE_MESSAGE);
+  };
+
   // Un usuario de otra organización responde 404, igual que uno inexistente.
   private findManageableUser = async (
     actor: OrganizationActor,
@@ -159,6 +177,8 @@ export default class UsersService extends CrudService<
     const organizationId = this.organizationOf(actor);
 
     await this.assertAssignableRole(dto.roleId);
+    if (dto.documentNumber)
+      await this.assertDocumentAvailable(organizationId, dto.documentNumber);
 
     return await this.transaction((transaction) =>
       this.createUser({ ...dto, organizationId }, transaction),
@@ -180,6 +200,12 @@ export default class UsersService extends CrudService<
       throw new ForbiddenException(PROTECTED_USER_MESSAGE);
 
     if (dto.roleId) await this.assertAssignableRole(dto.roleId);
+    if (dto.documentNumber)
+      await this.assertDocumentAvailable(
+        this.organizationOf(actor),
+        dto.documentNumber,
+        user.id,
+      );
 
     return this.toSafeUser((await this.updateByPk(user.id, dto))!);
   };

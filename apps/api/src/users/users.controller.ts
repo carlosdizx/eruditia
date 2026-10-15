@@ -46,7 +46,15 @@ export default class UsersController {
       dto,
       { organizationId },
       {
-        attributes: ['id', 'firstName', 'lastName', 'email', 'isActive'],
+        attributes: [
+          'id',
+          'firstName',
+          'lastName',
+          'email',
+          'documentNumber',
+          'phone',
+          'isActive',
+        ],
         include: [{ model: RoleModel, attributes: ['id', 'name', 'labelEs'] }],
       },
     );

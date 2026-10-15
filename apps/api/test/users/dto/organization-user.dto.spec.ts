@@ -42,6 +42,26 @@ describe('CreateOrganizationUserDto', () => {
       }),
     ).resolves.toEqual(expect.arrayContaining(['email', 'firstName']));
   });
+
+  it('accepts an optional document and phone', async () => {
+    await expect(
+      errorsOf(CreateOrganizationUserDto, {
+        ...valid,
+        documentNumber: '1020-3040',
+        phone: '+57 300 123 4567',
+      }),
+    ).resolves.toEqual([]);
+  });
+
+  it('rejects a malformed document and phone', async () => {
+    await expect(
+      errorsOf(CreateOrganizationUserDto, {
+        ...valid,
+        documentNumber: '12.345 678',
+        phone: 'llámame',
+      }),
+    ).resolves.toEqual(['documentNumber', 'phone']);
+  });
 });
 
 describe('UpdateOrganizationUserDto', () => {
@@ -59,5 +79,14 @@ describe('UpdateOrganizationUserDto', () => {
         isActive: 'no',
       }),
     ).resolves.toEqual(['firstName', 'roleId', 'isActive']);
+  });
+
+  it('accepts null to clear the document and phone', async () => {
+    await expect(
+      errorsOf(UpdateOrganizationUserDto, {
+        documentNumber: null,
+        phone: null,
+      }),
+    ).resolves.toEqual([]);
   });
 });

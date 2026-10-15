@@ -21,7 +21,11 @@ import RoleNameEnum from '@common/enums/role-name.enum';
 import UserStatusEnum from '@common/enums/user-status.enum';
 import RoleCategoryEnum from '@common/enums/role-category.enum';
 import OrganizationModel from '@database/models/organization.model';
-import { EMAIL_IN_USE_MESSAGE } from '../../src/users/constants/user-messages.constant';
+import {
+  DOCUMENT_IN_USE_MESSAGE,
+  EMAIL_IN_USE_MESSAGE,
+} from '../../src/users/constants/user-messages.constant';
+import { Op } from 'sequelize';
 import Env from '@common/schemas/env.schema';
 import EmailService from '@email/email.service';
 import { TEMPORARY_PASSWORD_SUBJECT } from '@email/templates/temporary-password.template';
@@ -375,6 +379,26 @@ describe('UsersService', () => {
         expect(repository.create).not.toHaveBeenCalled();
       });
 
+      it('rejects a document already used in the organization', async () => {
+        repository.findOne.mockImplementation(
+          (query: { documentNumber?: string }) =>
+            Promise.resolve(query.documentNumber ? { id: 'other-id' } : null),
+        );
+
+        await expect(
+          service.createOrganizationUser(actor, {
+            ...newUser,
+            documentNumber: '1020',
+          }),
+        ).rejects.toThrow(DOCUMENT_IN_USE_MESSAGE);
+        expect(repository.findOne).toHaveBeenCalledWith(
+          { organizationId: 'org-id', documentNumber: '1020' },
+          false,
+          { attributes: ['id'] },
+        );
+        expect(repository.create).not.toHaveBeenCalled();
+      });
+
       it('rejects an actor without organization', async () => {
         await expect(
           service.createOrganizationUser(
@@ -436,6 +460,43 @@ describe('UsersService', () => {
           firstName: 'Eva',
           isActive: false,
         });
+      });
+
+      it('checks the document against other users of the organization', async () => {
+        repository.findOne.mockImplementation(
+          (query: { documentNumber?: string }) =>
+            Promise.resolve(query.documentNumber ? null : target()),
+        );
+
+        await service.updateOrganizationUser(actor, 'target-id', {
+          documentNumber: '1020',
+        });
+
+        expect(repository.findOne).toHaveBeenCalledWith(
+          {
+            organizationId: 'org-id',
+            documentNumber: '1020',
+            id: { [Op.ne]: 'target-id' },
+          },
+          false,
+          { attributes: ['id'] },
+        );
+      });
+
+      it('rejects a document used by another user of the organization', async () => {
+        repository.findOne.mockImplementation(
+          (query: { documentNumber?: string }) =>
+            Promise.resolve(
+              query.documentNumber ? { id: 'other-id' } : target(),
+            ),
+        );
+
+        await expect(
+          service.updateOrganizationUser(actor, 'target-id', {
+            documentNumber: '1020',
+          }),
+        ).rejects.toThrow(DOCUMENT_IN_USE_MESSAGE);
+        expect(repository.updateByPk).not.toHaveBeenCalled();
       });
 
       it('validates the new role', async () => {

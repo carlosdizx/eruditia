@@ -24,12 +24,19 @@ export async function createUser(
   await requireGrant(USER_GRANTS.create);
 
   const values = readValues(formData);
-  const { firstName, lastName, email, roleId } = values;
+  const { firstName, lastName, email, documentNumber, phone, roleId } = values;
 
   try {
     await authFetch('/users', {
       method: 'POST',
-      body: { firstName, lastName, email, roleId },
+      body: {
+        firstName,
+        lastName,
+        email,
+        roleId,
+        ...(documentNumber && { documentNumber }),
+        ...(phone && { phone }),
+      },
     });
   } catch (error) {
     return { status: 'error', message: toMessage(error), values };
@@ -50,7 +57,8 @@ export async function updateUser(
   await requireGrant(USER_GRANTS.update);
 
   const values = readValues(formData);
-  const { firstName, lastName, roleId, isActive } = values;
+  const { firstName, lastName, documentNumber, phone, roleId, isActive } =
+    values;
 
   try {
     await authFetch(`/users/${userId}`, {
@@ -58,6 +66,9 @@ export async function updateUser(
       body: {
         firstName,
         lastName,
+        // Vacío borra el dato.
+        documentNumber: documentNumber || null,
+        phone: phone || null,
         // Deshabilitados en el form (p. ej. la propia cuenta) no se envían y
         // quedan como están.
         ...(roleId && { roleId }),

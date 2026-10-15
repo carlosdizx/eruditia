@@ -21,6 +21,8 @@ export type CurrentUser = {
   firstName: string;
   lastName: string;
   email: string;
+  documentNumber: string | null;
+  phone: string | null;
   status: 'pending' | 'active' | 'suspended' | 'blocked';
   isActive: boolean;
   isVerified: boolean;

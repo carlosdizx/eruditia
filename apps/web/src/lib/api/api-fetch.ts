@@ -47,6 +47,8 @@ export async function apiFetch<T>(
   { body, token, headers: init, ...options }: ApiFetchOptions = {},
 ): Promise<T> {
   let response: Response;
+  // Los archivos van como multipart: fetch pone el content-type con su boundary.
+  const isFormData = body instanceof FormData;
 
   try {
     response = await fetch(new URL(path, env.apiUrl), {
@@ -54,11 +56,16 @@ export async function apiFetch<T>(
       cache: 'no-store',
       headers: {
         ...(await forwardedHeaders()),
-        ...(body !== undefined && { 'content-type': 'application/json' }),
+        ...(body !== undefined &&
+          !isFormData && { 'content-type': 'application/json' }),
         ...(token && { authorization: `Bearer ${token}` }),
         ...init,
       },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: isFormData
+        ? body
+        : body !== undefined
+          ? JSON.stringify(body)
+          : undefined,
     });
   } catch {
     throw new ApiError(503, DEFAULT_ERROR_MESSAGE);
