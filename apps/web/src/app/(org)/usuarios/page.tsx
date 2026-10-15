@@ -155,7 +155,7 @@ async function UsersTable({
 export default function UsersPage({ searchParams }: PageProps<'/usuarios'>) {
   return (
     <>
-      <PanelHeader crumbs={[{ label: 'Usuarios' }]} />
+      <PanelHeader crumbs={[{ label: 'Usuarios' }]} yearSelector />
       <PanelContent>
         <Suspense fallback={<TableSkeleton />}>
           <UsersTable searchParams={searchParams} />

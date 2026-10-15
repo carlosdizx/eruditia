@@ -225,7 +225,7 @@ export default function StudentsPage({
 }: PageProps<'/estudiantes'>) {
   return (
     <>
-      <PanelHeader crumbs={[{ label: 'Estudiantes' }]} />
+      <PanelHeader crumbs={[{ label: 'Estudiantes' }]} yearSelector />
       <PanelContent>
         <Suspense fallback={<TableSkeleton />}>
           <StudentsTable searchParams={searchParams} />

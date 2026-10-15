@@ -49,6 +49,11 @@ const RESOURCE_LABELS: Record<string, string> = {
   user: 'Usuarios',
   role: 'Roles',
   student: 'Estudiantes',
+  'academic-year': 'Años lectivos',
+  'grade-level': 'Grados',
+  classroom: 'Salones',
+  subject: 'Materias',
+  'classroom-subject': 'Carga académica',
 };
 
 type PermissionsFormProps = {

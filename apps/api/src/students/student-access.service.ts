@@ -12,11 +12,12 @@ import {
   NO_ACCOUNT_MESSAGE,
 } from './constants/student-messages.constant';
 import { generateAccessPin } from './utils/access-pin.util';
+import organizationOf, {
+  type OrganizationActor,
+} from '@common/utils/organization-of.util';
 import {
-  organizationOf,
   STUDENT_USER_INCLUDE,
   toPublicStudent,
-  type OrganizationActor,
 } from './utils/public-student.util';
 
 type AccountOwner = Pick<StudentModel, 'firstName' | 'lastName'>;

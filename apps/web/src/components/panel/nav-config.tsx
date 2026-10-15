@@ -2,6 +2,11 @@
 
 import {
   Building2Icon,
+  CalendarRangeIcon,
+  BookOpenIcon,
+  DoorOpenIcon,
+  PresentationIcon,
+  LayersIcon,
   GraduationCapIcon,
   ShieldCheckIcon,
   UserIcon,
@@ -9,6 +14,11 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import {
+  ACADEMIC_YEAR_GRANTS,
+  CLASSROOM_GRANTS,
+  CLASSROOM_SUBJECT_GRANTS,
+  SUBJECT_GRANTS,
+  GRADE_LEVEL_GRANTS,
   STUDENT_GRANTS,
   USER_GRANTS,
   type Grant,
@@ -40,6 +50,36 @@ export const NAV: Record<PanelKind, { label: string; items: NavItem[] }> = {
         url: '/estudiantes',
         icon: GraduationCapIcon,
         grant: STUDENT_GRANTS.list,
+      },
+      {
+        title: 'Años lectivos',
+        url: '/anios-lectivos',
+        icon: CalendarRangeIcon,
+        grant: ACADEMIC_YEAR_GRANTS.list,
+      },
+      {
+        title: 'Grados',
+        url: '/grados',
+        icon: LayersIcon,
+        grant: GRADE_LEVEL_GRANTS.list,
+      },
+      {
+        title: 'Salones',
+        url: '/salones',
+        icon: DoorOpenIcon,
+        grant: CLASSROOM_GRANTS.list,
+      },
+      {
+        title: 'Materias',
+        url: '/materias',
+        icon: BookOpenIcon,
+        grant: SUBJECT_GRANTS.list,
+      },
+      {
+        title: 'Mis clases',
+        url: '/mis-clases',
+        icon: PresentationIcon,
+        grant: CLASSROOM_SUBJECT_GRANTS.mine,
       },
     ],
   },
