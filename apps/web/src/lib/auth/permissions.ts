@@ -5,6 +5,9 @@ export const Permission = {
   USER_UPDATE: 'user:update',
   USER_DELETE: 'user:delete',
   ROLE_LIST: 'role:list',
+  STUDENT_LIST: 'student:list',
+  STUDENT_CREATE: 'student:create',
+  STUDENT_UPDATE: 'student:update',
 } as const;
 
 export type Permission = (typeof Permission)[keyof typeof Permission];
@@ -15,6 +18,9 @@ export const PERMISSION_LABELS: Record<string, string> = {
   [Permission.USER_UPDATE]: 'Editar usuarios',
   [Permission.USER_DELETE]: 'Eliminar usuarios',
   [Permission.ROLE_LIST]: 'Ver roles',
+  [Permission.STUDENT_LIST]: 'Ver estudiantes',
+  [Permission.STUDENT_CREATE]: 'Matricular estudiantes',
+  [Permission.STUDENT_UPDATE]: 'Editar estudiantes',
 };
 
 export const hasPermission = (
@@ -39,4 +45,11 @@ export const USER_GRANTS = {
   create: { permission: Permission.USER_CREATE, role: 'ADMIN' },
   update: { permission: Permission.USER_UPDATE, role: 'ADMIN' },
   delete: { permission: Permission.USER_DELETE, role: 'ADMIN' },
+} satisfies Record<string, Grant>;
+
+// Espejo de los @AuthWithPermissions de StudentsController.
+export const STUDENT_GRANTS = {
+  list: { permission: Permission.STUDENT_LIST, role: 'ADMIN' },
+  create: { permission: Permission.STUDENT_CREATE, role: 'ADMIN' },
+  update: { permission: Permission.STUDENT_UPDATE, role: 'ADMIN' },
 } satisfies Record<string, Grant>;

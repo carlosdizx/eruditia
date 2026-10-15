@@ -7,6 +7,10 @@ const permissionDescriptions: Record<PermissionEnum, string> = {
   [PermissionEnum.USER_UPDATE]: 'Editar usuarios de la organización',
   [PermissionEnum.USER_DELETE]: 'Eliminar usuarios de la organización',
   [PermissionEnum.ROLE_LIST]: 'Listar roles disponibles',
+  [PermissionEnum.STUDENT_LIST]: 'Listar estudiantes de la organización',
+  [PermissionEnum.STUDENT_CREATE]: 'Matricular estudiantes en la organización',
+  [PermissionEnum.STUDENT_UPDATE]:
+    'Editar estudiantes y cambiar su estado en la organización',
 };
 
 export interface PermissionCatalogEntry {

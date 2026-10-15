@@ -12,7 +12,7 @@ import {
   INVALID_DOCUMENT_NUMBER_MESSAGE,
   INVALID_PHONE_MESSAGE,
   PHONE_PATTERN,
-} from '../constants/user-validation.constant';
+} from '@common/constants/contact-validation.constant';
 
 // Alta de un usuario por el admin de su organización: a diferencia de
 // CreateUserDto, el rol es obligatorio (no hay uno por defecto).

@@ -12,7 +12,7 @@ import {
   INVALID_DOCUMENT_NUMBER_MESSAGE,
   INVALID_PHONE_MESSAGE,
   PHONE_PATTERN,
-} from '../constants/user-validation.constant';
+} from '@common/constants/contact-validation.constant';
 
 // El correo no se edita: es la identidad de login y el canal del 2FA.
 export default class UpdateOrganizationUserDto {

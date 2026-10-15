@@ -9,6 +9,7 @@ import UserSessionModel from './user-session.model';
 import PermissionModel from './permission.model';
 import RolePermissionModel from './role-permission.model';
 import OrganizationPermissionModel from './organization-permission.model';
+import StudentModel from './student.model';
 
 // Register every @Table model here (never BaseModel/SoftDeleteModel).
 // Consumed by databaseOptionsUtil so both the Nest app and the CLI
@@ -24,6 +25,7 @@ const models: ModelCtor[] = [
   PermissionModel,
   RolePermissionModel,
   OrganizationPermissionModel,
+  StudentModel,
 ];
 
 export default models;
