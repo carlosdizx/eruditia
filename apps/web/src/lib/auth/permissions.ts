@@ -13,6 +13,10 @@ export const Permission = {
   ACADEMIC_YEAR_CREATE: 'academic-year:create',
   ACADEMIC_YEAR_UPDATE: 'academic-year:update',
   ACADEMIC_YEAR_DELETE: 'academic-year:delete',
+  GRADE_LEVEL_LIST: 'grade-level:list',
+  GRADE_LEVEL_CREATE: 'grade-level:create',
+  GRADE_LEVEL_UPDATE: 'grade-level:update',
+  GRADE_LEVEL_DELETE: 'grade-level:delete',
 } as const;
 
 export type Permission = (typeof Permission)[keyof typeof Permission];
@@ -31,6 +35,10 @@ export const PERMISSION_LABELS: Record<string, string> = {
   [Permission.ACADEMIC_YEAR_CREATE]: 'Crear años lectivos',
   [Permission.ACADEMIC_YEAR_UPDATE]: 'Editar años lectivos y periodos',
   [Permission.ACADEMIC_YEAR_DELETE]: 'Eliminar años lectivos',
+  [Permission.GRADE_LEVEL_LIST]: 'Ver grados',
+  [Permission.GRADE_LEVEL_CREATE]: 'Crear grados',
+  [Permission.GRADE_LEVEL_UPDATE]: 'Editar grados',
+  [Permission.GRADE_LEVEL_DELETE]: 'Eliminar grados',
 };
 
 export const hasPermission = (
@@ -71,4 +79,12 @@ export const ACADEMIC_YEAR_GRANTS = {
   create: { permission: Permission.ACADEMIC_YEAR_CREATE, role: 'ADMIN' },
   update: { permission: Permission.ACADEMIC_YEAR_UPDATE, role: 'ADMIN' },
   delete: { permission: Permission.ACADEMIC_YEAR_DELETE, role: 'ADMIN' },
+} satisfies Record<string, Grant>;
+
+// Espejo de los @AuthWithPermissions de GradeLevelsController.
+export const GRADE_LEVEL_GRANTS = {
+  list: { permission: Permission.GRADE_LEVEL_LIST, role: 'ADMIN' },
+  create: { permission: Permission.GRADE_LEVEL_CREATE, role: 'ADMIN' },
+  update: { permission: Permission.GRADE_LEVEL_UPDATE, role: 'ADMIN' },
+  delete: { permission: Permission.GRADE_LEVEL_DELETE, role: 'ADMIN' },
 } satisfies Record<string, Grant>;

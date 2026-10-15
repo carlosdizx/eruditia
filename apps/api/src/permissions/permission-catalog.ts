@@ -17,6 +17,11 @@ const permissionDescriptions: Record<PermissionEnum, string> = {
   [PermissionEnum.ACADEMIC_YEAR_UPDATE]:
     'Editar años lectivos, sus periodos y abrir o cerrar el ingreso de notas',
   [PermissionEnum.ACADEMIC_YEAR_DELETE]: 'Eliminar años lectivos',
+  [PermissionEnum.GRADE_LEVEL_LIST]: 'Listar grados escolares',
+  [PermissionEnum.GRADE_LEVEL_CREATE]:
+    'Crear grados escolares y cargar la plantilla estándar',
+  [PermissionEnum.GRADE_LEVEL_UPDATE]: 'Editar grados escolares',
+  [PermissionEnum.GRADE_LEVEL_DELETE]: 'Eliminar grados escolares',
 };
 
 export interface PermissionCatalogEntry {

@@ -3,6 +3,7 @@
 import {
   Building2Icon,
   CalendarRangeIcon,
+  LayersIcon,
   GraduationCapIcon,
   ShieldCheckIcon,
   UserIcon,
@@ -11,6 +12,7 @@ import {
 } from 'lucide-react';
 import {
   ACADEMIC_YEAR_GRANTS,
+  GRADE_LEVEL_GRANTS,
   STUDENT_GRANTS,
   USER_GRANTS,
   type Grant,
@@ -48,6 +50,12 @@ export const NAV: Record<PanelKind, { label: string; items: NavItem[] }> = {
         url: '/anios-lectivos',
         icon: CalendarRangeIcon,
         grant: ACADEMIC_YEAR_GRANTS.list,
+      },
+      {
+        title: 'Grados',
+        url: '/grados',
+        icon: LayersIcon,
+        grant: GRADE_LEVEL_GRANTS.list,
       },
     ],
   },

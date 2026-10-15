@@ -17,6 +17,11 @@ enum PermissionEnum {
   ACADEMIC_YEAR_CREATE = 'academic-year:create',
   ACADEMIC_YEAR_UPDATE = 'academic-year:update',
   ACADEMIC_YEAR_DELETE = 'academic-year:delete',
+
+  GRADE_LEVEL_LIST = 'grade-level:list',
+  GRADE_LEVEL_CREATE = 'grade-level:create',
+  GRADE_LEVEL_UPDATE = 'grade-level:update',
+  GRADE_LEVEL_DELETE = 'grade-level:delete',
 }
 
 export default PermissionEnum;
