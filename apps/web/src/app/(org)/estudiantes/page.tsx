@@ -50,6 +50,26 @@ const STATUS_VARIANTS: Record<
   suspended: 'destructive',
 };
 
+function StudentAccess({ student }: { student: Student }) {
+  if (student.user)
+    return (
+      <div className="flex flex-col items-start gap-0.5">
+        <Badge variant={student.user.isActive ? 'secondary' : 'outline'}>
+          Cuenta
+        </Badge>
+        <span className="text-muted-foreground max-w-40 truncate text-xs">
+          {student.user.email}
+        </span>
+      </div>
+    );
+
+  return student.hasAccessPin ? (
+    <Badge variant="outline">PIN</Badge>
+  ) : (
+    <span className="text-muted-foreground text-xs">Sin acceso</span>
+  );
+}
+
 async function StudentsTable({
   searchParams,
 }: {
@@ -141,6 +161,7 @@ async function StudentsTable({
               <TableHead className="hidden sm:table-cell">Documento</TableHead>
               <TableHead className="hidden lg:table-cell">Código</TableHead>
               <TableHead className="hidden md:table-cell">Acudiente</TableHead>
+              <TableHead className="hidden sm:table-cell">Acceso</TableHead>
               <TableHead>Estado</TableHead>
               {can.update && <TableHead className="w-12 pr-4" />}
             </TableRow>
@@ -175,6 +196,9 @@ async function StudentsTable({
                   ) : (
                     '—'
                   )}
+                </TableCell>
+                <TableCell className="hidden sm:table-cell">
+                  <StudentAccess student={student} />
                 </TableCell>
                 <TableCell>
                   <Badge variant={STATUS_VARIANTS[student.status]}>

@@ -7,6 +7,7 @@ import { IS_PUBLIC_KEY } from '@auth/decorators/public.decorator';
 import { AUTH_WITH_PERMISSIONS_KEY } from '@auth/decorators/auth-with-permissions.decorator';
 import StudentsController from '../../src/students/students.controller';
 import StudentsService from '../../src/students/students.service';
+import StudentAccessService from '../../src/students/student-access.service';
 import ListStudentsDto from '../../src/students/dto/list-students.dto';
 import authContextFixture from '../auth/fixtures/auth-context.fixture';
 
@@ -25,6 +26,11 @@ describe('StudentsController', () => {
     updateStudent: jest.Mock;
     importStudents: jest.Mock;
   };
+  let studentAccessService: {
+    regenerateAccessPin: jest.Mock;
+    linkAccount: jest.Mock;
+    unlinkAccount: jest.Mock;
+  };
   let controller: StudentsController;
 
   const auth = authContextFixture();
@@ -37,8 +43,14 @@ describe('StudentsController', () => {
       updateStudent: jest.fn().mockResolvedValue({ id: 'student-id' }),
       importStudents: jest.fn().mockResolvedValue({ created: 1 }),
     };
+    studentAccessService = {
+      regenerateAccessPin: jest.fn().mockResolvedValue({ accessPin: '012345' }),
+      linkAccount: jest.fn().mockResolvedValue({ id: 'student-id' }),
+      unlinkAccount: jest.fn().mockResolvedValue({ accessPin: '012345' }),
+    };
     controller = new StudentsController(
       studentsService as unknown as StudentsService,
+      studentAccessService as unknown as StudentAccessService,
     );
   });
 
@@ -48,6 +60,9 @@ describe('StudentsController', () => {
     ['createStudent', PermissionEnum.STUDENT_CREATE],
     ['updateStudent', PermissionEnum.STUDENT_UPDATE],
     ['importStudents', PermissionEnum.STUDENT_IMPORT],
+    ['regenerateAccessPin', PermissionEnum.STUDENT_UPDATE],
+    ['linkAccount', PermissionEnum.STUDENT_UPDATE],
+    ['unlinkAccount', PermissionEnum.STUDENT_UPDATE],
   ])('%s', (handler, permission) => {
     it(`requires the ADMIN role and the ${permission} permission`, () => {
       expect(handlerMetadata(handler, AUTH_WITH_PERMISSIONS_KEY)).toEqual({
@@ -110,5 +125,39 @@ describe('StudentsController', () => {
       created: 1,
     });
     expect(studentsService.importStudents).toHaveBeenCalledWith(auth, buffer);
+  });
+
+  it('regenerates the PIN of a student of the current organization', async () => {
+    await expect(
+      controller.regenerateAccessPin('student-id', auth),
+    ).resolves.toEqual({ accessPin: '012345' });
+    expect(studentAccessService.regenerateAccessPin).toHaveBeenCalledWith(
+      auth,
+      'student-id',
+    );
+  });
+
+  it('links an account by email', async () => {
+    await controller.linkAccount(
+      'student-id',
+      { email: 'sofia@example.com' },
+      auth,
+    );
+
+    expect(studentAccessService.linkAccount).toHaveBeenCalledWith(
+      auth,
+      'student-id',
+      'sofia@example.com',
+    );
+  });
+
+  it('unlinks the account and returns the new PIN', async () => {
+    await expect(controller.unlinkAccount('student-id', auth)).resolves.toEqual(
+      { accessPin: '012345' },
+    );
+    expect(studentAccessService.unlinkAccount).toHaveBeenCalledWith(
+      auth,
+      'student-id',
+    );
   });
 });

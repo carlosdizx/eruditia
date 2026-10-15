@@ -23,6 +23,22 @@ describe('CreateStudentDto', () => {
     await expect(errorsOf(CreateStudentDto, valid)).resolves.toEqual([]);
   });
 
+  it('requires a valid email only when creating an account', async () => {
+    await expect(
+      errorsOf(CreateStudentDto, { ...valid, email: 'ignored' }),
+    ).resolves.toEqual([]);
+    await expect(
+      errorsOf(CreateStudentDto, { ...valid, createAccount: true }),
+    ).resolves.toEqual(['email']);
+    await expect(
+      errorsOf(CreateStudentDto, {
+        ...valid,
+        createAccount: true,
+        email: 'sofia@example.com',
+      }),
+    ).resolves.toEqual([]);
+  });
+
   it('accepts the full record', async () => {
     await expect(
       errorsOf(CreateStudentDto, {

@@ -1,12 +1,13 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { CircleAlertIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { DialogClose, DialogFooter } from '@/components/ui/dialog';
 import {
   Field,
+  FieldContent,
   FieldDescription,
   FieldGroup,
   FieldLabel,
@@ -22,6 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
+import { Switch } from '@/components/ui/switch';
 import {
   DOCUMENT_TYPES,
   STUDENT_STATUSES,
@@ -36,7 +38,7 @@ type StudentFormProps = {
     formData: FormData,
   ) => Promise<StudentFormState>;
   initialValues?: StudentFormValues;
-  onDone: () => void;
+  onDone: (result: Extract<StudentFormState, { status: 'success' }>) => void;
 };
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -53,7 +55,7 @@ export function StudentForm({
       const next = await action(prev, formData);
       if (next.status === 'success') {
         toast.success(next.message);
-        onDone();
+        onDone(next);
       }
       return next;
     },
@@ -62,6 +64,9 @@ export function StudentForm({
 
   // Tras un error se conserva lo enviado (React reinicia el form).
   const values = state.status === 'error' ? state.values : initialValues;
+  const [createAccount, setCreateAccount] = useState(
+    values.createAccount === 'on',
+  );
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
@@ -187,6 +192,42 @@ export function StudentForm({
               </SelectContent>
             </Select>
           </Field>
+        )}
+
+        {mode === 'create' && (
+          <FieldSet>
+            <Field orientation="horizontal">
+              <FieldContent>
+                <FieldLabel htmlFor="createAccount">
+                  Crear cuenta de acceso (Login) para este estudiante
+                </FieldLabel>
+                <FieldDescription>
+                  {createAccount
+                    ? 'Iniciará sesión con su correo; le enviaremos una contraseña temporal.'
+                    : 'Sin cuenta, consultará sus notas con su documento y un PIN de 6 dígitos que se genera ahora.'}
+                </FieldDescription>
+              </FieldContent>
+              <Switch
+                id="createAccount"
+                name="createAccount"
+                checked={createAccount}
+                onCheckedChange={setCreateAccount}
+              />
+            </Field>
+            {createAccount && (
+              <Field>
+                <FieldLabel htmlFor="email">Correo del estudiante</FieldLabel>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  required
+                  placeholder="estudiante@colegio.edu"
+                  defaultValue={values.email ?? ''}
+                />
+              </Field>
+            )}
+          </FieldSet>
         )}
 
         <FieldSet>

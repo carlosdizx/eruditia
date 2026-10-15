@@ -1,13 +1,7 @@
-import {
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-} from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { Op, WhereOptions } from 'sequelize';
 import StudentModel from '@database/models/student.model';
 import CrudService from '@database/services/crud.service';
-import type AuthContextInterface from '@auth/interfaces/auth-context.interface';
-import { NO_ORGANIZATION_MESSAGE } from '../users/constants/user-messages.constant';
 import StudentRepository from './student.repository';
 import CreateStudentDto from './dto/create-student.dto';
 import UpdateStudentDto from './dto/update-student.dto';
@@ -22,11 +16,14 @@ import {
   toCreateStudentDto,
 } from './utils/students-csv.util';
 import type { StudentsImportSummary } from './interfaces/students-import-summary.interface';
-
-type OrganizationActor = Pick<AuthContextInterface, 'organizationId'>;
-
-// El hash del PIN nunca sale de la API.
-const PUBLIC_ATTRIBUTES = { exclude: ['accessPin'] };
+import StudentAccessService from './student-access.service';
+import { generateAccessPin } from './utils/access-pin.util';
+import {
+  organizationOf,
+  STUDENT_USER_INCLUDE,
+  toPublicStudent,
+  type OrganizationActor,
+} from './utils/public-student.util';
 
 const SEARCHABLE_FIELDS = [
   'firstName',
@@ -42,19 +39,12 @@ export default class StudentsService extends CrudService<
   StudentModel,
   StudentRepository
 > {
-  constructor(protected readonly repository: StudentRepository) {
+  constructor(
+    protected readonly repository: StudentRepository,
+    private readonly studentAccessService: StudentAccessService,
+  ) {
     super(repository);
   }
-
-  private toPublicStudent = (student: StudentModel) => {
-    const { accessPin: _accessPin, ...publicStudent } = student;
-    return publicStudent as StudentModel;
-  };
-
-  private organizationOf = ({ organizationId }: OrganizationActor) => {
-    if (!organizationId) throw new ForbiddenException(NO_ORGANIZATION_MESSAGE);
-    return organizationId;
-  };
 
   // Cada palabra debe aparecer en alguno de los campos: "ana lopez" encuentra
   // a Ana López aunque nombre y apellido estén en columnas distintas.
@@ -109,37 +99,43 @@ export default class StudentsService extends CrudService<
   ) => {
     const { status, search } = dto;
 
-    return await this.findAllPaginated(
+    const { data, meta } = await this.findAllPaginated(
       dto,
       {
-        organizationId: this.organizationOf(actor),
+        organizationId: organizationOf(actor),
         ...(status && { status }),
         ...this.searchWhere(search),
       },
       {
-        attributes: PUBLIC_ATTRIBUTES,
+        include: STUDENT_USER_INCLUDE,
         order: [
           ['lastName', 'ASC'],
           ['firstName', 'ASC'],
         ],
       },
     );
+
+    return { data: data.map(toPublicStudent), meta };
   };
 
   // Un estudiante de otra organización responde 404, igual que uno inexistente.
   public findStudent = async (actor: OrganizationActor, studentId: string) => {
-    return (await this.findOne(
-      { id: studentId, organizationId: this.organizationOf(actor) },
-      true,
-      { attributes: PUBLIC_ATTRIBUTES },
-    ))!;
+    return toPublicStudent(
+      (await this.findOne(
+        { id: studentId, organizationId: organizationOf(actor) },
+        true,
+        { include: STUDENT_USER_INCLUDE },
+      ))!,
+    );
   };
 
+  // Con createAccount se crea o vincula su cuenta; si no, se le genera un PIN
+  // que se devuelve en claro solo en esta respuesta.
   public createStudent = async (
     actor: OrganizationActor,
-    dto: CreateStudentDto,
+    { createAccount, email, ...dto }: CreateStudentDto,
   ) => {
-    const organizationId = this.organizationOf(actor);
+    const organizationId = organizationOf(actor);
     const studentCode = dto.studentCode ?? dto.documentNumber;
 
     await this.assertUnique(organizationId, {
@@ -147,9 +143,34 @@ export default class StudentsService extends CrudService<
       studentCode,
     });
 
-    return this.toPublicStudent(
-      await this.create({ ...dto, studentCode, organizationId }),
-    );
+    return await this.transaction(async (transaction) => {
+      const user = createAccount
+        ? await this.studentAccessService.provideAccount(
+            organizationId,
+            email!,
+            dto,
+            transaction,
+          )
+        : null;
+      const pin = user ? null : await generateAccessPin();
+
+      const student = await this.create(
+        {
+          ...dto,
+          studentCode,
+          organizationId,
+          userId: user?.id ?? null,
+          accessPin: pin?.accessPinHash ?? null,
+        },
+        { transaction },
+      );
+
+      return {
+        ...toPublicStudent(student),
+        user: user && { id: user.id, email: user.email, isActive: true },
+        accessPin: pin?.accessPin ?? null,
+      };
+    });
   };
 
   public updateStudent = async (
@@ -157,14 +178,15 @@ export default class StudentsService extends CrudService<
     studentId: string,
     dto: UpdateStudentDto,
   ) => {
-    const organizationId = this.organizationOf(actor);
+    const organizationId = organizationOf(actor);
 
     await this.findOne({ id: studentId, organizationId }, true, {
       attributes: ['id'],
     });
     await this.assertUnique(organizationId, dto, studentId);
+    await this.updateByPk(studentId, dto);
 
-    return this.toPublicStudent((await this.updateByPk(studentId, dto))!);
+    return await this.findStudent(actor, studentId);
   };
 
   // Importa las filas válidas y reporta el resto; una fila con errores no
@@ -173,7 +195,7 @@ export default class StudentsService extends CrudService<
     actor: OrganizationActor,
     content: Buffer,
   ): Promise<StudentsImportSummary> => {
-    const organizationId = this.organizationOf(actor);
+    const organizationId = organizationOf(actor);
     const rows = parseStudentsCsv(content);
 
     const errors: StudentsImportSummary['errors'] = [];

@@ -1,3 +1,7 @@
+jest.mock('../../src/students/utils/access-pin.util', () => ({
+  generateAccessPin: jest.fn(),
+}));
+
 import 'reflect-metadata';
 import {
   BadRequestException,
@@ -10,6 +14,9 @@ import StudentDocumentTypeEnum from '@common/enums/student-document-type.enum';
 import StudentStatusEnum from '@common/enums/student-status.enum';
 import StudentsService from '../../src/students/students.service';
 import StudentRepository from '../../src/students/student.repository';
+import StudentAccessService from '../../src/students/student-access.service';
+import { generateAccessPin } from '../../src/students/utils/access-pin.util';
+import { STUDENT_USER_INCLUDE } from '../../src/students/utils/public-student.util';
 import CreateStudentDto from '../../src/students/dto/create-student.dto';
 import ListStudentsDto from '../../src/students/dto/list-students.dto';
 import {
@@ -28,6 +35,7 @@ describe('StudentsService', () => {
     transaction: jest.Mock;
   };
   const transaction = { id: 'tx' } as unknown as Transaction;
+  let studentAccessService: { provideAccount: jest.Mock };
   let service: StudentsService;
 
   const actor = { organizationId: 'org-id' };
@@ -56,14 +64,27 @@ describe('StudentsService', () => {
         run(transaction),
       ),
     };
-    service = new StudentsService(repository as unknown as StudentRepository);
+    studentAccessService = {
+      provideAccount: jest
+        .fn()
+        .mockResolvedValue({ id: 'user-id', email: 'sofia@example.com' }),
+    };
+    jest
+      .mocked(generateAccessPin)
+      .mockReset()
+      .mockResolvedValue({ accessPin: '012345', accessPinHash: 'pin-hash' });
+
+    service = new StudentsService(
+      repository as unknown as StudentRepository,
+      studentAccessService as unknown as StudentAccessService,
+    );
   });
 
   describe('listStudents', () => {
     const list = (overrides: Partial<ListStudentsDto> = {}) =>
       Object.assign(new ListStudentsDto(), overrides);
 
-    it('lists only the actor organization, ordered by name and without the PIN', async () => {
+    it('lists only the actor organization, ordered by name, with the linked account', async () => {
       const pagination = list();
 
       await service.listStudents(actor, pagination);
@@ -72,13 +93,31 @@ describe('StudentsService', () => {
         pagination,
         { organizationId: 'org-id' },
         {
-          attributes: { exclude: ['accessPin'] },
+          include: STUDENT_USER_INCLUDE,
           order: [
             ['lastName', 'ASC'],
             ['firstName', 'ASC'],
           ],
         },
       );
+    });
+
+    it('replaces the PIN hash by whether the student has one', async () => {
+      repository.findAllPaginated.mockResolvedValue({
+        data: [
+          { id: 'a', accessPin: 'hash' },
+          { id: 'b', accessPin: null },
+        ],
+        meta: { total: 2 },
+      });
+
+      await expect(service.listStudents(actor, list())).resolves.toEqual({
+        data: [
+          { id: 'a', hasAccessPin: true },
+          { id: 'b', hasAccessPin: false },
+        ],
+        meta: { total: 2 },
+      });
     });
 
     it('filters by status', async () => {
@@ -117,30 +156,81 @@ describe('StudentsService', () => {
 
   describe('findStudent', () => {
     it('looks the student up only inside the actor organization', async () => {
-      repository.findOne.mockResolvedValue({ id: 'student-id' });
+      repository.findOne.mockResolvedValue({
+        id: 'student-id',
+        accessPin: 'hash',
+      });
 
-      await service.findStudent(actor, 'student-id');
-
+      await expect(service.findStudent(actor, 'student-id')).resolves.toEqual({
+        id: 'student-id',
+        hasAccessPin: true,
+      });
       expect(repository.findOne).toHaveBeenCalledWith(
         { id: 'student-id', organizationId: 'org-id' },
         true,
-        { attributes: { exclude: ['accessPin'] } },
+        { include: STUDENT_USER_INCLUDE },
       );
     });
   });
 
   describe('createStudent', () => {
-    it('creates the student in the actor organization without returning the PIN', async () => {
+    it('creates the student with a hashed PIN and returns the plain PIN once', async () => {
+      repository.create.mockImplementation((data: object) =>
+        Promise.resolve({ id: 'student-id', ...data }),
+      );
+
       const result = await service.createStudent(actor, {
         ...dto,
         studentCode: 'EST-01',
       });
 
       expect(repository.create).toHaveBeenCalledWith(
-        { ...dto, studentCode: 'EST-01', organizationId: 'org-id' },
-        undefined,
+        {
+          ...dto,
+          studentCode: 'EST-01',
+          organizationId: 'org-id',
+          userId: null,
+          accessPin: 'pin-hash',
+        },
+        { transaction },
       );
-      expect(result).not.toHaveProperty('accessPin');
+      expect(studentAccessService.provideAccount).not.toHaveBeenCalled();
+      expect(result).toMatchObject({
+        id: 'student-id',
+        hasAccessPin: true,
+        accessPin: '012345',
+        user: null,
+      });
+    });
+
+    it('creates or links an account instead of a PIN when requested', async () => {
+      repository.create.mockImplementation((data: object) =>
+        Promise.resolve({ id: 'student-id', ...data }),
+      );
+
+      const result = await service.createStudent(actor, {
+        ...dto,
+        createAccount: true,
+        email: 'sofia@example.com',
+      });
+
+      expect(studentAccessService.provideAccount).toHaveBeenCalledWith(
+        'org-id',
+        'sofia@example.com',
+        { ...dto },
+        transaction,
+      );
+      expect(repository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'user-id', accessPin: null }),
+        { transaction },
+      );
+      expect(repository.create.mock.calls[0][0]).not.toHaveProperty('email');
+      expect(generateAccessPin).not.toHaveBeenCalled();
+      expect(result).toMatchObject({
+        hasAccessPin: false,
+        accessPin: null,
+        user: { id: 'user-id', email: 'sofia@example.com', isActive: true },
+      });
     });
 
     it('uses the document number as code when none is given', async () => {
@@ -148,7 +238,7 @@ describe('StudentsService', () => {
 
       expect(repository.create).toHaveBeenCalledWith(
         expect.objectContaining({ studentCode: '1020' }),
-        undefined,
+        { transaction },
       );
     });
 
@@ -193,12 +283,18 @@ describe('StudentsService', () => {
   });
 
   describe('updateStudent', () => {
-    it('updates a student of the organization without returning the PIN', async () => {
+    // Responde al estudiante objetivo y deja libres documento y código.
+    const mockStudent = () =>
       repository.findOne.mockImplementation((query: { id?: string }) =>
         Promise.resolve(
-          query.id === 'student-id' ? { id: 'student-id' } : null,
+          query.id === 'student-id'
+            ? { id: 'student-id', status: 'graduated', accessPin: 'hash' }
+            : null,
         ),
       );
+
+    it('updates a student of the organization and returns it without the PIN', async () => {
+      mockStudent();
 
       const result = await service.updateStudent(actor, 'student-id', {
         status: StudentStatusEnum.GRADUATED,
@@ -217,19 +313,19 @@ describe('StudentsService', () => {
       expect(result).toEqual({
         id: 'student-id',
         status: StudentStatusEnum.GRADUATED,
+        hasAccessPin: true,
       });
     });
 
     it('checks the new document against the other students', async () => {
-      repository.findOne
-        .mockResolvedValueOnce({ id: 'student-id' })
-        .mockResolvedValueOnce(null);
+      mockStudent();
 
       await service.updateStudent(actor, 'student-id', {
         documentNumber: '3040',
       });
 
-      expect(repository.findOne).toHaveBeenLastCalledWith(
+      expect(repository.findOne).toHaveBeenNthCalledWith(
+        2,
         {
           organizationId: 'org-id',
           [Op.or]: [{ documentNumber: '3040' }],

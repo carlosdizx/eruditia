@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsEmail,
   IsEnum,
   IsISO8601,
@@ -7,6 +8,7 @@ import {
   IsString,
   Matches,
   MaxLength,
+  ValidateIf,
 } from 'class-validator';
 import StudentDocumentTypeEnum from '@common/enums/student-document-type.enum';
 import StudentStatusEnum from '@common/enums/student-status.enum';
@@ -70,4 +72,13 @@ export default class CreateStudentDto {
   @IsOptional()
   @IsEnum(StudentStatusEnum)
   status?: StudentStatusEnum;
+
+  // Cuenta de acceso (rol estudiante). Sin ella se le genera un PIN.
+  @IsOptional()
+  @IsBoolean()
+  createAccount?: boolean;
+
+  @ValidateIf((dto: CreateStudentDto) => dto.createAccount === true)
+  @IsEmail()
+  email?: string;
 }

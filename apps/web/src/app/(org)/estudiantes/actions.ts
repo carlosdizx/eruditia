@@ -9,6 +9,7 @@ import type {
   StudentActionResult,
   StudentFormState,
   StudentFormValues,
+  StudentPinResult,
   StudentsImportState,
   StudentsImportSummary,
   StudentStatus,
@@ -38,27 +39,40 @@ export async function createStudent(
   await requireGrant(STUDENT_GRANTS.create);
 
   const values = readValues(formData);
-  const { firstName, lastName, documentType, documentNumber, studentCode } =
-    values;
+  const {
+    firstName,
+    lastName,
+    documentType,
+    documentNumber,
+    studentCode,
+    createAccount,
+    email,
+  } = values;
+  const withAccount = createAccount === 'on';
 
+  let accessPin: string | null;
   try {
-    await authFetch('/students', {
-      method: 'POST',
-      body: {
-        firstName,
-        lastName,
-        documentType,
-        documentNumber,
-        ...(studentCode && { studentCode }),
-        // Los vacíos no se envían.
-        ...Object.fromEntries(
-          OPTIONAL_FIELDS.filter((field) => values[field]).map((field) => [
-            field,
-            values[field],
-          ]),
-        ),
+    ({ accessPin } = await authFetch<{ accessPin: string | null }>(
+      '/students',
+      {
+        method: 'POST',
+        body: {
+          firstName,
+          lastName,
+          documentType,
+          documentNumber,
+          ...(studentCode && { studentCode }),
+          ...(withAccount && { createAccount: true, email }),
+          // Los vacíos no se envían.
+          ...Object.fromEntries(
+            OPTIONAL_FIELDS.filter((field) => values[field]).map((field) => [
+              field,
+              values[field],
+            ]),
+          ),
+        },
       },
-    });
+    ));
   } catch (error) {
     return { status: 'error', message: toMessage(error), values };
   }
@@ -66,7 +80,11 @@ export async function createStudent(
   refresh();
   return {
     status: 'success',
-    message: `Se matriculó a ${firstName} ${lastName}`,
+    message: withAccount
+      ? `Se matriculó a ${firstName} ${lastName}. Si su cuenta es nueva, le enviamos la contraseña temporal a ${email}.`
+      : `Se matriculó a ${firstName} ${lastName}`,
+    name: `${firstName} ${lastName}`,
+    accessPin,
   };
 }
 
@@ -156,4 +174,56 @@ export async function importStudents(
 
   if (summary.created) refresh();
   return { status: 'done', summary };
+}
+
+const pinAction = async (
+  path: string,
+  method: 'POST' | 'DELETE',
+): Promise<StudentPinResult> => {
+  await requireGrant(STUDENT_GRANTS.update);
+
+  try {
+    const { accessPin } = await authFetch<{ accessPin: string }>(path, {
+      method,
+    });
+    refresh();
+    return { ok: true, accessPin };
+  } catch (error) {
+    return { ok: false, message: toMessage(error) };
+  }
+};
+
+// El PIN anterior deja de funcionar.
+export async function regenerateStudentPin(studentId: string) {
+  return await pinAction(`/students/${studentId}/access-pin`, 'POST');
+}
+
+// La cuenta queda desactivada y el estudiante pasa a consultar con PIN.
+export async function unlinkStudentAccount(studentId: string) {
+  return await pinAction(`/students/${studentId}/account`, 'DELETE');
+}
+
+export async function linkStudentAccount(
+  studentId: string,
+  _prev: StudentFormState,
+  formData: FormData,
+): Promise<StudentFormState> {
+  await requireGrant(STUDENT_GRANTS.update);
+
+  const values = readValues(formData);
+
+  try {
+    await authFetch(`/students/${studentId}/account`, {
+      method: 'POST',
+      body: { email: values.email },
+    });
+  } catch (error) {
+    return { status: 'error', message: toMessage(error), values };
+  }
+
+  refresh();
+  return {
+    status: 'success',
+    message: `Se vinculó la cuenta ${values.email}. Si es nueva, le enviamos la contraseña temporal.`,
+  };
 }

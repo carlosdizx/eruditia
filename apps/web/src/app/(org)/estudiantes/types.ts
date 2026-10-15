@@ -40,6 +40,9 @@ export type Student = {
   guardianPhone: string | null;
   guardianEmail: string | null;
   status: StudentStatus;
+  // Acceso: con cuenta propia (user) o consultando con documento + PIN.
+  hasAccessPin: boolean;
+  user: { id: string; email: string; isActive: boolean } | null;
 };
 
 export type StudentFormValues = Partial<
@@ -53,14 +56,22 @@ export type StudentFormValues = Partial<
     | 'guardianName'
     | 'guardianPhone'
     | 'guardianEmail'
-    | 'status',
+    | 'status'
+    | 'createAccount'
+    | 'email',
     string
   >
 >;
 
 export type StudentFormState =
   | { status: 'idle' }
-  | { status: 'success'; message: string }
+  // accessPin: el PIN generado al matricular sin cuenta, visible solo esta vez.
+  | {
+      status: 'success';
+      message: string;
+      name?: string;
+      accessPin?: string | null;
+    }
   | { status: 'error'; message: string; values: StudentFormValues };
 
 // Respuesta de POST /students/import.
@@ -77,3 +88,7 @@ export type StudentsImportState =
   | { status: 'error'; message: string };
 
 export type StudentActionResult = { ok: true } | { ok: false; message: string };
+
+// Respuesta de las acciones que generan un PIN nuevo.
+export type StudentPinResult =
+  { ok: true; accessPin: string } | { ok: false; message: string };
