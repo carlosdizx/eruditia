@@ -27,6 +27,11 @@ export const Permission = {
   SUBJECT_DELETE: 'subject:delete',
   CLASSROOM_SUBJECT_LIST: 'classroom-subject:list',
   CLASSROOM_SUBJECT_ASSIGN: 'classroom-subject:assign',
+  ENROLLMENT_LIST: 'enrollment:list',
+  ENROLLMENT_CREATE: 'enrollment:create',
+  ENROLLMENT_UPDATE: 'enrollment:update',
+  ENROLLMENT_DELETE: 'enrollment:delete',
+  ENROLLMENT_PROMOTE: 'enrollment:promote',
 } as const;
 
 export type Permission = (typeof Permission)[keyof typeof Permission];
@@ -59,6 +64,11 @@ export const PERMISSION_LABELS: Record<string, string> = {
   [Permission.SUBJECT_DELETE]: 'Eliminar materias',
   [Permission.CLASSROOM_SUBJECT_LIST]: 'Ver carga académica',
   [Permission.CLASSROOM_SUBJECT_ASSIGN]: 'Asignar materias a salones',
+  [Permission.ENROLLMENT_LIST]: 'Ver listas de clase e historial',
+  [Permission.ENROLLMENT_CREATE]: 'Matricular en salones',
+  [Permission.ENROLLMENT_UPDATE]: 'Cambiar de salón o retirar',
+  [Permission.ENROLLMENT_DELETE]: 'Anular matrículas',
+  [Permission.ENROLLMENT_PROMOTE]: 'Promoción anual de estudiantes',
 };
 
 export const hasPermission = (
@@ -131,4 +141,16 @@ export const CLASSROOM_SUBJECT_GRANTS = {
   assign: { permission: Permission.CLASSROOM_SUBJECT_ASSIGN, role: 'ADMIN' },
   // "Mis clases" del profesor.
   mine: { permission: Permission.CLASSROOM_SUBJECT_LIST, role: 'TEACHER' },
+} satisfies Record<string, Grant>;
+
+// Espejo de los @AuthWithPermissions de EnrollmentsController.
+export const ENROLLMENT_GRANTS = {
+  list: { permission: Permission.ENROLLMENT_LIST, role: 'ADMIN' },
+  create: { permission: Permission.ENROLLMENT_CREATE, role: 'ADMIN' },
+  update: { permission: Permission.ENROLLMENT_UPDATE, role: 'ADMIN' },
+  delete: { permission: Permission.ENROLLMENT_DELETE, role: 'ADMIN' },
+  // Asistente de promoción anual (PromotionsController).
+  promote: { permission: Permission.ENROLLMENT_PROMOTE, role: 'ADMIN' },
+  // Lista de clase e historial, solo de los salones donde dicta.
+  classes: { permission: Permission.ENROLLMENT_LIST, role: 'TEACHER' },
 } satisfies Record<string, Grant>;

@@ -12,6 +12,8 @@ import ClassroomsService, {
 } from '../../src/classrooms/classrooms.service';
 import ClassroomRepository from '../../src/classrooms/classroom.repository';
 import ClassroomSubjectRepository from '../../src/classroom-subjects/classroom-subject.repository';
+import EnrollmentRepository from '../../src/enrollments/enrollment.repository';
+import { CLASSROOM_HAS_ENROLLMENTS_MESSAGE } from '../../src/enrollments/constants/enrollment-messages.constant';
 import { Transaction } from 'sequelize';
 import AcademicYearsService from '../../src/academic-years/academic-years.service';
 import GradeLevelsService from '../../src/grade-levels/grade-levels.service';
@@ -33,6 +35,7 @@ describe('ClassroomsService', () => {
     transaction: jest.Mock;
   };
   let classroomSubjectRepository: { deleteByClassroom: jest.Mock };
+  let enrollmentRepository: { findOne: jest.Mock };
   const transaction = { id: 'tx' } as unknown as Transaction;
   let academicYearsService: { findOne: jest.Mock };
   let gradeLevelsService: { findOne: jest.Mock };
@@ -79,6 +82,7 @@ describe('ClassroomsService', () => {
     classroomSubjectRepository = {
       deleteByClassroom: jest.fn().mockResolvedValue(undefined),
     };
+    enrollmentRepository = { findOne: jest.fn().mockResolvedValue(null) };
     academicYearsService = {
       findOne: jest.fn().mockResolvedValue({
         id: 'year-id',
@@ -99,6 +103,7 @@ describe('ClassroomsService', () => {
       gradeLevelsService as unknown as GradeLevelsService,
       usersService as unknown as UsersService,
       classroomSubjectRepository as unknown as ClassroomSubjectRepository,
+      enrollmentRepository as unknown as EnrollmentRepository,
     );
   });
 
@@ -338,6 +343,21 @@ describe('ClassroomsService', () => {
       await expect(
         service.deleteClassroom(actor, 'classroom-id'),
       ).rejects.toBeInstanceOf(ConflictException);
+      expect(repository.deleteByPk).not.toHaveBeenCalled();
+    });
+
+    it('does not delete classrooms with enrollments', async () => {
+      mockClassroom();
+      enrollmentRepository.findOne.mockResolvedValue({ id: 'enrollment-id' });
+
+      await expect(
+        service.deleteClassroom(actor, 'classroom-id'),
+      ).rejects.toThrow(CLASSROOM_HAS_ENROLLMENTS_MESSAGE);
+      expect(enrollmentRepository.findOne).toHaveBeenCalledWith(
+        { classroomId: 'classroom-id' },
+        false,
+        { attributes: ['id'] },
+      );
       expect(repository.deleteByPk).not.toHaveBeenCalled();
     });
   });

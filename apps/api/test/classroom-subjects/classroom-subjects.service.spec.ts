@@ -82,12 +82,10 @@ describe('ClassroomSubjectsService', () => {
       ),
     };
     academicYearsService = {
-      findOne: jest
-        .fn()
-        .mockResolvedValue({
-          id: 'year-id',
-          status: AcademicYearStatusEnum.OPEN,
-        }),
+      findOne: jest.fn().mockResolvedValue({
+        id: 'year-id',
+        status: AcademicYearStatusEnum.OPEN,
+      }),
     };
     subjectsService = { findOne: jest.fn().mockResolvedValue({ id: 's-id' }) };
     usersService = {
@@ -259,9 +257,15 @@ describe('ClassroomSubjectsService', () => {
         where: { academicYearId: 'year-id' },
         required: true,
       });
+      expect(classroomsService.findAll.mock.calls[0][0]).toEqual({
+        organizationId: 'org-id',
+        academicYearId: 'year-id',
+        homeroomTeacherId: 'teacher-id',
+      });
       expect(result).toEqual({
         academicYear: { id: 'year-id', status: AcademicYearStatusEnum.OPEN },
         assignments: [],
+        homerooms: [],
       });
     });
 
@@ -281,8 +285,10 @@ describe('ClassroomSubjectsService', () => {
       await expect(service.listMyAssignments(actor)).resolves.toEqual({
         academicYear: null,
         assignments: [],
+        homerooms: [],
       });
       expect(repository.findAll).not.toHaveBeenCalled();
+      expect(classroomsService.findAll).not.toHaveBeenCalled();
     });
   });
 

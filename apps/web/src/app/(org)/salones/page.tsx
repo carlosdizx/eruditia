@@ -177,7 +177,7 @@ async function ClassroomsTable() {
                 <TableCell className="pl-4 font-medium">
                   <Link
                     href={`/salones/${classroom.id}`}
-                    className="hover:underline"
+                    className="decoration-muted-foreground/40 underline underline-offset-4 hover:decoration-current"
                   >
                     {classroom.name}
                   </Link>

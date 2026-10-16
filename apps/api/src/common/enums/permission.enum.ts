@@ -35,6 +35,12 @@ enum PermissionEnum {
 
   CLASSROOM_SUBJECT_LIST = 'classroom-subject:list',
   CLASSROOM_SUBJECT_ASSIGN = 'classroom-subject:assign',
+
+  ENROLLMENT_LIST = 'enrollment:list',
+  ENROLLMENT_CREATE = 'enrollment:create',
+  ENROLLMENT_UPDATE = 'enrollment:update',
+  ENROLLMENT_DELETE = 'enrollment:delete',
+  ENROLLMENT_PROMOTE = 'enrollment:promote',
 }
 
 export default PermissionEnum;

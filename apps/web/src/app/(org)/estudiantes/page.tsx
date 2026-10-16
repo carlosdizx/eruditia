@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { Suspense } from 'react';
 import { GraduationCapIcon, SearchXIcon } from 'lucide-react';
 import { ListPagination } from '@/components/data/list-pagination';
@@ -171,9 +172,12 @@ async function StudentsTable({
               <TableRow key={student.id}>
                 <TableCell className="pl-4">
                   <div className="flex flex-col">
-                    <span className="font-medium">
+                    <Link
+                      href={`${BASE_PATH}/${student.id}`}
+                      className="font-medium hover:underline"
+                    >
                       {student.lastName}, {student.firstName}
-                    </span>
+                    </Link>
                     <span className="text-muted-foreground text-xs sm:hidden">
                       {student.documentType} {student.documentNumber}
                     </span>

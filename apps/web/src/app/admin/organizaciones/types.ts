@@ -13,6 +13,7 @@ export type Organization = {
   country: string | null;
   website: string | null;
   logoUrl: string | null;
+  passingGrade: number;
   isActive: boolean;
   ownerId: string | null;
   createdAt: string;
@@ -54,6 +55,7 @@ export const ORGANIZATION_FIELDS = [
   'country',
   'website',
   'logoUrl',
+  'passingGrade',
 ] as const;
 
 export const OWNER_FIELDS = ['firstName', 'lastName', 'email'] as const;

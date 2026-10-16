@@ -80,6 +80,13 @@ export function ClassroomForm({
   // El nombre se propone al elegir el grado mientras el usuario no lo edite.
   const [name, setName] = useState(values.name ?? '');
   const [nameTouched, setNameTouched] = useState(!!values.name);
+  // Controlados: al guardar se revalida la página y cambian los valores iniciales.
+  const [gradeLevelId, setGradeLevelId] = useState<string | null>(
+    values.gradeLevelId || null,
+  );
+  const [teacherId, setTeacherId] = useState<string>(
+    values.homeroomTeacherId || NO_TEACHER,
+  );
 
   const gradeItems = gradeLevels.map((grade) => ({
     value: grade.id,
@@ -112,10 +119,11 @@ export function ClassroomForm({
             <Select
               name="gradeLevelId"
               items={gradeItems}
-              defaultValue={values.gradeLevelId || null}
+              value={gradeLevelId}
               required
-              onValueChange={(gradeLevelId) => {
-                const grade = gradeLevels.find(({ id }) => id === gradeLevelId);
+              onValueChange={(next) => {
+                setGradeLevelId(next);
+                const grade = gradeLevels.find(({ id }) => id === next);
                 if (grade && !nameTouched)
                   setName(suggestName(grade.shortName, usedNames));
               }}
@@ -154,7 +162,8 @@ export function ClassroomForm({
           <Select
             name="homeroomTeacherId"
             items={teacherItems}
-            defaultValue={values.homeroomTeacherId || NO_TEACHER}
+            value={teacherId}
+            onValueChange={(next) => setTeacherId(next ?? NO_TEACHER)}
           >
             <SelectTrigger id="homeroomTeacherId" className="w-full">
               <SelectValue />

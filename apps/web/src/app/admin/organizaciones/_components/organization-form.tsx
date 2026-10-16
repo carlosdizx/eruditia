@@ -37,7 +37,11 @@ const toSlug = (value: string) =>
 type FieldConfig = {
   name: keyof OrganizationFormValues;
   label: string;
-  type?: 'text' | 'email' | 'url' | 'tel';
+  type?: 'text' | 'email' | 'url' | 'tel' | 'number';
+  step?: string;
+  min?: number;
+  max?: number;
+  description?: string;
   required?: boolean;
   maxLength?: number;
   placeholder?: string;
@@ -98,6 +102,24 @@ const LOCATION: Section = {
   ],
 };
 
+const EVALUATION: Section = {
+  title: 'Evaluación',
+  description: 'Reglas académicas de la organización.',
+  fields: [
+    {
+      name: 'passingGrade',
+      label: 'Nota mínima de aprobación',
+      type: 'number',
+      step: '0.01',
+      min: 0,
+      max: 999.99,
+      placeholder: '3.00',
+      description:
+        'Con ella el asistente de promoción sugiere quién aprueba el año.',
+    },
+  ],
+};
+
 const OWNER: Section = {
   title: 'Administrador',
   description:
@@ -149,9 +171,15 @@ function SectionCard({
                 type={field.type ?? 'text'}
                 required={field.required}
                 maxLength={field.maxLength}
+                step={field.step}
+                min={field.min}
+                max={field.max}
                 placeholder={field.placeholder}
                 defaultValue={values[field.name] ?? ''}
               />
+              {field.description && (
+                <FieldDescription>{field.description}</FieldDescription>
+              )}
             </Field>
           ))}
         </FieldGroup>
@@ -239,6 +267,8 @@ export function OrganizationForm({
         <SectionCard section={CONTACT} values={values} />
         <SectionCard section={LOCATION} values={values} />
       </div>
+
+      <SectionCard section={EVALUATION} values={values} />
 
       {mode === 'create' && <SectionCard section={OWNER} values={values} />}
 

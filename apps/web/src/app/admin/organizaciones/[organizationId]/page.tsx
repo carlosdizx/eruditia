@@ -20,7 +20,10 @@ type Params = PageProps<'/admin/organizaciones/[organizationId]'>['params'];
 
 const toFormValues = (organization: Organization): OrganizationFormValues => ({
   ...Object.fromEntries(
-    ORGANIZATION_FIELDS.map((field) => [field, organization[field] ?? '']),
+    ORGANIZATION_FIELDS.map((field) => [
+      field,
+      String(organization[field] ?? ''),
+    ]),
   ),
   isActive: organization.isActive ? 'on' : '',
 });
