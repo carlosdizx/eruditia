@@ -1,4 +1,4 @@
-import type { AnnualScore } from '@/lib/grading/annual';
+import type { AnnualScore, SubjectRecovery } from '@/lib/grading/annual';
 import type { GradingScale } from '@/lib/grading/scale';
 
 export type GradebookPeriod = {
@@ -67,6 +67,7 @@ export type AnnualSummary = Pick<
   students: (Pick<GradebookStudent, 'enrollmentId' | 'status' | 'student'> & {
     periodScores: Record<string, number | null>;
     annual: AnnualScore;
+    recovery: SubjectRecovery | null;
   })[];
 };
 

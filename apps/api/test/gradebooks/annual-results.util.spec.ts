@@ -52,6 +52,20 @@ describe('annualResults', () => {
     });
   });
 
+  it('uses the recovery instead of the lost subject', () => {
+    const result = annualResults(periods, subjects, resultOf, scale, (id) =>
+      id === 'art' ? { score: 3.5, notes: 'Examen' } : undefined,
+    );
+
+    expect(result.subjects[1]).toMatchObject({
+      annual: { projected: 3.5, status: 'passing' },
+      recovery: { score: 3.5, originalScore: 2.3 },
+    });
+    expect(result.failedSubjects).toEqual([]);
+    // (3.5 × 2 + 3.5 × 1) / 3
+    expect(result.averages.general).toBe(3.5);
+  });
+
   it('has no average without grades', () => {
     const result = annualResults(periods, subjects, () => undefined, scale);
 

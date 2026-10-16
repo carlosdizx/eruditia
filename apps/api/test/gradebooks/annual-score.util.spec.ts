@@ -1,4 +1,7 @@
-import annualScore from '../../src/gradebooks/utils/annual-score.util';
+import annualScore, {
+  canRecover,
+  withRecovery,
+} from '../../src/gradebooks/utils/annual-score.util';
 
 describe('annualScore', () => {
   const scale = { maxScore: 5, passingScore: 3, decimalPlaces: 1 };
@@ -69,6 +72,40 @@ describe('annualScore', () => {
     expect(annualScore(periods(5, 5, 5, null), scale)).toMatchObject({
       requiredScore: 0,
       status: 'passing',
+    });
+  });
+});
+
+describe('recoveries', () => {
+  const scale = { maxScore: 5, passingScore: 3, decimalPlaces: 1 };
+  const periods = (...scores: (number | null)[]) =>
+    scores.map((score) => ({ weightPercentage: 50, score }));
+
+  it('only recovers failed subjects with every period graded', () => {
+    expect(canRecover(annualScore(periods(2, 2.5), scale), 3)).toBe(true);
+    expect(canRecover(annualScore(periods(2, null), scale), 3)).toBe(false);
+    expect(canRecover(annualScore(periods(3, 3.5), scale), 3)).toBe(false);
+  });
+
+  it('replaces the annual score and keeps the original', () => {
+    const original = annualScore(periods(2, 2.5), scale);
+
+    expect(withRecovery(original, { score: 4, notes: null }, 3)).toEqual({
+      annual: {
+        accumulated: 4,
+        projected: 4,
+        requiredScore: null,
+        complete: true,
+        status: 'passing',
+      },
+      recovery: { score: 4, notes: null, originalScore: 2.3 },
+    });
+    expect(
+      withRecovery(original, { score: 2.8, notes: null }, 3).annual.status,
+    ).toBe('failed');
+    expect(withRecovery(original, undefined, 3)).toEqual({
+      annual: original,
+      recovery: null,
     });
   });
 });

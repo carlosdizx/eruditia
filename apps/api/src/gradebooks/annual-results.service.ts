@@ -5,6 +5,7 @@ import AcademicPeriodRepository from '../academic-years/repositories/academic-pe
 import ClassroomSubjectRepository from '../classroom-subjects/classroom-subject.repository';
 import type { GradingScale } from '../grading-scales/grading-scales.service';
 import PeriodSubjectSummaryRepository from './repositories/period-subject-summary.repository';
+import SubjectRecoveryRepository from './repositories/subject-recovery.repository';
 import annualResults from './utils/annual-results.util';
 
 // Resultados anuales de las matrículas de un salón a partir de las
@@ -15,6 +16,7 @@ export default class AnnualResultsService {
     private readonly academicPeriodRepository: AcademicPeriodRepository,
     private readonly classroomSubjectRepository: ClassroomSubjectRepository,
     private readonly periodSubjectSummaryRepository: PeriodSubjectSummaryRepository,
+    private readonly subjectRecoveryRepository: SubjectRecoveryRepository,
   ) {}
 
   public loadClassroom = async (
@@ -47,14 +49,14 @@ export default class AnnualResultsService {
       ),
     ]);
 
-    const summaries =
+    const scope = {
+      enrollmentId: enrollmentIds,
+      classroomSubjectId: assignments.map(({ id }) => id),
+    };
+    const [summaries, recoveries] =
       enrollmentIds.length && assignments.length
-        ? await this.periodSubjectSummaryRepository.findAll(
-            {
-              enrollmentId: enrollmentIds,
-              classroomSubjectId: assignments.map(({ id }) => id),
-            },
-            {
+        ? await Promise.all([
+            this.periodSubjectSummaryRepository.findAll(scope, {
               attributes: [
                 'enrollmentId',
                 'classroomSubjectId',
@@ -62,9 +64,23 @@ export default class AnnualResultsService {
                 'finalPeriodScore',
                 'teacherObservation',
               ],
-            },
-          )
-        : [];
+            }),
+            this.subjectRecoveryRepository.findAll(scope, {
+              attributes: [
+                'enrollmentId',
+                'classroomSubjectId',
+                'score',
+                'notes',
+              ],
+            }),
+          ])
+        : [[], []];
+    const recoveryOf = new Map(
+      recoveries.map(({ enrollmentId, classroomSubjectId, score, notes }) => [
+        `${enrollmentId}:${classroomSubjectId}`,
+        { score, notes },
+      ]),
+    );
     const resultOf = new Map(
       summaries.map((summary) => [
         `${summary.enrollmentId}:${summary.classroomSubjectId}:${summary.academicPeriodId}`,
@@ -96,6 +112,7 @@ export default class AnnualResultsService {
           (subjectId, periodId) =>
             resultOf.get(`${enrollmentId}:${subjectId}:${periodId}`),
           scale,
+          (subjectId) => recoveryOf.get(`${enrollmentId}:${subjectId}`),
         ),
     };
   };

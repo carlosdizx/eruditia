@@ -20,6 +20,7 @@ import GradingScalesService from '../../src/grading-scales/grading-scales.servic
 import EvaluationItemRepository from '../../src/gradebooks/repositories/evaluation-item.repository';
 import StudentGradeRepository from '../../src/gradebooks/repositories/student-grade.repository';
 import PeriodSubjectSummaryRepository from '../../src/gradebooks/repositories/period-subject-summary.repository';
+import SubjectRecoveryRepository from '../../src/gradebooks/repositories/subject-recovery.repository';
 import {
   EVALUATION_ITEMS_WEIGHT_MESSAGE,
   GRADEBOOK_PERIOD_CLOSED_MESSAGE,
@@ -41,6 +42,7 @@ describe('GradebooksService', () => {
   let itemRepository: Mocked;
   let gradeRepository: Mocked;
   let summaryRepository: Mocked;
+  let recoveryRepository: Mocked;
   let gradingScalesService: Mocked;
   let service: GradebooksService;
 
@@ -140,6 +142,7 @@ describe('GradebooksService', () => {
       findAll: jest.fn().mockResolvedValue([]),
       upsertMany: jest.fn().mockResolvedValue(undefined),
     };
+    recoveryRepository = { findAll: jest.fn().mockResolvedValue([]) };
     gradingScalesService = { findScale: jest.fn().mockResolvedValue(scale) };
 
     service = new GradebooksService(
@@ -150,6 +153,7 @@ describe('GradebooksService', () => {
       itemRepository as unknown as EvaluationItemRepository,
       gradeRepository as unknown as StudentGradeRepository,
       summaryRepository as unknown as PeriodSubjectSummaryRepository,
+      recoveryRepository as unknown as SubjectRecoveryRepository,
       gradingScalesService as unknown as GradingScalesService,
     );
   });

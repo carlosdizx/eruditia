@@ -14,6 +14,7 @@ import ReportCardsService, {
 } from '../../src/report-cards/report-cards.service';
 import AcademicPeriodRepository from '../../src/academic-years/repositories/academic-period.repository';
 import AnnualResultsService from '../../src/gradebooks/annual-results.service';
+import SubjectRecoveryRepository from '../../src/gradebooks/repositories/subject-recovery.repository';
 import ClassroomSubjectRepository from '../../src/classroom-subjects/classroom-subject.repository';
 import EnrollmentRepository from '../../src/enrollments/enrollment.repository';
 import EvaluationItemRepository from '../../src/gradebooks/repositories/evaluation-item.repository';
@@ -162,6 +163,9 @@ describe('ReportCardsService', () => {
         } as unknown as AcademicPeriodRepository,
         classroomSubjectRepository as unknown as ClassroomSubjectRepository,
         summaryRepository as unknown as PeriodSubjectSummaryRepository,
+        {
+          findAll: jest.fn().mockResolvedValue([]),
+        } as unknown as SubjectRecoveryRepository,
       ),
       {
         findAll: jest.fn().mockResolvedValue([

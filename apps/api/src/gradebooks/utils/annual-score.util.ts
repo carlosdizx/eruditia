@@ -86,4 +86,36 @@ const annualScore = (
   };
 };
 
+export type Recovery = { score: number; notes: string | null };
+
+// Se recupera una materia perdida (acumulado bajo la aprobatoria) con todos
+// los periodos calificados.
+export const canRecover = (annual: AnnualScore, passingScore: number) =>
+  annual.complete &&
+  annual.projected !== null &&
+  annual.projected < passingScore;
+
+// La nota de recuperación reemplaza el acumulado anual de la materia; se
+// conserva el original para mostrarlo.
+export const withRecovery = (
+  annual: AnnualScore,
+  recovery: Recovery | undefined,
+  passingScore: number,
+): {
+  annual: AnnualScore;
+  recovery: (Recovery & { originalScore: number | null }) | null;
+} => {
+  if (!recovery) return { annual, recovery: null };
+  return {
+    annual: {
+      accumulated: recovery.score,
+      projected: recovery.score,
+      requiredScore: null,
+      complete: true,
+      status: recovery.score >= passingScore ? 'passing' : 'failed',
+    },
+    recovery: { ...recovery, originalScore: annual.projected },
+  };
+};
+
 export default annualScore;

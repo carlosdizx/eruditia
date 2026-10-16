@@ -27,3 +27,12 @@ export const SCORE_DECIMALS_MESSAGE = (
   decimalPlaces: number,
 ) =>
   `La nota de ${student} admite como máximo ${decimalPlaces} ${decimalPlaces === 1 ? 'decimal' : 'decimales'}`;
+export const SUBJECT_RECOVERY_NOT_FOUND_MESSAGE = 'Recuperación no encontrada';
+export const RECOVERY_NOT_ALLOWED_MESSAGE =
+  'Solo se recuperan materias perdidas con todos los periodos calificados';
+export const RECOVERY_ENROLLMENT_MESSAGE =
+  'El estudiante no está cursando en este salón';
+export const RECOVERY_SCORE_RANGE_MESSAGE = (min: string, max: string) =>
+  `La nota de recuperación debe estar entre ${min} y ${max}`;
+export const RECOVERY_SCORE_DECIMALS_MESSAGE = (decimalPlaces: number) =>
+  `La nota de recuperación admite como máximo ${decimalPlaces} ${decimalPlaces === 1 ? 'decimal' : 'decimales'}`;

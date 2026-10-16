@@ -33,8 +33,9 @@ import GradingScalesService, {
 import EvaluationItemRepository from './repositories/evaluation-item.repository';
 import StudentGradeRepository from './repositories/student-grade.repository';
 import PeriodSubjectSummaryRepository from './repositories/period-subject-summary.repository';
+import SubjectRecoveryRepository from './repositories/subject-recovery.repository';
 import periodScore from './utils/period-score.util';
-import annualScore from './utils/annual-score.util';
+import annualScore, { withRecovery } from './utils/annual-score.util';
 import SetEvaluationItemsDto from './dto/set-evaluation-items.dto';
 import SaveGradesDto from './dto/save-grades.dto';
 import {
@@ -119,6 +120,7 @@ export default class GradebooksService {
     private readonly evaluationItemRepository: EvaluationItemRepository,
     private readonly studentGradeRepository: StudentGradeRepository,
     private readonly periodSubjectSummaryRepository: PeriodSubjectSummaryRepository,
+    private readonly subjectRecoveryRepository: SubjectRecoveryRepository,
     private readonly gradingScalesService: GradingScalesService,
   ) {}
 
@@ -400,7 +402,7 @@ export default class GradebooksService {
     const context = await this.loadContext(actor, classroomSubjectId);
     const { assignment, classroom, periods } = context;
 
-    const [base, enrollments, summaries] = await Promise.all([
+    const [base, enrollments, summaries, recoveries] = await Promise.all([
       this.describe(context),
       this.listEnrollments(classroom.id),
       this.periodSubjectSummaryRepository.findAll(
@@ -409,7 +411,17 @@ export default class GradebooksService {
           attributes: ['enrollmentId', 'academicPeriodId', 'finalPeriodScore'],
         },
       ),
+      this.subjectRecoveryRepository.findAll(
+        { classroomSubjectId: assignment.id },
+        { attributes: ['enrollmentId', 'score', 'notes'] },
+      ),
     ]);
+    const recoveryOf = new Map(
+      recoveries.map(({ enrollmentId, score, notes }) => [
+        enrollmentId,
+        { score, notes },
+      ]),
+    );
     const scores = new Map(
       summaries.map(({ enrollmentId, academicPeriodId, finalPeriodScore }) => [
         `${enrollmentId}:${academicPeriodId}`,
@@ -434,7 +446,12 @@ export default class GradebooksService {
           periodScores: Object.fromEntries(
             periodScores.map(({ periodId, score }) => [periodId, score]),
           ),
-          annual: annualScore(periodScores, base.scale),
+          // La recuperación reemplaza el acumulado de la materia.
+          ...withRecovery(
+            annualScore(periodScores, base.scale),
+            recoveryOf.get(id),
+            base.scale.passingScore,
+          ),
         };
       }),
     };

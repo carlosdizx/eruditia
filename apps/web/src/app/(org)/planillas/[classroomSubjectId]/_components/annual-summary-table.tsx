@@ -84,7 +84,14 @@ export function AnnualSummaryTable({ summary }: { summary: AnnualSummary }) {
           <tbody>
             {students.map(
               (
-                { enrollmentId, status, student, periodScores, annual },
+                {
+                  enrollmentId,
+                  status,
+                  student,
+                  periodScores,
+                  annual,
+                  recovery,
+                },
                 index,
               ) => (
                 <tr key={enrollmentId} className="border-b last:border-b-0">
@@ -121,6 +128,14 @@ export function AnnualSummaryTable({ summary }: { summary: AnnualSummary }) {
                   </td>
                   <td className="px-3 py-2 text-center">
                     <ScoreText score={annual.projected} scale={scale} />
+                    {recovery && (
+                      <div className="text-muted-foreground text-xs">
+                        Recuperación · antes{' '}
+                        {recovery.originalScore === null
+                          ? '—'
+                          : formatScore(recovery.originalScore, scale)}
+                      </div>
+                    )}
                   </td>
                   <td
                     className={cn(
@@ -137,7 +152,7 @@ export function AnnualSummaryTable({ summary }: { summary: AnnualSummary }) {
                         : formatScore(annual.requiredScore, scale)}
                   </td>
                   <td className="px-3 py-2">
-                    <AnnualStatusBadge annual={annual} />
+                    <AnnualStatusBadge annual={annual} recovered={!!recovery} />
                   </td>
                 </tr>
               ),

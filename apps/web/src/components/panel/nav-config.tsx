@@ -5,6 +5,7 @@ import {
   CalendarRangeIcon,
   BookOpenIcon,
   FileTextIcon,
+  LifeBuoyIcon,
   TrendingUpIcon,
   DoorOpenIcon,
   PresentationIcon,
@@ -24,6 +25,7 @@ import {
   SUBJECT_GRANTS,
   GRADE_LEVEL_GRANTS,
   GRADING_SCALE_GRANTS,
+  RECOVERY_GRANTS,
   REPORT_CARD_GRANTS,
   STUDENT_GRANTS,
   USER_GRANTS,
@@ -92,6 +94,12 @@ export const NAV: Record<PanelKind, { label: string; items: NavItem[] }> = {
         url: '/mis-clases',
         icon: PresentationIcon,
         grant: CLASSROOM_SUBJECT_GRANTS.mine,
+      },
+      {
+        title: 'Recuperaciones',
+        url: '/recuperaciones',
+        icon: LifeBuoyIcon,
+        grant: RECOVERY_GRANTS.manage,
       },
       {
         title: 'Mi boletín',

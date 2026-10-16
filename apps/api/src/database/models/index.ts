@@ -21,6 +21,7 @@ import GradingScaleModel from './grading-scale.model';
 import EvaluationItemModel from './evaluation-item.model';
 import StudentGradeModel from './student-grade.model';
 import PeriodSubjectSummaryModel from './period-subject-summary.model';
+import SubjectRecoveryModel from './subject-recovery.model';
 
 // Register every @Table model here (never BaseModel/SoftDeleteModel).
 // Consumed by databaseOptionsUtil so both the Nest app and the CLI
@@ -48,6 +49,7 @@ const models: ModelCtor[] = [
   EvaluationItemModel,
   StudentGradeModel,
   PeriodSubjectSummaryModel,
+  SubjectRecoveryModel,
 ];
 
 export default models;

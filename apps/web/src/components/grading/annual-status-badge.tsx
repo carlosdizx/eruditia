@@ -10,7 +10,13 @@ const STATUS_CLASSES = {
   failed: '',
 };
 
-export function AnnualStatusBadge({ annual }: { annual: AnnualScore }) {
+export function AnnualStatusBadge({
+  annual,
+  recovered = false,
+}: {
+  annual: AnnualScore;
+  recovered?: boolean;
+}) {
   return (
     <Badge
       variant={
@@ -22,7 +28,7 @@ export function AnnualStatusBadge({ annual }: { annual: AnnualScore }) {
       }
       className={cn(annual.status && STATUS_CLASSES[annual.status])}
     >
-      {annualStatusLabel(annual)}
+      {annualStatusLabel(annual, recovered)}
     </Badge>
   );
 }

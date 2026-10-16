@@ -1,4 +1,4 @@
-import type { AnnualScore } from './annual';
+import type { AnnualScore, SubjectRecovery } from './annual';
 import type { GradingScale } from './scale';
 
 export type ReportCardPeriod = {
@@ -26,6 +26,7 @@ export type ReportCardSubject = {
     }
   >;
   annual: AnnualScore;
+  recovery: SubjectRecovery | null;
 };
 
 export type ReportCardYear = {

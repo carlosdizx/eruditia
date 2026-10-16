@@ -46,6 +46,7 @@ enum PermissionEnum {
 
   GRADE_LIST = 'grade:list',
   GRADE_RECORD = 'grade:record',
+  GRADE_RECOVER = 'grade:recover',
 
   REPORT_CARD_VIEW = 'report-card:view',
 }

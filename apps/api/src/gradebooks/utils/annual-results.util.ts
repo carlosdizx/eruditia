@@ -1,6 +1,6 @@
 import { roundScore } from '@common/utils/score.util';
 import type { GradingScale } from '../../grading-scales/grading-scales.service';
-import annualScore, { type AnnualScore } from './annual-score.util';
+import annualScore, { type Recovery, withRecovery } from './annual-score.util';
 
 export type ResultPeriod = { id: string; weightPercentage: number };
 
@@ -30,12 +30,13 @@ export const weightedAverage = (values: Weighted[], decimalPlaces: number) => {
 
 // Resultado anual de una matrícula: acumulado de cada materia y promedios
 // generales ponderados por el peso de cada materia. Una materia se pierde si
-// su acumulado queda por debajo de la aprobatoria.
+// su acumulado (o su recuperación) queda por debajo de la aprobatoria.
 const annualResults = <TSubject extends ResultSubject>(
   periods: ResultPeriod[],
   subjects: TSubject[],
   resultOf: (subjectId: string, periodId: string) => PeriodResult | undefined,
   scale: Pick<GradingScale, 'maxScore' | 'passingScore' | 'decimalPlaces'>,
+  recoveryOf: (subjectId: string) => Recovery | undefined = () => undefined,
 ) => {
   const results = subjects.map((subject) => {
     const periodResults = Object.fromEntries(
@@ -44,14 +45,18 @@ const annualResults = <TSubject extends ResultSubject>(
         resultOf(subject.id, id) ?? { score: null, observation: null },
       ]),
     );
-    const annual: AnnualScore = annualScore(
+    const original = annualScore(
       periods.map(({ id, weightPercentage }) => ({
         weightPercentage,
         score: periodResults[id].score,
       })),
       scale,
     );
-    return { ...subject, periods: periodResults, annual };
+    return {
+      ...subject,
+      periods: periodResults,
+      ...withRecovery(original, recoveryOf(subject.id), scale.passingScore),
+    };
   });
 
   return {

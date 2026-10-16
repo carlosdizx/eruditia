@@ -189,7 +189,10 @@ function ReportCardBody({ card }: { card: Card }) {
                       />
                     </td>
                     <td className="px-3 py-2">
-                      <AnnualStatusBadge annual={subject.annual} />
+                      <AnnualStatusBadge
+                        annual={subject.annual}
+                        recovered={!!subject.recovery}
+                      />
                     </td>
                   </tr>
                 ))}
@@ -238,7 +241,7 @@ function SubjectDetail({
   periods: Card['periods'];
   scale: Card['scale'];
 }) {
-  const { annual } = subject;
+  const { annual, recovery } = subject;
   const graded = periods.filter(({ id }) => {
     const result = subject.periods[id];
     return (
@@ -255,9 +258,25 @@ function SubjectDetail({
         <ChevronDownIcon className="text-muted-foreground size-4 shrink-0 transition-transform group-open:rotate-180" />
         <span className="flex-1 font-medium">{subject.subject.name}</span>
         <ScoreText score={annual.projected} scale={scale} />
-        <AnnualStatusBadge annual={annual} />
+        <AnnualStatusBadge annual={annual} recovered={!!recovery} />
       </summary>
       <div className="flex flex-col gap-4 border-t px-4 py-3">
+        {recovery && (
+          <p className="bg-muted rounded-lg px-3 py-2 text-sm">
+            {recovery.score >= scale.passingScore
+              ? 'Recuperó la materia'
+              : 'Presentó recuperación'}{' '}
+            con <ScoreText score={recovery.score} scale={scale} />
+            {recovery.originalScore !== null && (
+              <>
+                {' '}
+                (acumulado de los periodos:{' '}
+                {formatScore(recovery.originalScore, scale)})
+              </>
+            )}
+            .{recovery.notes && ` ${recovery.notes}`}
+          </p>
+        )}
         {annual.requiredScore !== null && (
           <p className="text-muted-foreground text-sm">
             {annual.requiredScore > scale.maxScore
