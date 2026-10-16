@@ -6,6 +6,7 @@ import {
   BookOpenIcon,
   FileTextIcon,
   LifeBuoyIcon,
+  TrophyIcon,
   TrendingUpIcon,
   DoorOpenIcon,
   PresentationIcon,
@@ -25,6 +26,7 @@ import {
   SUBJECT_GRANTS,
   GRADE_LEVEL_GRANTS,
   GRADING_SCALE_GRANTS,
+  RANKING_GRANTS,
   RECOVERY_GRANTS,
   REPORT_CARD_GRANTS,
   STUDENT_GRANTS,
@@ -100,6 +102,12 @@ export const NAV: Record<PanelKind, { label: string; items: NavItem[] }> = {
         url: '/recuperaciones',
         icon: LifeBuoyIcon,
         grant: RECOVERY_GRANTS.manage,
+      },
+      {
+        title: 'Ranking',
+        url: '/ranking',
+        icon: TrophyIcon,
+        grant: RANKING_GRANTS.view,
       },
       {
         title: 'Mi boletín',
