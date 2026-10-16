@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import {
   Field,
+  FieldContent,
   FieldDescription,
   FieldGroup,
   FieldLabel,
@@ -19,6 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
+import { Switch } from '@/components/ui/switch';
 import type { GradingScale } from '@/lib/grading/scale';
 import { saveGradingScale } from '../actions';
 import type { GradingScaleFormState, GradingScaleFormValues } from '../types';
@@ -34,7 +36,9 @@ const toValues = ({
   passingScore,
   decimalPlaces,
   maxFailedSubjects,
+  failByAverage,
 }: GradingScale): GradingScaleFormValues => ({
+  failByAverage: failByAverage ? 'on' : '',
   minScore: minScore.toFixed(decimalPlaces),
   maxScore: maxScore.toFixed(decimalPlaces),
   passingScore: passingScore.toFixed(decimalPlaces),
@@ -212,10 +216,34 @@ export function GradingScaleForm({ scale }: { scale: GradingScale }) {
             onChange={change('maxFailedSubjects')}
           />
           <FieldDescription>
-            En la promoción anual se sugiere repetir el grado si el promedio
-            general queda bajo la aprobatoria o si el estudiante pierde esta
-            cantidad de materias o más. Déjalo vacío para usar solo el promedio.
+            En la promoción anual se sugiere repetir el grado si el estudiante
+            pierde esta cantidad de materias o más (1: con una sola materia
+            perdida repite). Déjalo vacío si las materias perdidas no deben
+            hacer repetir el año.
           </FieldDescription>
+        </Field>
+
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel htmlFor="failByAverage">
+              También reprobar por promedio general
+            </FieldLabel>
+            <FieldDescription>
+              Si se activa, también repite quien tenga un promedio general menor
+              a la nota aprobatoria, aunque no pierda materias.
+            </FieldDescription>
+          </FieldContent>
+          <Switch
+            id="failByAverage"
+            name="failByAverage"
+            checked={values.failByAverage === 'on'}
+            onCheckedChange={(checked) =>
+              setValues((current) => ({
+                ...current,
+                failByAverage: checked ? 'on' : '',
+              }))
+            }
+          />
         </Field>
 
         <Field>

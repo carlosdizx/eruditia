@@ -4,7 +4,8 @@ export type GradingScaleFormValues = Partial<
     | 'maxScore'
     | 'passingScore'
     | 'decimalPlaces'
-    | 'maxFailedSubjects',
+    | 'maxFailedSubjects'
+    | 'failByAverage',
     string
   >
 >;

@@ -28,16 +28,20 @@ export interface GradingScale {
   // Con esta cantidad de materias reprobadas se reprueba el año (null: no
   // aplica).
   maxFailedSubjects: number | null;
+  // También se reprueba con el promedio general bajo la aprobatoria.
+  failByAverage: boolean;
   // Aún no la configuró el admin: se usa la escala colombiana habitual.
   isDefault: boolean;
 }
 
+// Por defecto, perder una materia reprueba el año y el promedio no cuenta.
 export const DEFAULT_GRADING_SCALE: GradingScale = {
   minScore: 1,
   maxScore: 5,
   passingScore: 3,
   decimalPlaces: 1,
-  maxFailedSubjects: 3,
+  maxFailedSubjects: 1,
+  failByAverage: false,
   isDefault: true,
 };
 
@@ -48,6 +52,7 @@ const SCALE_ATTRIBUTES = [
   'passingScore',
   'decimalPlaces',
   'maxFailedSubjects',
+  'failByAverage',
 ];
 
 @Injectable()
@@ -96,6 +101,7 @@ export default class GradingScalesService extends CrudService<
       passingScore,
       decimalPlaces,
       maxFailedSubjects,
+      failByAverage,
     } = scale;
     return {
       minScore,
@@ -103,6 +109,7 @@ export default class GradingScalesService extends CrudService<
       passingScore,
       decimalPlaces,
       maxFailedSubjects,
+      failByAverage,
       isDefault: false,
     };
   };
@@ -124,6 +131,7 @@ export default class GradingScalesService extends CrudService<
     const values = {
       ...range,
       maxFailedSubjects: dto.maxFailedSubjects ?? null,
+      failByAverage: dto.failByAverage ?? false,
     };
 
     // Las notas ya registradas deben seguir siendo válidas.

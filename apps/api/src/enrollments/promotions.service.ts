@@ -64,18 +64,19 @@ const CLOSING_STATUS = {
 const fullName = ({ firstName, lastName }: StudentModel) =>
   `${firstName} ${lastName}`;
 
-// Reprueba el año con el promedio general bajo la aprobatoria o con
-// maxFailedSubjects materias perdidas. Sin notas no hay sugerencia.
+// Reprueba el año con maxFailedSubjects materias perdidas o, si el colegio
+// lo activa, con el promedio general bajo la aprobatoria. Sin notas no hay
+// sugerencia.
 export const suggestOutcome = (
   average: number | null,
   failedSubjects: number,
-  { passingScore, maxFailedSubjects }: GradingScale,
+  { passingScore, maxFailedSubjects, failByAverage }: GradingScale,
   isFinalGrade: boolean,
 ) => {
   if (average === null) return null;
   if (
-    average < passingScore ||
-    (maxFailedSubjects !== null && failedSubjects >= maxFailedSubjects)
+    (maxFailedSubjects !== null && failedSubjects >= maxFailedSubjects) ||
+    (failByAverage && average < passingScore)
   )
     return PromotionOutcomeEnum.REPEAT;
   return isFinalGrade

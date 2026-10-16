@@ -6,6 +6,8 @@ export type GradingScale = {
   decimalPlaces: number;
   // Materias reprobadas con las que se reprueba el año; null: no aplica.
   maxFailedSubjects: number | null;
+  // También se reprueba con el promedio general bajo la aprobatoria.
+  failByAverage: boolean;
   isDefault: boolean;
 };
 

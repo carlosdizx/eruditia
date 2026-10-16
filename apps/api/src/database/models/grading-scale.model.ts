@@ -49,6 +49,11 @@ export default class GradingScaleModel extends Model {
   @Column(DataType.SMALLINT)
   declare maxFailedSubjects: number | null;
 
+  // También se reprueba con el promedio general bajo la aprobatoria.
+  @Default(false)
+  @Column(DataType.BOOLEAN)
+  declare failByAverage: boolean;
+
   @CreatedAt
   declare createdAt: Date;
 

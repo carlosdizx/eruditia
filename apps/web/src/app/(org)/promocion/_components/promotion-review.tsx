@@ -108,17 +108,17 @@ export function PromotionReview({ preview }: { preview: PromotionPreview }) {
         ? preview.suggestedSameClassroomId
         : null;
 
-  // Espejo de suggestOutcome de la API: promedio bajo la aprobatoria o
-  // demasiadas materias perdidas.
+  // Espejo de suggestOutcome de la API: materias perdidas y, si el colegio lo
+  // activa, promedio bajo la aprobatoria.
   const suggest = (
     average: number | null,
     failedSubjects: number,
   ): PromotionOutcome | null => {
     if (average === null) return null;
     if (
-      average < scale.passingScore ||
       (scale.maxFailedSubjects !== null &&
-        failedSubjects >= scale.maxFailedSubjects)
+        failedSubjects >= scale.maxFailedSubjects) ||
+      (scale.failByAverage && average < scale.passingScore)
     )
       return 'repeat';
     return isFinal ? 'graduate' : 'promote';
@@ -397,6 +397,21 @@ export function PromotionReview({ preview }: { preview: PromotionPreview }) {
     { value: SKIP, label: 'No incluir' },
   ];
 
+  const failRules = [
+    ...(scale.maxFailedSubjects === null
+      ? []
+      : [
+          scale.maxFailedSubjects === 1
+            ? 'con una materia perdida'
+            : `con ${scale.maxFailedSubjects} materias perdidas o más`,
+        ]),
+    ...(scale.failByAverage
+      ? [
+          `con un promedio general menor a ${formatScore(scale.passingScore, scale)}`,
+        ]
+      : []),
+  ];
+
   const classroomItems = (choice: Choice) =>
     (choice === 'promote'
       ? nextClassrooms
@@ -421,26 +436,12 @@ export function PromotionReview({ preview }: { preview: PromotionPreview }) {
       )}
 
       <p className="text-muted-foreground text-sm">
-        El promedio sale de las planillas. Se sugiere repetir con un promedio
-        menor a{' '}
-        <span className="text-foreground font-medium tabular-nums">
-          {formatScore(scale.passingScore, scale)}
-        </span>
-        {scale.maxFailedSubjects !== null && (
-          <>
-            {' '}
-            o con{' '}
-            <span className="text-foreground font-medium">
-              {scale.maxFailedSubjects}{' '}
-              {scale.maxFailedSubjects === 1
-                ? 'materia perdida'
-                : 'materias perdidas'}
-            </span>{' '}
-            o más
-          </>
-        )}
-        . Ajustar el promedio o decidir distinto a la sugerencia exige escribir
-        el motivo.
+        El promedio sale de las planillas.{' '}
+        {failRules.length
+          ? `Se sugiere repetir ${failRules.join(' o ')}.`
+          : 'Con la configuración actual nadie reprueba automáticamente.'}{' '}
+        Ajustar el promedio o decidir distinto a la sugerencia exige escribir el
+        motivo. Las reglas se cambian en Ajustes.
       </p>
 
       <div className="rounded-xl border">

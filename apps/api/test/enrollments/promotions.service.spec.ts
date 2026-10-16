@@ -135,7 +135,8 @@ describe('PromotionsService', () => {
     maxScore: 5,
     passingScore: 3,
     decimalPlaces: 1,
-    maxFailedSubjects: 2,
+    maxFailedSubjects: 1,
+    failByAverage: false,
     isDefault: false,
   };
   const failed = (...names: string[]) =>
@@ -315,10 +316,10 @@ describe('PromotionsService', () => {
       });
     });
 
-    it('fails the year with too many failed subjects despite the average', async () => {
+    it('fails the year with a single failed subject despite the average', async () => {
       annualResults.e1 = {
         averages: { general: 3.8 },
-        failedSubjects: failed('Inglés', 'Química'),
+        failedSubjects: failed('Inglés'),
         incomplete: false,
       };
 
@@ -345,6 +346,26 @@ describe('PromotionsService', () => {
       expect(result.students[0].suggestedOutcome).toBe(
         PromotionOutcomeEnum.PROMOTE,
       );
+    });
+
+    it('ignores a low average unless the school enables it', async () => {
+      annualResults.e1 = {
+        averages: { general: 2.8 },
+        failedSubjects: failed(),
+        incomplete: false,
+      };
+
+      expect(
+        (await service.preview(actor, query)).students[0].suggestedOutcome,
+      ).toBe(PromotionOutcomeEnum.PROMOTE);
+
+      gradingScalesService.findScale.mockResolvedValue({
+        ...scale,
+        failByAverage: true,
+      });
+      expect(
+        (await service.preview(actor, query)).students[0].suggestedOutcome,
+      ).toBe(PromotionOutcomeEnum.REPEAT);
     });
 
     it('suggests graduating from the final grade', async () => {

@@ -36,6 +36,7 @@ export async function saveGradingScale(
         maxFailedSubjects: values.maxFailedSubjects
           ? Number(values.maxFailedSubjects)
           : null,
+        failByAverage: values.failByAverage === 'on',
       },
     });
   } catch (error) {
