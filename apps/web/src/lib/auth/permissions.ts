@@ -32,6 +32,7 @@ export const Permission = {
   ENROLLMENT_UPDATE: 'enrollment:update',
   ENROLLMENT_DELETE: 'enrollment:delete',
   ENROLLMENT_PROMOTE: 'enrollment:promote',
+  GRADING_SCALE_UPDATE: 'grading-scale:update',
 } as const;
 
 export type Permission = (typeof Permission)[keyof typeof Permission];
@@ -69,6 +70,7 @@ export const PERMISSION_LABELS: Record<string, string> = {
   [Permission.ENROLLMENT_UPDATE]: 'Cambiar de salón o retirar',
   [Permission.ENROLLMENT_DELETE]: 'Anular matrículas',
   [Permission.ENROLLMENT_PROMOTE]: 'Promoción anual de estudiantes',
+  [Permission.GRADING_SCALE_UPDATE]: 'Configurar escala de calificación',
 };
 
 export const hasPermission = (
@@ -153,4 +155,9 @@ export const ENROLLMENT_GRANTS = {
   promote: { permission: Permission.ENROLLMENT_PROMOTE, role: 'ADMIN' },
   // Lista de clase e historial, solo de los salones donde dicta.
   classes: { permission: Permission.ENROLLMENT_LIST, role: 'TEACHER' },
+} satisfies Record<string, Grant>;
+
+// Espejo de los @AuthWithPermissions de GradingScalesController.
+export const GRADING_SCALE_GRANTS = {
+  update: { permission: Permission.GRADING_SCALE_UPDATE, role: 'ADMIN' },
 } satisfies Record<string, Grant>;

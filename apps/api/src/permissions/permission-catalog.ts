@@ -44,6 +44,8 @@ const permissionDescriptions: Record<PermissionEnum, string> = {
   [PermissionEnum.ENROLLMENT_DELETE]: 'Anular matrículas hechas por error',
   [PermissionEnum.ENROLLMENT_PROMOTE]:
     'Promover, reprobar o graduar a los estudiantes al cierre del año (asistente de promoción)',
+  [PermissionEnum.GRADING_SCALE_UPDATE]:
+    'Configurar la escala de calificación (mínima, máxima, aprobatoria y decimales)',
 };
 
 export interface PermissionCatalogEntry {

@@ -10,7 +10,7 @@ import EnrollmentsService from '../../src/enrollments/enrollments.service';
 import ClassroomsService from '../../src/classrooms/classrooms.service';
 import AcademicYearsService from '../../src/academic-years/academic-years.service';
 import StudentsService from '../../src/students/students.service';
-import OrganizationRepository from '../../src/organizations/organization.repository';
+import GradingScalesService from '../../src/grading-scales/grading-scales.service';
 import {
   ALREADY_ENROLLED_MESSAGE,
   CLOSED_TARGET_YEAR_MESSAGE,
@@ -36,7 +36,7 @@ describe('PromotionsService', () => {
   let classroomsService: { findOne: jest.Mock; findAll: jest.Mock };
   let academicYearsService: { findOne: jest.Mock };
   let studentsService: { updateByPk: jest.Mock };
-  let organizationRepository: { findByPk: jest.Mock };
+  let gradingScalesService: { findScale: jest.Mock };
   let service: PromotionsService;
 
   const transaction = { id: 'tx' } as unknown as Transaction;
@@ -168,15 +168,15 @@ describe('PromotionsService', () => {
       findOne: jest.fn().mockResolvedValue(targetYear),
     };
     studentsService = { updateByPk: jest.fn().mockResolvedValue({}) };
-    organizationRepository = {
-      findByPk: jest.fn().mockResolvedValue({ id: 'org-id', passingGrade: 3 }),
+    gradingScalesService = {
+      findScale: jest.fn().mockResolvedValue({ passingScore: 3 }),
     };
     service = new PromotionsService(
       enrollmentsService as unknown as EnrollmentsService,
       classroomsService as unknown as ClassroomsService,
       academicYearsService as unknown as AcademicYearsService,
       studentsService as unknown as StudentsService,
-      organizationRepository as unknown as OrganizationRepository,
+      gradingScalesService as unknown as GradingScalesService,
     );
   });
 

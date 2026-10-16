@@ -18,7 +18,7 @@ import organizationOf, {
 import AcademicYearsService from '../academic-years/academic-years.service';
 import ClassroomsService from '../classrooms/classrooms.service';
 import StudentsService from '../students/students.service';
-import OrganizationRepository from '../organizations/organization.repository';
+import GradingScalesService from '../grading-scales/grading-scales.service';
 import EnrollmentsService, {
   STUDENT_ATTRIBUTES,
   today,
@@ -64,7 +64,7 @@ export default class PromotionsService {
     private readonly classroomsService: ClassroomsService,
     private readonly academicYearsService: AcademicYearsService,
     private readonly studentsService: StudentsService,
-    private readonly organizationRepository: OrganizationRepository,
+    private readonly gradingScalesService: GradingScalesService,
   ) {}
 
   // Salón de origen y año destino (posterior y abierto), con los salones del
@@ -167,11 +167,8 @@ export default class PromotionsService {
     const organizationId = organizationOf(actor);
     const { source, grade, target, sameClassrooms, nextClassrooms } =
       await this.loadContext(organizationId, dto);
-    const { passingGrade } = (await this.organizationRepository.findByPk(
-      organizationId,
-      true,
-      { attributes: ['id', 'passingGrade'] },
-    ))!;
+    const { passingScore: passingGrade } =
+      await this.gradingScalesService.findScale(organizationId);
 
     const [enrollments, siblings] = await Promise.all([
       this.enrollmentsService.findAll(
