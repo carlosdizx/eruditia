@@ -50,6 +50,18 @@ export default class GradebooksController {
     );
   }
 
+  @AuthWithPermissions({ permissions: [PermissionEnum.GRADE_LIST] })
+  @Get('gradebooks/:classroomSubjectId/annual')
+  public async getAnnualSummary(
+    @Param('classroomSubjectId', ParseUUIDPipe) classroomSubjectId: string,
+    @CurrentAuth() auth: AuthContextInterface,
+  ) {
+    return await this.gradebooksService.getAnnualSummary(
+      auth,
+      classroomSubjectId,
+    );
+  }
+
   @AuthWithPermissions({ permissions: [PermissionEnum.GRADE_RECORD] })
   @Put('gradebooks/:classroomSubjectId/periods/:periodId/items')
   public async setEvaluationItems(

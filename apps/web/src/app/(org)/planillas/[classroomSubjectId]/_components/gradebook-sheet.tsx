@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
+import { ScoreText } from '@/components/grading/score-text';
 import { cn } from '@/lib/utils';
 import {
   formatScore,
@@ -56,28 +57,6 @@ const focusCell = (row: number, column: string) =>
       `[data-row="${row}"][data-column="${column}"]`,
     )
     ?.focus();
-
-function FinalScore({
-  score,
-  scale,
-}: {
-  score: number | null;
-  scale: GradingScale;
-}) {
-  if (score === null) return <span className="text-muted-foreground">—</span>;
-  return (
-    <span
-      className={cn(
-        'font-semibold tabular-nums',
-        score < scale.passingScore
-          ? 'text-destructive'
-          : 'text-emerald-600 dark:text-emerald-400',
-      )}
-    >
-      {formatScore(score, scale)}
-    </span>
-  );
-}
 
 export function GradebookSheet({
   gradebook: initial,
@@ -255,7 +234,7 @@ export function GradebookSheet({
           {average !== null && (
             <span>
               Promedio del curso:{' '}
-              <FinalScore score={Number(average.toFixed(2))} scale={scale} />
+              <ScoreText score={Number(average.toFixed(2))} scale={scale} />
             </span>
           )}
           {failing > 0 && (
@@ -379,7 +358,7 @@ export function GradebookSheet({
                       );
                     })}
                     <td className="border-l px-3 py-1.5 text-center">
-                      <FinalScore score={final} scale={scale} />
+                      <ScoreText score={final} scale={scale} />
                     </td>
                     <td className="px-3 py-1.5">
                       {editable ? (

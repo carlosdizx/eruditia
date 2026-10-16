@@ -24,6 +24,7 @@ describe('GradebooksController', () => {
       [
         'listClassroomGradebooks',
         'getGradebook',
+        'getAnnualSummary',
         'setEvaluationItems',
         'saveGrades',
       ].map((name) => [name, jest.fn().mockResolvedValue({ ok: true })]),
@@ -46,6 +47,7 @@ describe('GradebooksController', () => {
   it.each([
     ['listClassroomGradebooks', PermissionEnum.GRADE_LIST],
     ['getGradebook', PermissionEnum.GRADE_LIST],
+    ['getAnnualSummary', PermissionEnum.GRADE_LIST],
     ['setEvaluationItems', PermissionEnum.GRADE_RECORD],
     ['saveGrades', PermissionEnum.GRADE_RECORD],
   ])('%s requires %s', (handler, permission) => {
@@ -62,6 +64,7 @@ describe('GradebooksController', () => {
 
     await controller.listClassroomGradebooks('classroom-id', auth);
     await controller.getGradebook('cs-id', { periodId: 'p1' }, auth);
+    await controller.getAnnualSummary('cs-id', auth);
     await controller.setEvaluationItems('cs-id', 'p1', items, auth);
     await controller.saveGrades('cs-id', 'p1', grades, auth);
 
@@ -70,6 +73,7 @@ describe('GradebooksController', () => {
       'classroom-id',
     );
     expect(service.getGradebook).toHaveBeenCalledWith(auth, 'cs-id', 'p1');
+    expect(service.getAnnualSummary).toHaveBeenCalledWith(auth, 'cs-id');
     expect(service.setEvaluationItems).toHaveBeenCalledWith(
       auth,
       'cs-id',

@@ -1,3 +1,4 @@
+import type { AnnualScore } from '@/lib/grading/annual';
 import type { GradingScale } from '@/lib/grading/scale';
 
 export type GradebookPeriod = {
@@ -56,6 +57,17 @@ export type Gradebook = {
   lock: GradebookLock | null;
   items: EvaluationItem[];
   students: GradebookStudent[];
+};
+
+// Contrato de GET /gradebooks/:classroomSubjectId/annual.
+export type AnnualSummary = Pick<
+  Gradebook,
+  'classroomSubject' | 'classroom' | 'academicYear' | 'periods' | 'scale'
+> & {
+  students: (Pick<GradebookStudent, 'enrollmentId' | 'status' | 'student'> & {
+    periodScores: Record<string, number | null>;
+    annual: AnnualScore;
+  })[];
 };
 
 // Contrato de GET /classrooms/:classroomId/gradebooks.

@@ -34,6 +34,7 @@ import EvaluationItemRepository from './repositories/evaluation-item.repository'
 import StudentGradeRepository from './repositories/student-grade.repository';
 import PeriodSubjectSummaryRepository from './repositories/period-subject-summary.repository';
 import periodScore from './utils/period-score.util';
+import annualScore from './utils/annual-score.util';
 import SetEvaluationItemsDto from './dto/set-evaluation-items.dto';
 import SaveGradesDto from './dto/save-grades.dto';
 import {
@@ -304,6 +305,27 @@ export default class GradebooksService {
       };
     });
 
+  private describe = async ({
+    organizationId,
+    assignment,
+    classroom,
+    periods,
+  }: GradebookContext) => ({
+    classroomSubject: {
+      id: assignment.id,
+      subject: assignment.subject,
+      teacher: assignment.teacher ?? null,
+    },
+    classroom: {
+      id: classroom.id,
+      name: classroom.name,
+      gradeLevel: classroom.gradeLevel,
+    },
+    academicYear: classroom.academicYear,
+    periods,
+    scale: await this.gradingScalesService.findScale(organizationId),
+  });
+
   // Planilla del periodo: filas = matrículas del salón (por apellido),
   // columnas = actividades. Si el profesor no ha creado actividades se crea la
   // columna única "Nota del periodo (100%)".
@@ -314,27 +336,12 @@ export default class GradebooksService {
   ) => {
     const context = await this.loadContext(actor, classroomSubjectId);
     const { assignment, classroom, periods } = context;
-
     const period = periodId
       ? this.findPeriod(periods, periodId)
       : (periods.find(({ isOpenForGrading }) => isOpenForGrading) ??
         periods[periods.length - 1]);
 
-    const base = {
-      classroomSubject: {
-        id: assignment.id,
-        subject: assignment.subject,
-        teacher: assignment.teacher ?? null,
-      },
-      classroom: {
-        id: classroom.id,
-        name: classroom.name,
-        gradeLevel: classroom.gradeLevel,
-      },
-      academicYear: classroom.academicYear,
-      periods,
-      scale: await this.gradingScalesService.findScale(context.organizationId),
-    };
+    const base = await this.describe(context);
     if (!period)
       return { ...base, period: null, lock: null, items: [], students: [] };
 
@@ -379,6 +386,55 @@ export default class GradebooksService {
           finalPeriodScore: summary?.finalPeriodScore ?? null,
           isPassed: summary?.isPassed ?? null,
           teacherObservation: summary?.teacherObservation ?? null,
+        };
+      }),
+    };
+  };
+
+  // Acumulado anual de la materia: definitiva de cada periodo ponderada por
+  // su peso, proyección de la nota final y estado de cada estudiante.
+  public getAnnualSummary = async (
+    actor: Viewer,
+    classroomSubjectId: string,
+  ) => {
+    const context = await this.loadContext(actor, classroomSubjectId);
+    const { assignment, classroom, periods } = context;
+
+    const [base, enrollments, summaries] = await Promise.all([
+      this.describe(context),
+      this.listEnrollments(classroom.id),
+      this.periodSubjectSummaryRepository.findAll(
+        { classroomSubjectId: assignment.id },
+        {
+          attributes: ['enrollmentId', 'academicPeriodId', 'finalPeriodScore'],
+        },
+      ),
+    ]);
+    const scores = new Map(
+      summaries.map(({ enrollmentId, academicPeriodId, finalPeriodScore }) => [
+        `${enrollmentId}:${academicPeriodId}`,
+        finalPeriodScore,
+      ]),
+    );
+
+    return {
+      ...base,
+      students: enrollments.map(({ id, status, student }) => {
+        const periodScores = periods.map(
+          ({ id: periodId, weightPercentage }) => ({
+            periodId,
+            weightPercentage,
+            score: scores.get(`${id}:${periodId}`) ?? null,
+          }),
+        );
+        return {
+          enrollmentId: id,
+          status,
+          student,
+          periodScores: Object.fromEntries(
+            periodScores.map(({ periodId, score }) => [periodId, score]),
+          ),
+          annual: annualScore(periodScores, base.scale),
         };
       }),
     };

@@ -7,6 +7,7 @@ import {
   CalendarRangeIcon,
   EyeIcon,
   LockIcon,
+  SigmaIcon,
 } from 'lucide-react';
 import { TableSkeleton } from '@/components/data/table-skeleton';
 import { PanelContent, PanelHeader } from '@/components/panel/panel-header';
@@ -23,8 +24,9 @@ import { ApiError } from '@/lib/api/api-fetch';
 import { authFetch } from '@/lib/api/auth-fetch';
 import { ORG_HOME, requireOrgUser } from '@/lib/auth/current-user';
 import { canOpenGradebooks } from '@/lib/auth/permissions';
+import { AnnualSummaryTable } from './_components/annual-summary-table';
 import { GradebookSheet } from './_components/gradebook-sheet';
-import type { Gradebook, GradebookLock } from '../types';
+import type { AnnualSummary, Gradebook, GradebookLock } from '../types';
 
 export const metadata: Metadata = { title: 'Planilla de notas' };
 
@@ -39,6 +41,19 @@ const LOCK_MESSAGES: Record<GradebookLock, string> = {
     'El año lectivo está cerrado: las notas ya no se pueden modificar.',
 };
 
+// Pestaña del acumulado anual, junto a las de los periodos.
+const ANNUAL_TAB = 'anual';
+
+const fetchOrNotFound = async <T,>(path: string) => {
+  try {
+    return await authFetch<T>(path);
+  } catch (error) {
+    if (error instanceof ApiError && [400, 404].includes(error.status))
+      notFound();
+    throw error;
+  }
+};
+
 async function GradebookView({ params, searchParams }: Props) {
   const me = await requireOrgUser();
   if (!canOpenGradebooks(me)) redirect(ORG_HOME);
@@ -46,20 +61,19 @@ async function GradebookView({ params, searchParams }: Props) {
   const { classroomSubjectId } = await params;
   const { periodo } = await searchParams;
   const periodId = typeof periodo === 'string' ? periodo : undefined;
+  const annualView = periodId === ANNUAL_TAB;
 
-  let gradebook: Gradebook;
-  try {
-    gradebook = await authFetch<Gradebook>(
-      `/gradebooks/${classroomSubjectId}${periodId ? `?periodId=${periodId}` : ''}`,
-    );
-  } catch (error) {
-    if (error instanceof ApiError && [400, 404].includes(error.status))
-      notFound();
-    throw error;
-  }
-
-  const { classroomSubject, classroom, academicYear, periods, period, lock } =
-    gradebook;
+  const data = annualView
+    ? await fetchOrNotFound<AnnualSummary>(
+        `/gradebooks/${classroomSubjectId}/annual`,
+      )
+    : await fetchOrNotFound<Gradebook>(
+        `/gradebooks/${classroomSubjectId}${periodId ? `?periodId=${periodId}` : ''}`,
+      );
+  const gradebook = 'items' in data ? data : null;
+  const { classroomSubject, classroom, academicYear, periods } = data;
+  const period = gradebook?.period ?? null;
+  const lock = gradebook?.lock ?? null;
 
   const back =
     me.role.name === 'TEACHER'
@@ -96,7 +110,7 @@ async function GradebookView({ params, searchParams }: Props) {
         </p>
       </div>
 
-      {!period ? (
+      {!periods.length ? (
         <Empty className="border">
           <EmptyHeader>
             <EmptyMedia variant="icon">
@@ -116,12 +130,12 @@ async function GradebookView({ params, searchParams }: Props) {
               <Button
                 key={option.id}
                 size="sm"
-                variant={option.id === period.id ? 'default' : 'outline'}
+                variant={option.id === period?.id ? 'default' : 'outline'}
                 nativeButton={false}
                 render={
                   <Link
                     href={`/planillas/${classroomSubject.id}?periodo=${option.id}`}
-                    aria-current={option.id === period.id ? 'page' : undefined}
+                    aria-current={option.id === period?.id ? 'page' : undefined}
                   />
                 }
               >
@@ -132,6 +146,20 @@ async function GradebookView({ params, searchParams }: Props) {
                 <span className="opacity-70">({option.weightPercentage}%)</span>
               </Button>
             ))}
+            <Button
+              size="sm"
+              variant={annualView ? 'default' : 'outline'}
+              nativeButton={false}
+              render={
+                <Link
+                  href={`/planillas/${classroomSubject.id}?periodo=${ANNUAL_TAB}`}
+                  aria-current={annualView ? 'page' : undefined}
+                />
+              }
+            >
+              <SigmaIcon data-icon="inline-start" />
+              Acumulado anual
+            </Button>
           </nav>
 
           {lock && (
@@ -145,7 +173,7 @@ async function GradebookView({ params, searchParams }: Props) {
             </div>
           )}
 
-          {!gradebook.students.length ? (
+          {!data.students.length ? (
             <Empty className="border">
               <EmptyHeader>
                 <EmptyTitle>Sin estudiantes</EmptyTitle>
@@ -154,10 +182,12 @@ async function GradebookView({ params, searchParams }: Props) {
                 </EmptyDescription>
               </EmptyHeader>
             </Empty>
+          ) : !gradebook ? (
+            <AnnualSummaryTable summary={data as AnnualSummary} />
           ) : (
             <GradebookSheet
               // Otro periodo u otras columnas: la planilla empieza de cero.
-              key={`${period.id}:${gradebook.items
+              key={`${period?.id}:${gradebook.items
                 .map(({ id, weightPercentage }) => `${id}-${weightPercentage}`)
                 .join(',')}`}
               gradebook={gradebook}

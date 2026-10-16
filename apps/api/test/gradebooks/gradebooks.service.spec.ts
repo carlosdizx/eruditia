@@ -264,6 +264,54 @@ describe('GradebooksService', () => {
     });
   });
 
+  describe('getAnnualSummary', () => {
+    it('weights each period and projects the final score', async () => {
+      summaryRepository.findAll.mockResolvedValue([
+        { enrollmentId: 'e1', academicPeriodId: 'p1', finalPeriodScore: 2.5 },
+        { enrollmentId: 'e2', academicPeriodId: 'p1', finalPeriodScore: 4 },
+        { enrollmentId: 'e2', academicPeriodId: 'p2', finalPeriodScore: 3 },
+      ]);
+
+      const result = await service.getAnnualSummary(teacher, 'cs-id');
+
+      expect(summaryRepository.findAll).toHaveBeenCalledWith(
+        { classroomSubjectId: 'cs-id' },
+        expect.any(Object),
+      );
+      expect(result.periods).toEqual([open, closed]);
+      expect(result.students).toEqual([
+        expect.objectContaining({
+          enrollmentId: 'e1',
+          periodScores: { p1: 2.5, p2: null },
+          annual: {
+            accumulated: 1.3,
+            projected: 2.5,
+            requiredScore: 3.5,
+            complete: false,
+            status: 'at_risk',
+          },
+        }),
+        expect.objectContaining({
+          enrollmentId: 'e2',
+          periodScores: { p1: 4, p2: 3 },
+          annual: {
+            accumulated: 3.5,
+            projected: 3.5,
+            requiredScore: null,
+            complete: true,
+            status: 'passing',
+          },
+        }),
+      ]);
+    });
+
+    it('hides subjects the teacher neither teaches nor directs', async () => {
+      await expect(
+        service.getAnnualSummary({ ...teacher, userId: 'other-id' }, 'cs-id'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
   describe('saveGrades', () => {
     const save = (students: object[], actor: object = teacher, period = 'p1') =>
       service.saveGrades(actor as typeof teacher, 'cs-id', period, {
