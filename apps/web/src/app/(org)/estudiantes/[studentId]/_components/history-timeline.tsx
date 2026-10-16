@@ -102,6 +102,13 @@ export function HistoryTimeline({
                 <span className="font-medium tabular-nums">
                   {enrollment.finalAverage?.toFixed(2) ?? '—'}
                 </span>
+                {enrollment.computedAverage !== null &&
+                  enrollment.computedAverage !== enrollment.finalAverage && (
+                    <span className="text-muted-foreground block text-xs">
+                      Ajustado (calculado{' '}
+                      {enrollment.computedAverage.toFixed(2)})
+                    </span>
+                  )}
               </span>
             </div>
           </div>

@@ -2,10 +2,11 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
-import { UsersIcon } from 'lucide-react';
+import { EyeIcon, TableIcon, UsersIcon } from 'lucide-react';
 import { TableSkeleton } from '@/components/data/table-skeleton';
 import { PanelContent, PanelHeader } from '@/components/panel/panel-header';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Empty,
   EmptyDescription,
@@ -24,7 +25,8 @@ import {
 import { ApiError } from '@/lib/api/api-fetch';
 import { authFetch } from '@/lib/api/auth-fetch';
 import { requireGrant } from '@/lib/auth/current-user';
-import { ENROLLMENT_GRANTS } from '@/lib/auth/permissions';
+import { ENROLLMENT_GRANTS, canOpenGradebooks } from '@/lib/auth/permissions';
+import type { ClassroomGradebooks } from '../../planillas/types';
 import {
   ENROLLMENT_STATUS_LABELS,
   type Enrollment,
@@ -56,7 +58,7 @@ async function ClassList({
 }) {
   const { classroomId } = await params;
   // La API solo responde los salones donde el profesor dicta.
-  await requireGrant(ENROLLMENT_GRANTS.classes);
+  const me = await requireGrant(ENROLLMENT_GRANTS.classes);
 
   let enrollments: Enrollment[];
   try {
@@ -69,8 +71,15 @@ async function ClassList({
     throw error;
   }
 
-  const { academicYear, assignments, homerooms } =
-    await authFetch<TeachingAssignments>('/teaching-assignments');
+  const [{ academicYear, assignments, homerooms }, gradebooks] =
+    await Promise.all([
+      authFetch<TeachingAssignments>('/teaching-assignments'),
+      canOpenGradebooks(me)
+        ? authFetch<ClassroomGradebooks>(
+            `/classrooms/${classroomId}/gradebooks`,
+          ).catch(() => null)
+        : null,
+    ]);
   const classroom = [
     ...homerooms,
     ...assignments.map((assignment) => assignment.classroom),
@@ -93,6 +102,37 @@ async function ClassList({
           estudiantes cursando
         </p>
       </div>
+
+      {gradebooks && gradebooks.gradebooks.length > 0 && (
+        <section className="flex flex-col gap-2">
+          <h2 className="text-sm font-medium">Planillas de notas</h2>
+          <div className="flex flex-wrap gap-2">
+            {gradebooks.gradebooks.map(
+              ({ id, subject, teacher, canManage }) => (
+                <Button
+                  key={id}
+                  size="sm"
+                  variant={canManage ? 'default' : 'outline'}
+                  title={
+                    canManage
+                      ? undefined
+                      : `Solo lectura${teacher ? ` · Prof. ${teacher.firstName} ${teacher.lastName}` : ''}`
+                  }
+                  nativeButton={false}
+                  render={<Link href={`/planillas/${id}`} />}
+                >
+                  {canManage ? (
+                    <TableIcon data-icon="inline-start" />
+                  ) : (
+                    <EyeIcon data-icon="inline-start" />
+                  )}
+                  {subject.name}
+                </Button>
+              ),
+            )}
+          </div>
+        </section>
+      )}
 
       {!enrollments.length ? (
         <Empty className="border">

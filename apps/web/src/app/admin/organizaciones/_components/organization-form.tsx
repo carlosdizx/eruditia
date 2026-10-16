@@ -102,24 +102,6 @@ const LOCATION: Section = {
   ],
 };
 
-const EVALUATION: Section = {
-  title: 'Evaluación',
-  description: 'Reglas académicas de la organización.',
-  fields: [
-    {
-      name: 'passingGrade',
-      label: 'Nota mínima de aprobación',
-      type: 'number',
-      step: '0.01',
-      min: 0,
-      max: 999.99,
-      placeholder: '3.00',
-      description:
-        'Con ella el asistente de promoción sugiere quién aprueba el año.',
-    },
-  ],
-};
-
 const OWNER: Section = {
   title: 'Administrador',
   description:
@@ -267,8 +249,6 @@ export function OrganizationForm({
         <SectionCard section={CONTACT} values={values} />
         <SectionCard section={LOCATION} values={values} />
       </div>
-
-      <SectionCard section={EVALUATION} values={values} />
 
       {mode === 'create' && <SectionCard section={OWNER} values={values} />}
 

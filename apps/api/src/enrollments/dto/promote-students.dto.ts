@@ -33,12 +33,15 @@ export class PromotionDecisionDto {
   @IsUUID()
   targetClassroomId?: string;
 
+  // El promedio sale de las planillas; solo se envía para ajustarlo a mano
+  // (exige el motivo en promotionNotes).
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   @Max(999.99)
-  finalAverage?: number;
+  adjustedAverage?: number;
 
+  // Obligatoria si se ajusta el promedio o la decisión contradice las notas.
   @IsOptional()
   @IsString()
   @MaxLength(1000)

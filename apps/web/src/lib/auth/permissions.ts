@@ -32,6 +32,11 @@ export const Permission = {
   ENROLLMENT_UPDATE: 'enrollment:update',
   ENROLLMENT_DELETE: 'enrollment:delete',
   ENROLLMENT_PROMOTE: 'enrollment:promote',
+  GRADING_SCALE_UPDATE: 'grading-scale:update',
+  GRADE_LIST: 'grade:list',
+  GRADE_RECORD: 'grade:record',
+  GRADE_RECOVER: 'grade:recover',
+  REPORT_CARD_VIEW: 'report-card:view',
 } as const;
 
 export type Permission = (typeof Permission)[keyof typeof Permission];
@@ -69,6 +74,11 @@ export const PERMISSION_LABELS: Record<string, string> = {
   [Permission.ENROLLMENT_UPDATE]: 'Cambiar de salón o retirar',
   [Permission.ENROLLMENT_DELETE]: 'Anular matrículas',
   [Permission.ENROLLMENT_PROMOTE]: 'Promoción anual de estudiantes',
+  [Permission.GRADING_SCALE_UPDATE]: 'Configurar escala de calificación',
+  [Permission.GRADE_LIST]: 'Ver planillas de notas',
+  [Permission.GRADE_RECORD]: 'Registrar notas',
+  [Permission.GRADE_RECOVER]: 'Registrar recuperaciones',
+  [Permission.REPORT_CARD_VIEW]: 'Boletín de notas (cuenta y portal con PIN)',
 };
 
 export const hasPermission = (
@@ -77,14 +87,14 @@ export const hasPermission = (
 ) => permissions.includes(permission);
 
 // Lo que exige un endpoint: el permiso de la organización y, si la API lo pide,
-// además un rol concreto.
-export type Grant = { permission: Permission; role?: string };
+// además uno de ciertos roles.
+export type Grant = { permission: Permission; role?: string | string[] };
 
 export const isGranted = (
   user: { role: { name: string }; permissions: readonly string[] },
   { permission, role }: Grant,
 ) =>
-  (!role || user.role.name === role) &&
+  (!role || [role].flat().includes(user.role.name)) &&
   hasPermission(user.permissions, permission);
 
 // Espejo de los @AuthWithPermissions de UsersController.
@@ -154,3 +164,34 @@ export const ENROLLMENT_GRANTS = {
   // Lista de clase e historial, solo de los salones donde dicta.
   classes: { permission: Permission.ENROLLMENT_LIST, role: 'TEACHER' },
 } satisfies Record<string, Grant>;
+
+// Espejo de los @AuthWithPermissions de GradingScalesController.
+export const GRADING_SCALE_GRANTS = {
+  update: { permission: Permission.GRADING_SCALE_UPDATE, role: 'ADMIN' },
+} satisfies Record<string, Grant>;
+
+// Espejo de los @AuthWithPermissions de GradebooksController: además del
+// permiso exige ser ADMIN o TEACHER (el profesor, solo de sus materias).
+export const GRADE_GRANTS = {
+  view: { permission: Permission.GRADE_LIST },
+  record: { permission: Permission.GRADE_RECORD },
+} satisfies Record<string, Grant>;
+
+// Espejo de los @AuthWithPermissions de RecoveriesController.
+export const RECOVERY_GRANTS = {
+  manage: { permission: Permission.GRADE_RECOVER, role: ['ADMIN', 'TEACHER'] },
+} satisfies Record<string, Grant>;
+
+// Espejo de los @AuthWithPermissions de ReportCardsController.
+export const REPORT_CARD_GRANTS = {
+  own: { permission: Permission.REPORT_CARD_VIEW, role: 'STUDENT' },
+} satisfies Record<string, Grant>;
+
+export const GRADEBOOK_ROLES = ['ADMIN', 'TEACHER'];
+
+export const canOpenGradebooks = (user: {
+  role: { name: string };
+  permissions: readonly string[];
+}) =>
+  GRADEBOOK_ROLES.includes(user.role.name) &&
+  isGranted(user, GRADE_GRANTS.view);

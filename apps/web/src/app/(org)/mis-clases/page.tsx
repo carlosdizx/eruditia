@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Suspense } from 'react';
-import { PresentationIcon, UsersIcon } from 'lucide-react';
+import { PresentationIcon, TableIcon, UsersIcon } from 'lucide-react';
 import { PanelContent, PanelHeader } from '@/components/panel/panel-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,7 @@ import { requireGrant } from '@/lib/auth/current-user';
 import {
   CLASSROOM_SUBJECT_GRANTS,
   ENROLLMENT_GRANTS,
+  canOpenGradebooks,
   isGranted,
 } from '@/lib/auth/permissions';
 
@@ -91,6 +92,7 @@ async function MyClasses() {
   // Solo para profesores: ven únicamente sus salones y materias.
   const me = await requireGrant(CLASSROOM_SUBJECT_GRANTS.mine);
   const canSeeStudents = isGranted(me, ENROLLMENT_GRANTS.classes);
+  const canGrade = canOpenGradebooks(me);
 
   const { academicYear, assignments, homerooms } =
     await authFetch<TeachingAssignments>('/teaching-assignments');
@@ -152,7 +154,16 @@ async function MyClasses() {
                   >
                     <span className="flex items-center gap-2">
                       <Badge variant="outline">{subject.code}</Badge>
-                      {subject.name}
+                      {canGrade ? (
+                        <Link
+                          href={`/planillas/${id}`}
+                          className="hover:underline"
+                        >
+                          {subject.name}
+                        </Link>
+                      ) : (
+                        subject.name
+                      )}
                     </span>
                     {weeklyHours && (
                       <span className="text-muted-foreground tabular-nums">
@@ -163,17 +174,31 @@ async function MyClasses() {
                 ))}
               </ul>
             </CardContent>
-            {canSeeStudents && (
-              <CardFooter>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  nativeButton={false}
-                  render={<Link href={`/mis-clases/${classroom.id}`} />}
-                >
-                  <UsersIcon data-icon="inline-start" />
-                  Ver estudiantes
-                </Button>
+            {(canSeeStudents || (canGrade && subjects.length > 0)) && (
+              <CardFooter className="flex flex-wrap gap-2">
+                {canGrade && subjects.length === 1 && (
+                  <Button
+                    size="sm"
+                    nativeButton={false}
+                    render={<Link href={`/planillas/${subjects[0].id}`} />}
+                  >
+                    <TableIcon data-icon="inline-start" />
+                    Calificar
+                  </Button>
+                )}
+                {canSeeStudents && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    nativeButton={false}
+                    render={<Link href={`/mis-clases/${classroom.id}`} />}
+                  >
+                    <UsersIcon data-icon="inline-start" />
+                    {homeroom && canGrade
+                      ? 'Estudiantes y planillas'
+                      : 'Ver estudiantes'}
+                  </Button>
+                )}
               </CardFooter>
             )}
           </Card>

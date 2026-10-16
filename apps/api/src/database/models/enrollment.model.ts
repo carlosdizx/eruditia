@@ -14,6 +14,7 @@ import OrganizationModel from './organization.model';
 import StudentModel from './student.model';
 import AcademicYearModel from './academic-year.model';
 import ClassroomModel from './classroom.model';
+import UserModel from './user.model';
 
 // Matrícula de un estudiante en un salón durante un año lectivo. El historial
 // del estudiante son sus matrículas: al pasar de año se crea una nueva y la
@@ -63,6 +64,23 @@ export default class EnrollmentModel extends BaseModel {
     },
   })
   declare finalAverage: number | null;
+
+  // Promedio calculado de las planillas al promover. Si difiere de
+  // finalAverage, lo ajustó averageAdjustedBy (el motivo va en promotionNotes).
+  @AllowNull
+  @Column({
+    type: DataType.DECIMAL(5, 2),
+    get(this: EnrollmentModel) {
+      const value: unknown = this.getDataValue('computedAverage');
+      return value === null || value === undefined ? value : Number(value);
+    },
+  })
+  declare computedAverage: number | null;
+
+  @ForeignKey(() => UserModel)
+  @AllowNull
+  @Column(DataType.UUID)
+  declare averageAdjustedBy: string | null;
 
   @AllowNull
   @Column(DataType.TEXT)

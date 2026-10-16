@@ -67,18 +67,6 @@ export default class OrganizationModel extends BaseModel {
   @Column(DataType.STRING)
   declare logoUrl: string | null;
 
-  // Nota mínima de aprobación del año (sugerencias del asistente de promoción).
-  // Postgres devuelve DECIMAL como string; se expone como número.
-  @Default(3)
-  @Column({
-    type: DataType.DECIMAL(5, 2),
-    get(this: OrganizationModel) {
-      const value: unknown = this.getDataValue('passingGrade');
-      return value === null || value === undefined ? value : Number(value);
-    },
-  })
-  declare passingGrade: number;
-
   @Default(true)
   @Column
   declare isActive: boolean;

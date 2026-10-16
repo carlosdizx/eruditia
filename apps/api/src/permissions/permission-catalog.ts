@@ -44,6 +44,16 @@ const permissionDescriptions: Record<PermissionEnum, string> = {
   [PermissionEnum.ENROLLMENT_DELETE]: 'Anular matrículas hechas por error',
   [PermissionEnum.ENROLLMENT_PROMOTE]:
     'Promover, reprobar o graduar a los estudiantes al cierre del año (asistente de promoción)',
+  [PermissionEnum.GRADING_SCALE_UPDATE]:
+    'Configurar la escala de calificación (mínima, máxima, aprobatoria y decimales)',
+  [PermissionEnum.GRADE_LIST]:
+    'Ver planillas de notas (los profesores, de sus materias y su dirección de grupo)',
+  [PermissionEnum.GRADE_RECORD]:
+    'Registrar notas y configurar actividades evaluativas (los profesores, solo en periodos abiertos)',
+  [PermissionEnum.GRADE_RECOVER]:
+    'Registrar recuperaciones de materias perdidas al final del año (los profesores, de sus materias)',
+  [PermissionEnum.REPORT_CARD_VIEW]:
+    'Boletín de notas: los estudiantes lo consultan con su cuenta o con documento + PIN en el portal público',
 };
 
 export interface PermissionCatalogEntry {

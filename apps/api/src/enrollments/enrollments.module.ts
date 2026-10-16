@@ -7,12 +7,19 @@ import EnrollmentsService from './enrollments.service';
 import EnrollmentRepository from './enrollment.repository';
 import StudentEnrollmentsController from './student-enrollments.controller';
 import ClassroomSubjectRepository from '../classroom-subjects/classroom-subject.repository';
-import OrganizationRepository from '../organizations/organization.repository';
+import GradingScalesModule from '../grading-scales/grading-scales.module';
+import GradebooksModule from '../gradebooks/gradebooks.module';
 import PromotionsController from './promotions.controller';
 import PromotionsService from './promotions.service';
 
 @Module({
-  imports: [ClassroomsModule, StudentsModule, AcademicYearsModule],
+  imports: [
+    ClassroomsModule,
+    StudentsModule,
+    AcademicYearsModule,
+    GradingScalesModule,
+    GradebooksModule,
+  ],
   controllers: [
     EnrollmentsController,
     StudentEnrollmentsController,
@@ -21,7 +28,6 @@ import PromotionsService from './promotions.service';
   providers: [
     EnrollmentRepository,
     ClassroomSubjectRepository,
-    OrganizationRepository,
     EnrollmentsService,
     PromotionsService,
   ],

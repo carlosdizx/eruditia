@@ -4,6 +4,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Op, Transaction } from 'sequelize';
+import type AuthContextInterface from '@auth/interfaces/auth-context.interface';
 import AcademicYearModel from '@database/models/academic-year.model';
 import ClassroomModel from '@database/models/classroom.model';
 import GradeLevelModel from '@database/models/grade-level.model';
@@ -18,7 +19,10 @@ import organizationOf, {
 import AcademicYearsService from '../academic-years/academic-years.service';
 import ClassroomsService from '../classrooms/classrooms.service';
 import StudentsService from '../students/students.service';
-import OrganizationRepository from '../organizations/organization.repository';
+import GradingScalesService, {
+  type GradingScale,
+} from '../grading-scales/grading-scales.service';
+import AnnualResultsService from '../gradebooks/annual-results.service';
 import EnrollmentsService, {
   STUDENT_ATTRIBUTES,
   today,
@@ -26,11 +30,14 @@ import EnrollmentsService, {
 import PromotionPreviewDto from './dto/promotion-preview.dto';
 import PromoteStudentsDto from './dto/promote-students.dto';
 import {
+  ADJUSTED_AVERAGE_RANGE_MESSAGE,
+  ADJUSTMENT_REASON_REQUIRED_MESSAGE,
   ALREADY_ENROLLED_MESSAGE,
   CLOSED_TARGET_YEAR_MESSAGE,
   GRADUATE_NOT_FINAL_MESSAGE,
   INVALID_PROMOTION_ENROLLMENTS_MESSAGE,
   INVALID_PROMOTION_TARGET_MESSAGE,
+  MANUAL_DECISION_REASON_REQUIRED_MESSAGE,
   PAST_YEAR_PROMOTION_MESSAGE,
   PROMOTE_FINAL_MESSAGE,
   PROMOTION_TARGET_REQUIRED_MESSAGE,
@@ -57,6 +64,30 @@ const CLOSING_STATUS = {
 const fullName = ({ firstName, lastName }: StudentModel) =>
   `${firstName} ${lastName}`;
 
+// Reprueba el año con maxFailedSubjects materias perdidas o, si el colegio
+// lo activa, con el promedio general bajo la aprobatoria. Sin notas no hay
+// sugerencia.
+export const suggestOutcome = (
+  average: number | null,
+  failedSubjects: number,
+  { passingScore, maxFailedSubjects, failByAverage }: GradingScale,
+  isFinalGrade: boolean,
+) => {
+  if (average === null) return null;
+  if (
+    (maxFailedSubjects !== null && failedSubjects >= maxFailedSubjects) ||
+    (failByAverage && average < passingScore)
+  )
+    return PromotionOutcomeEnum.REPEAT;
+  return isFinalGrade
+    ? PromotionOutcomeEnum.GRADUATE
+    : PromotionOutcomeEnum.PROMOTE;
+};
+
+// Aprueba (promueve o gradúa) o reprueba; null: sin sugerencia.
+const passes = (outcome: PromotionOutcomeEnum | null) =>
+  outcome === null ? null : outcome !== PromotionOutcomeEnum.REPEAT;
+
 @Injectable()
 export default class PromotionsService {
   constructor(
@@ -64,7 +95,8 @@ export default class PromotionsService {
     private readonly classroomsService: ClassroomsService,
     private readonly academicYearsService: AcademicYearsService,
     private readonly studentsService: StudentsService,
-    private readonly organizationRepository: OrganizationRepository,
+    private readonly gradingScalesService: GradingScalesService,
+    private readonly annualResultsService: AnnualResultsService,
   ) {}
 
   // Salón de origen y año destino (posterior y abierto), con los salones del
@@ -158,8 +190,34 @@ export default class PromotionsService {
     return counts;
   };
 
-  // Revisión previa: estudiantes en curso del salón con la decisión sugerida
-  // según su promedio y la nota mínima de la organización.
+  // Resultado anual de cada matrícula según las planillas.
+  private loadResults = async (
+    source: ClassroomModel,
+    enrollmentIds: string[],
+    scale: GradingScale,
+  ) => {
+    const { resultsFor } = await this.annualResultsService.loadClassroom(
+      { id: source.id, academicYearId: source.academicYearId },
+      enrollmentIds,
+      scale,
+    );
+    return new Map(
+      enrollmentIds.map((id) => {
+        const { averages, failedSubjects, incomplete } = resultsFor(id);
+        return [
+          id,
+          {
+            computedAverage: averages.general,
+            failedSubjects: failedSubjects.map(({ subject }) => subject.name),
+            incomplete,
+          },
+        ];
+      }),
+    );
+  };
+
+  // Revisión previa: estudiantes en curso del salón con el promedio calculado
+  // de las planillas y la decisión sugerida según las reglas de la escala.
   public preview = async (
     actor: OrganizationActor,
     dto: PromotionPreviewDto,
@@ -167,11 +225,7 @@ export default class PromotionsService {
     const organizationId = organizationOf(actor);
     const { source, grade, target, sameClassrooms, nextClassrooms } =
       await this.loadContext(organizationId, dto);
-    const { passingGrade } = (await this.organizationRepository.findByPk(
-      organizationId,
-      true,
-      { attributes: ['id', 'passingGrade'] },
-    ))!;
+    const scale = await this.gradingScalesService.findScale(organizationId);
 
     const [enrollments, siblings] = await Promise.all([
       this.enrollmentsService.findAll(
@@ -196,6 +250,12 @@ export default class PromotionsService {
         { attributes: ['id'], order: [['name', 'ASC']] },
       ),
     ]);
+
+    const results = await this.loadResults(
+      source,
+      enrollments.map(({ id }) => id),
+      scale,
+    );
 
     const studentIds = enrollments.map(({ studentId }) => studentId);
     const alreadyEnrolled = studentIds.length
@@ -234,14 +294,6 @@ export default class PromotionsService {
     const samePosition = (classrooms: ClassroomModel[]) =>
       classrooms[Math.min(position, classrooms.length - 1)]?.id ?? null;
 
-    const suggest = (finalAverage: number | null) => {
-      if (finalAverage === null || finalAverage === undefined) return null;
-      if (finalAverage < passingGrade) return PromotionOutcomeEnum.REPEAT;
-      return grade.isFinalGrade
-        ? PromotionOutcomeEnum.GRADUATE
-        : PromotionOutcomeEnum.PROMOTE;
-    };
-
     return {
       sourceClassroom: {
         id: source.id,
@@ -250,27 +302,38 @@ export default class PromotionsService {
         academicYear: source.academicYear,
       },
       targetAcademicYear: target,
-      passingGrade,
+      passingGrade: scale.passingScore,
+      scale,
       sameClassrooms: sameClassrooms.map(toOption),
       nextClassrooms: nextClassrooms.map(toOption),
       nextGradeLevel: nextClassrooms[0]?.gradeLevel ?? null,
       suggestedSameClassroomId: samePosition(sameClassrooms),
       suggestedNextClassroomId: samePosition(nextClassrooms),
-      students: enrollments.map((enrollment) => ({
-        enrollmentId: enrollment.id,
-        student: enrollment.student,
-        finalAverage: enrollment.finalAverage,
-        promotionNotes: enrollment.promotionNotes,
-        suggestedOutcome: suggest(enrollment.finalAverage),
-        targetEnrollment: targetEnrollments.get(enrollment.studentId) ?? null,
-      })),
+      students: enrollments.map((enrollment) => {
+        const result = results.get(enrollment.id)!;
+        return {
+          enrollmentId: enrollment.id,
+          student: enrollment.student,
+          ...result,
+          promotionNotes: enrollment.promotionNotes,
+          suggestedOutcome: suggestOutcome(
+            result.computedAverage,
+            result.failedSubjects.length,
+            scale,
+            grade.isFinalGrade,
+          ),
+          targetEnrollment: targetEnrollments.get(enrollment.studentId) ?? null,
+        };
+      }),
     };
   };
 
   // Cierra las matrículas del año de origen con su estado definitivo y crea
   // las del año destino (enlazadas a la anterior), todo en una transacción.
+  // El promedio se calcula de las planillas; ajustarlo o decidir en contra de
+  // las notas exige el motivo.
   public promote = async (
-    actor: OrganizationActor,
+    actor: Pick<AuthContextInterface, 'organizationId' | 'userId'>,
     dto: PromoteStudentsDto,
   ) => {
     const organizationId = organizationOf(actor);
@@ -294,6 +357,9 @@ export default class PromotionsService {
       throw new BadRequestException(INVALID_PROMOTION_ENROLLMENTS_MESSAGE);
     const studentOf = new Map(
       enrollments.map(({ id, studentId }) => [id, studentId]),
+    );
+    const nameOf = new Map(
+      enrollments.map(({ id, student }) => [id, fullName(student!)]),
     );
 
     const allowed = {
@@ -362,6 +428,68 @@ export default class PromotionsService {
         );
     }
 
+    const scale = await this.gradingScalesService.findScale(organizationId);
+    const results = await this.loadResults(
+      source,
+      enrollments.map(({ id }) => id),
+      scale,
+    );
+    const format = (value: number) => value.toFixed(scale.decimalPlaces);
+    const averages = new Map<
+      string,
+      {
+        finalAverage: number | null;
+        computedAverage: number | null;
+        averageAdjustedBy: string | null;
+      }
+    >();
+    for (const decision of dto.decisions) {
+      const name = nameOf.get(decision.enrollmentId)!;
+      const { computedAverage, failedSubjects } = results.get(
+        decision.enrollmentId,
+      )!;
+      const notes = decision.promotionNotes?.trim();
+      const adjusted =
+        decision.adjustedAverage !== undefined &&
+        decision.adjustedAverage !== computedAverage;
+
+      if (adjusted) {
+        const value = decision.adjustedAverage!;
+        if (value < scale.minScore || value > scale.maxScore)
+          throw new BadRequestException(
+            ADJUSTED_AVERAGE_RANGE_MESSAGE(
+              name,
+              format(scale.minScore),
+              format(scale.maxScore),
+            ),
+          );
+        if (!notes)
+          throw new BadRequestException(
+            ADJUSTMENT_REASON_REQUIRED_MESSAGE(name),
+          );
+      }
+
+      const finalAverage = adjusted
+        ? decision.adjustedAverage!
+        : computedAverage;
+      const suggested = suggestOutcome(
+        finalAverage,
+        failedSubjects.length,
+        scale,
+        grade.isFinalGrade,
+      );
+      if (passes(suggested) !== passes(decision.outcome) && !notes)
+        throw new BadRequestException(
+          MANUAL_DECISION_REASON_REQUIRED_MESSAGE(name),
+        );
+
+      averages.set(decision.enrollmentId, {
+        finalAverage,
+        computedAverage,
+        averageAdjustedBy: adjusted ? actor.userId : null,
+      });
+    }
+
     const enrollmentDate = dto.enrollmentDate ?? today();
     await this.enrollmentsService.transaction(
       async (transaction: Transaction) => {
@@ -370,9 +498,7 @@ export default class PromotionsService {
             decision.enrollmentId,
             {
               status: CLOSING_STATUS[decision.outcome],
-              ...(decision.finalAverage !== undefined && {
-                finalAverage: decision.finalAverage,
-              }),
+              ...averages.get(decision.enrollmentId)!,
               ...(decision.promotionNotes !== undefined && {
                 promotionNotes: decision.promotionNotes.trim() || null,
               }),

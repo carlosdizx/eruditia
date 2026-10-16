@@ -41,6 +41,14 @@ enum PermissionEnum {
   ENROLLMENT_UPDATE = 'enrollment:update',
   ENROLLMENT_DELETE = 'enrollment:delete',
   ENROLLMENT_PROMOTE = 'enrollment:promote',
+
+  GRADING_SCALE_UPDATE = 'grading-scale:update',
+
+  GRADE_LIST = 'grade:list',
+  GRADE_RECORD = 'grade:record',
+  GRADE_RECOVER = 'grade:recover',
+
+  REPORT_CARD_VIEW = 'report-card:view',
 }
 
 export default PermissionEnum;

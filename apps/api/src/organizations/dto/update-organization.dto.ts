@@ -3,14 +3,11 @@ import {
   IsEmail,
   IsISO31661Alpha2,
   IsNotEmpty,
-  IsNumber,
   IsOptional,
   IsString,
   IsUrl,
   Matches,
-  Max,
   MaxLength,
-  Min,
 } from 'class-validator';
 
 export default class UpdateOrganizationDto {
@@ -76,13 +73,6 @@ export default class UpdateOrganizationDto {
   @IsOptional()
   @IsUrl()
   logoUrl?: string;
-
-  // Nota mínima de aprobación del año.
-  @IsOptional()
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
-  @Max(999.99)
-  passingGrade?: number;
 
   // Desactivar corta el acceso de todos sus usuarios en la siguiente petición.
   @IsOptional()

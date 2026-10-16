@@ -3,9 +3,16 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
-import { CircleAlertIcon, CircleCheckIcon, UsersIcon } from 'lucide-react';
+import {
+  CircleAlertIcon,
+  CircleCheckIcon,
+  PencilIcon,
+  UsersIcon,
+  XIcon,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { ScoreText } from '@/components/grading/score-text';
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -49,6 +56,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { formatScore, parseScore } from '@/lib/grading/scale';
 import { promoteStudents } from '../actions';
 import type {
   PromotionClassroom,
@@ -63,20 +71,20 @@ type Choice = PromotionOutcome | typeof SKIP;
 type Row = {
   choice: Choice;
   targetClassroomId: string | null;
-  finalAverage: string;
+  // El promedio sale de las planillas; solo se edita al pedir "Ajustar".
+  adjusting: boolean;
+  adjustedAverage: string;
   notes: string;
 };
+
+type Student = PromotionPreview['students'][number];
 
 // Fecha local (AAAA-MM-DD), no la UTC.
 const today = () => new Date().toLocaleDateString('en-CA');
 
-const parseAverage = (value: string) => {
-  if (!value.trim()) return undefined;
-  const number = Number(value.replace(',', '.'));
-  return Number.isFinite(number) && number >= 0 && number <= 999.99
-    ? Math.round(number * 100) / 100
-    : null;
-};
+// Aprueba (promueve o gradúa) o reprueba; null: sin decisión o sin sugerencia.
+const passes = (choice: Choice | null) =>
+  choice === null || choice === SKIP ? null : choice !== 'repeat';
 
 // Paso 2: decisión por estudiante, salón destino y confirmación.
 export function PromotionReview({ preview }: { preview: PromotionPreview }) {
@@ -84,7 +92,7 @@ export function PromotionReview({ preview }: { preview: PromotionPreview }) {
   const {
     sourceClassroom,
     targetAcademicYear,
-    passingGrade,
+    scale,
     sameClassrooms,
     nextClassrooms,
     nextGradeLevel,
@@ -100,10 +108,19 @@ export function PromotionReview({ preview }: { preview: PromotionPreview }) {
         ? preview.suggestedSameClassroomId
         : null;
 
-  // Sugerencia según el promedio y la nota mínima de la organización.
-  const suggest = (average: number | null | undefined): Choice => {
-    if (average === null || average === undefined) return SKIP;
-    if (average < passingGrade) return 'repeat';
+  // Espejo de suggestOutcome de la API: materias perdidas y, si el colegio lo
+  // activa, promedio bajo la aprobatoria.
+  const suggest = (
+    average: number | null,
+    failedSubjects: number,
+  ): PromotionOutcome | null => {
+    if (average === null) return null;
+    if (
+      (scale.maxFailedSubjects !== null &&
+        failedSubjects >= scale.maxFailedSubjects) ||
+      (scale.failByAverage && average < scale.passingScore)
+    )
+      return 'repeat';
     return isFinal ? 'graduate' : 'promote';
   };
 
@@ -113,7 +130,7 @@ export function PromotionReview({ preview }: { preview: PromotionPreview }) {
         ({
           enrollmentId,
           suggestedOutcome,
-          finalAverage,
+          computedAverage,
           promotionNotes,
           targetEnrollment,
         }) => {
@@ -125,7 +142,11 @@ export function PromotionReview({ preview }: { preview: PromotionPreview }) {
             {
               choice,
               targetClassroomId: targetFor(choice),
-              finalAverage: finalAverage?.toString() ?? '',
+              adjusting: false,
+              adjustedAverage:
+                computedAverage === null
+                  ? ''
+                  : formatScore(computedAverage, scale),
               notes: promotionNotes ?? '',
             },
           ];
@@ -141,6 +162,30 @@ export function PromotionReview({ preview }: { preview: PromotionPreview }) {
   > | null>(null);
   const [pending, startTransition] = useTransition();
 
+  // Promedio que se va a guardar, si se ajustó y si la decisión contradice
+  // las notas: ambos casos exigen el motivo.
+  const evaluate = (student: Student, row: Row) => {
+    const parsed = row.adjusting
+      ? parseScore(row.adjustedAverage, scale)
+      : null;
+    const invalidAverage = !!parsed && !parsed.ok;
+    const adjustedValue = parsed?.ok ? parsed.score : null;
+    const adjusted =
+      adjustedValue !== null && adjustedValue !== student.computedAverage;
+    const average = adjusted ? adjustedValue : student.computedAverage;
+    const suggested = suggest(average, student.failedSubjects.length);
+    const manual =
+      row.choice !== SKIP && passes(suggested) !== passes(row.choice);
+    return {
+      average,
+      adjusted,
+      adjustedValue,
+      invalidAverage,
+      manual,
+      missingReason: (adjusted || manual) && !row.notes.trim(),
+    };
+  };
+
   const update = (enrollmentId: string, patch: Partial<Row>) =>
     setRows((current) => ({
       ...current,
@@ -150,13 +195,33 @@ export function PromotionReview({ preview }: { preview: PromotionPreview }) {
   const setChoice = (enrollmentId: string, choice: Choice) =>
     update(enrollmentId, { choice, targetClassroomId: targetFor(choice) });
 
-  // Al escribir el promedio se recalcula la sugerencia.
-  const setAverage = (enrollmentId: string, finalAverage: string) => {
-    const average = parseAverage(finalAverage);
-    const choice = average === null ? undefined : suggest(average);
-    update(enrollmentId, {
-      finalAverage,
+  // Al ajustar el promedio se recalcula la sugerencia.
+  const setAdjusted = (student: Student, adjustedAverage: string) => {
+    const parsed = parseScore(adjustedAverage, scale);
+    const average = parsed.ok
+      ? (parsed.score ?? student.computedAverage)
+      : undefined;
+    const choice =
+      average === undefined
+        ? undefined
+        : (suggest(average, student.failedSubjects.length) ?? SKIP);
+    update(student.enrollmentId, {
+      adjustedAverage,
       ...(choice && { choice, targetClassroomId: targetFor(choice) }),
+    });
+  };
+
+  const cancelAdjustment = (student: Student) => {
+    const choice: Choice =
+      suggest(student.computedAverage, student.failedSubjects.length) ?? SKIP;
+    update(student.enrollmentId, {
+      adjusting: false,
+      adjustedAverage:
+        student.computedAverage === null
+          ? ''
+          : formatScore(student.computedAverage, scale),
+      choice,
+      targetClassroomId: targetFor(choice),
     });
   };
 
@@ -164,9 +229,19 @@ export function PromotionReview({ preview }: { preview: PromotionPreview }) {
     ({ enrollmentId, targetEnrollment }) =>
       !targetEnrollment && rows[enrollmentId].choice !== SKIP,
   );
+  const evaluated = included.map((student) => ({
+    student,
+    row: rows[student.enrollmentId],
+    ...evaluate(student, rows[student.enrollmentId]),
+  }));
   const count = (choice: Choice) =>
     included.filter(({ enrollmentId }) => rows[enrollmentId].choice === choice)
       .length;
+  const manualCount = evaluated.filter(({ manual }) => manual).length;
+  const adjustedCount = evaluated.filter(({ adjusted }) => adjusted).length;
+  const incompleteCount = included.filter(
+    ({ incomplete }) => incomplete,
+  ).length;
 
   // Ocupación de cada salón destino con lo que se va a matricular.
   const incoming = new Map<string, number>();
@@ -183,24 +258,23 @@ export function PromotionReview({ preview }: { preview: PromotionPreview }) {
     incoming: incoming.get(classroom.id) ?? 0,
   }));
 
+  const nameOf = ({ student }: Student) =>
+    `${student.firstName} ${student.lastName}`;
   const problems = [
-    ...included
-      .filter(({ enrollmentId }) => {
-        const { choice, targetClassroomId } = rows[enrollmentId];
-        return choice !== 'graduate' && !targetClassroomId;
-      })
+    ...evaluated
+      .filter(({ row }) => row.choice !== 'graduate' && !row.targetClassroomId)
+      .map(({ student }) => `Falta el salón destino de ${nameOf(student)}`),
+    ...evaluated
+      .filter(({ invalidAverage }) => invalidAverage)
       .map(
         ({ student }) =>
-          `Falta el salón destino de ${student.firstName} ${student.lastName}`,
+          `El promedio ajustado de ${nameOf(student)} debe estar entre ${formatScore(scale.minScore, scale)} y ${formatScore(scale.maxScore, scale)}`,
       ),
-    ...included
-      .filter(
-        ({ enrollmentId }) =>
-          parseAverage(rows[enrollmentId].finalAverage) === null,
-      )
+    ...evaluated
+      .filter(({ missingReason }) => missingReason)
       .map(
         ({ student }) =>
-          `El promedio de ${student.firstName} ${student.lastName} no es válido`,
+          `Escribe en la observación el motivo de ${nameOf(student)}`,
       ),
     ...occupancy
       .filter(
@@ -216,21 +290,17 @@ export function PromotionReview({ preview }: { preview: PromotionPreview }) {
         sourceClassroomId: sourceClassroom.id,
         targetAcademicYearId: targetAcademicYear.id,
         enrollmentDate,
-        decisions: included.map(({ enrollmentId }) => {
-          const { choice, targetClassroomId, finalAverage, notes } =
-            rows[enrollmentId];
-          const average = parseAverage(finalAverage);
-          return {
-            enrollmentId,
-            outcome: choice as PromotionOutcome,
-            ...(choice !== 'graduate' && {
-              targetClassroomId: targetClassroomId!,
+        decisions: evaluated.map(
+          ({ student, row, adjusted, adjustedValue }) => ({
+            enrollmentId: student.enrollmentId,
+            outcome: row.choice as PromotionOutcome,
+            ...(row.choice !== 'graduate' && {
+              targetClassroomId: row.targetClassroomId!,
             }),
-            ...(average !== undefined &&
-              average !== null && { finalAverage: average }),
-            ...(notes.trim() && { promotionNotes: notes.trim() }),
-          };
-        }),
+            ...(adjusted && { adjustedAverage: adjustedValue! }),
+            ...(row.notes.trim() && { promotionNotes: row.notes.trim() }),
+          }),
+        ),
       });
 
       if (!outcome.ok) {
@@ -327,6 +397,21 @@ export function PromotionReview({ preview }: { preview: PromotionPreview }) {
     { value: SKIP, label: 'No incluir' },
   ];
 
+  const failRules = [
+    ...(scale.maxFailedSubjects === null
+      ? []
+      : [
+          scale.maxFailedSubjects === 1
+            ? 'con una materia perdida'
+            : `con ${scale.maxFailedSubjects} materias perdidas o más`,
+        ]),
+    ...(scale.failByAverage
+      ? [
+          `con un promedio general menor a ${formatScore(scale.passingScore, scale)}`,
+        ]
+      : []),
+  ];
+
   const classroomItems = (choice: Choice) =>
     (choice === 'promote'
       ? nextClassrooms
@@ -351,12 +436,12 @@ export function PromotionReview({ preview }: { preview: PromotionPreview }) {
       )}
 
       <p className="text-muted-foreground text-sm">
-        Nota mínima de aprobación:{' '}
-        <span className="text-foreground font-medium tabular-nums">
-          {passingGrade.toFixed(2)}
-        </span>
-        . La decisión se sugiere con el promedio final; puedes cambiarla en cada
-        estudiante.
+        El promedio sale de las planillas.{' '}
+        {failRules.length
+          ? `Se sugiere repetir ${failRules.join(' o ')}.`
+          : 'Con la configuración actual nadie reprueba automáticamente.'}{' '}
+        Ajustar el promedio o decidir distinto a la sugerencia exige escribir el
+        motivo. Las reglas se cambian en Ajustes.
       </p>
 
       <div className="rounded-xl border">
@@ -364,17 +449,17 @@ export function PromotionReview({ preview }: { preview: PromotionPreview }) {
           <TableHeader>
             <TableRow>
               <TableHead className="pl-4">Estudiante</TableHead>
-              <TableHead className="w-28">Promedio</TableHead>
+              <TableHead className="w-44">Promedio</TableHead>
               <TableHead className="w-52">Decisión</TableHead>
               <TableHead className="w-40">Salón destino</TableHead>
               <TableHead className="pr-4">Observación</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {students.map(({ enrollmentId, student, targetEnrollment }) => {
+            {students.map((entry) => {
+              const { enrollmentId, student, targetEnrollment } = entry;
               const row = rows[enrollmentId];
               const name = `${student.lastName} ${student.firstName}`;
-              const invalidAverage = parseAverage(row.finalAverage) === null;
               const items = classroomItems(row.choice);
 
               if (targetEnrollment)
@@ -392,31 +477,100 @@ export function PromotionReview({ preview }: { preview: PromotionPreview }) {
                   </TableRow>
                 );
 
+              const { adjusted, invalidAverage, manual, missingReason } =
+                evaluate(entry, row);
+
               return (
                 <TableRow
                   key={enrollmentId}
                   className={cn(row.choice === SKIP && 'text-muted-foreground')}
                 >
                   <TableCell className="pl-4">
-                    <div className="flex flex-col">
+                    <div className="flex flex-col gap-1">
                       <span className="font-medium">{name}</span>
                       <span className="text-muted-foreground text-xs">
                         Código {student.studentCode}
                       </span>
+                      <div className="flex flex-wrap gap-1">
+                        {entry.failedSubjects.length > 0 && (
+                          <Badge
+                            variant="destructive"
+                            title={entry.failedSubjects.join(', ')}
+                          >
+                            Pierde {entry.failedSubjects.length}{' '}
+                            {entry.failedSubjects.length === 1
+                              ? 'materia'
+                              : 'materias'}
+                          </Badge>
+                        )}
+                        {entry.incomplete && (
+                          <Badge
+                            variant="outline"
+                            className="border-amber-500/30 text-amber-700 dark:text-amber-400"
+                          >
+                            Notas incompletas
+                          </Badge>
+                        )}
+                        {manual && (
+                          <Badge variant="secondary">Decisión manual</Badge>
+                        )}
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Input
-                      inputMode="decimal"
-                      aria-label={`Promedio de ${name}`}
-                      aria-invalid={invalidAverage || undefined}
-                      value={row.finalAverage}
-                      onChange={(event) =>
-                        setAverage(enrollmentId, event.target.value)
-                      }
-                      placeholder="—"
-                      className="tabular-nums"
-                    />
+                    {row.adjusting ? (
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-1">
+                          <Input
+                            inputMode="decimal"
+                            aria-label={`Promedio ajustado de ${name}`}
+                            aria-invalid={invalidAverage || undefined}
+                            value={row.adjustedAverage}
+                            onChange={(event) =>
+                              setAdjusted(entry, event.target.value)
+                            }
+                            className="h-8 w-20 tabular-nums"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={`Quitar el ajuste de ${name}`}
+                            onClick={() => cancelAdjustment(entry)}
+                          >
+                            <XIcon />
+                          </Button>
+                        </div>
+                        <span className="text-muted-foreground text-xs">
+                          Calculado:{' '}
+                          {entry.computedAverage === null
+                            ? 'sin notas'
+                            : formatScore(entry.computedAverage, scale)}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <ScoreText
+                          score={entry.computedAverage}
+                          scale={scale}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={`Ajustar el promedio de ${name}`}
+                          title="Ajustar el promedio"
+                          onClick={() =>
+                            update(enrollmentId, { adjusting: true })
+                          }
+                        >
+                          <PencilIcon />
+                        </Button>
+                      </div>
+                    )}
+                    {adjusted && (
+                      <Badge variant="secondary" className="mt-1">
+                        Ajustado
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Select
@@ -476,12 +630,15 @@ export function PromotionReview({ preview }: { preview: PromotionPreview }) {
                   <TableCell className="pr-4">
                     <Input
                       aria-label={`Observación para ${name}`}
+                      aria-invalid={missingReason || undefined}
                       value={row.notes}
                       onChange={(event) =>
                         update(enrollmentId, { notes: event.target.value })
                       }
                       maxLength={1000}
-                      placeholder="Opcional"
+                      placeholder={
+                        adjusted || manual ? 'Motivo (obligatorio)' : 'Opcional'
+                      }
                       disabled={row.choice === SKIP}
                     />
                   </TableCell>
@@ -569,6 +726,37 @@ export function PromotionReview({ preview }: { preview: PromotionPreview }) {
               . Los que no incluiste siguen cursando.
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {(manualCount > 0 || adjustedCount > 0 || incompleteCount > 0) && (
+            <ul className="flex flex-col gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-700 dark:text-amber-400">
+              {manualCount > 0 && (
+                <li>
+                  {manualCount}{' '}
+                  {manualCount === 1
+                    ? 'decisión no coincide'
+                    : 'decisiones no coinciden'}{' '}
+                  con las notas.
+                </li>
+              )}
+              {adjustedCount > 0 && (
+                <li>
+                  {adjustedCount}{' '}
+                  {adjustedCount === 1
+                    ? 'promedio ajustado'
+                    : 'promedios ajustados'}{' '}
+                  a mano.
+                </li>
+              )}
+              {incompleteCount > 0 && (
+                <li>
+                  {incompleteCount}{' '}
+                  {incompleteCount === 1
+                    ? 'estudiante tiene'
+                    : 'estudiantes tienen'}{' '}
+                  notas incompletas.
+                </li>
+              )}
+            </ul>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={pending}>Cancelar</AlertDialogCancel>
             <Button onClick={onConfirm} disabled={pending}>

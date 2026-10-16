@@ -33,8 +33,6 @@ const organizationBody = (
   Object.fromEntries(
     ORGANIZATION_FIELDS.map((field) => {
       const value = values[field] || empty;
-      if (field === 'passingGrade')
-        return [field, value ? Number(value) : undefined];
       return [
         field,
         field === 'country' && value ? value.toUpperCase() : value,

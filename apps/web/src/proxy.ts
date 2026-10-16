@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { SESSION_COOKIE } from '@/lib/auth/constants';
 
 const PUBLIC_ROUTES = ['/login'];
+// Portal de consulta de notas con documento + PIN.
+const PUBLIC_PREFIXES = ['/consulta-notas/'];
 
 // Chequeo optimista: solo mira si existe la cookie. La validez real de la
 // sesión la decide la API en cada petición. /login no redirige aunque haya
@@ -9,7 +11,11 @@ const PUBLIC_ROUTES = ['/login'];
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (PUBLIC_ROUTES.includes(pathname)) return NextResponse.next();
+  if (
+    PUBLIC_ROUTES.includes(pathname) ||
+    PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+  )
+    return NextResponse.next();
 
   if (!request.cookies.has(SESSION_COOKIE))
     return NextResponse.redirect(new URL('/login', request.nextUrl));
