@@ -2,20 +2,28 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 import { Op, Transaction } from 'sequelize';
 import EnrollmentModel from '@database/models/enrollment.model';
 import AcademicYearModel from '@database/models/academic-year.model';
+import ClassroomModel from '@database/models/classroom.model';
+import GradeLevelModel from '@database/models/grade-level.model';
 import StudentModel from '@database/models/student.model';
 import CrudService from '@database/services/crud.service';
 import AcademicYearStatusEnum from '@common/enums/academic-year-status.enum';
 import EnrollmentStatusEnum from '@common/enums/enrollment-status.enum';
 import StudentStatusEnum from '@common/enums/student-status.enum';
+import RoleNameEnum from '@common/enums/role-name.enum';
+import type AuthContextInterface from '@auth/interfaces/auth-context.interface';
 import organizationOf, {
   type OrganizationActor,
 } from '@common/utils/organization-of.util';
 import ClassroomsService from '../classrooms/classrooms.service';
 import StudentsService from '../students/students.service';
+import ClassroomSubjectRepository from '../classroom-subjects/classroom-subject.repository';
+import { CLASSROOM_NOT_FOUND_MESSAGE } from '../classrooms/constants/classroom-messages.constant';
+import { STUDENT_NOT_FOUND_MESSAGE } from '../students/constants/student-messages.constant';
 import EnrollmentRepository from './enrollment.repository';
 import EnrollStudentsDto from './dto/enroll-students.dto';
 import UpdateEnrollmentDto from './dto/update-enrollment.dto';
@@ -45,8 +53,38 @@ const ENROLLMENT_INCLUDE = [
 const fullName = ({ firstName, lastName }: StudentModel) =>
   `${firstName} ${lastName}`;
 
+// Año y salón (con su grado) de cada matrícula del historial.
+const HISTORY_INCLUDE = [
+  {
+    model: AcademicYearModel,
+    attributes: ['id', 'name', 'startDate', 'endDate', 'status'],
+  },
+  {
+    model: ClassroomModel,
+    attributes: ['id', 'name'],
+    include: [
+      {
+        model: GradeLevelModel,
+        attributes: [
+          'id',
+          'name',
+          'shortName',
+          'sequenceOrder',
+          'isFinalGrade',
+        ],
+      },
+    ],
+  },
+];
+
+// Admin o profesor: el profesor solo ve lo de los salones donde dicta.
+type Viewer = Pick<
+  AuthContextInterface,
+  'organizationId' | 'userId' | 'roleName'
+>;
+
 // Fecha local del servidor (AAAA-MM-DD), no la UTC.
-const today = () => new Date().toLocaleDateString('en-CA');
+export const today = () => new Date().toLocaleDateString('en-CA');
 
 @Injectable()
 export default class EnrollmentsService extends CrudService<
@@ -57,6 +95,7 @@ export default class EnrollmentsService extends CrudService<
     protected readonly repository: EnrollmentRepository,
     private readonly classroomsService: ClassroomsService,
     private readonly studentsService: StudentsService,
+    private readonly classroomSubjectRepository: ClassroomSubjectRepository,
   ) {
     super(repository);
   }
@@ -116,6 +155,31 @@ export default class EnrollmentsService extends CrudService<
     return enrollments.map(({ studentId }) => studentId);
   };
 
+  // El profesor debe ser director de grupo o dictar alguna materia en alguno
+  // de los salones; si no, 404 para no revelar que existen.
+  private assertTeaches = async (
+    { userId, roleName }: Viewer,
+    classroomIds: string[],
+    notFoundMessage: string,
+  ) => {
+    if (roleName !== RoleNameEnum.TEACHER) return;
+    if (!classroomIds.length) throw new NotFoundException(notFoundMessage);
+
+    const [homeroom, assignment] = await Promise.all([
+      this.classroomsService.findOne(
+        { id: classroomIds, homeroomTeacherId: userId },
+        false,
+        { attributes: ['id'] },
+      ),
+      this.classroomSubjectRepository.findOne(
+        { classroomId: classroomIds, teacherId: userId },
+        false,
+        { attributes: ['id'] },
+      ),
+    ]);
+    if (!homeroom && !assignment) throw new NotFoundException(notFoundMessage);
+  };
+
   private findEnrollment = async (classroomId: string, enrollmentId: string) =>
     (await this.findOne({ id: enrollmentId, classroomId }, true, {
       include: ENROLLMENT_INCLUDE,
@@ -123,13 +187,18 @@ export default class EnrollmentsService extends CrudService<
 
   // Lista de clase: todas las matrículas del salón, también las retiradas.
   public listClassroomEnrollments = async (
-    actor: OrganizationActor,
+    actor: Viewer,
     classroomId: string,
   ) => {
     const classroom = await this.findOwnClassroom(
       organizationOf(actor),
       classroomId,
       false,
+    );
+    await this.assertTeaches(
+      actor,
+      [classroom.id],
+      CLASSROOM_NOT_FOUND_MESSAGE,
     );
 
     return await this.findAll(
@@ -142,6 +211,39 @@ export default class EnrollmentsService extends CrudService<
         ],
       },
     );
+  };
+
+  // Historial del estudiante: un registro por año cursado, del más antiguo al
+  // más reciente.
+  public listStudentHistory = async (actor: Viewer, studentId: string) => {
+    const student = (await this.studentsService.findOne(
+      { id: studentId, organizationId: organizationOf(actor) },
+      true,
+      { attributes: STUDENT_ATTRIBUTES },
+    ))!;
+
+    const enrollments = await this.findAll(
+      { studentId: student.id },
+      {
+        include: HISTORY_INCLUDE,
+        order: [
+          [
+            { model: AcademicYearModel, as: 'academicYear' },
+            'startDate',
+            'ASC',
+          ],
+          ['enrollmentDate', 'ASC'],
+          ['createdAt', 'ASC'],
+        ],
+      },
+    );
+    await this.assertTeaches(
+      actor,
+      enrollments.map(({ classroomId }) => classroomId),
+      STUDENT_NOT_FOUND_MESSAGE,
+    );
+
+    return { student, enrollments };
   };
 
   // Estudiantes activos que aún no cursan ningún salón en el año del salón.

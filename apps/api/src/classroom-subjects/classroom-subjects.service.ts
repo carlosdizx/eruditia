@@ -208,7 +208,34 @@ export default class ClassroomSubjectsService extends CrudService<
       !!academicYearId,
       { attributes: ['id', 'name', 'status'] },
     );
-    if (!academicYear) return { academicYear: null, assignments: [] };
+    if (!academicYear)
+      return { academicYear: null, assignments: [], homerooms: [] };
+
+    // Salones donde es director de grupo, aunque no dicte materias en ellos.
+    const homerooms = await this.classroomsService.findAll(
+      {
+        organizationId,
+        academicYearId: academicYear.id,
+        homeroomTeacherId: actor.userId,
+      },
+      {
+        attributes: ['id', 'name'],
+        include: [
+          {
+            model: GradeLevelModel,
+            attributes: ['id', 'name', 'shortName', 'sequenceOrder'],
+          },
+        ],
+        order: [
+          [
+            { model: GradeLevelModel, as: 'gradeLevel' },
+            'sequenceOrder',
+            'ASC',
+          ],
+          ['name', 'ASC'],
+        ],
+      },
+    );
 
     const assignments = await this.findAll(
       { organizationId, teacherId: actor.userId },
@@ -244,7 +271,7 @@ export default class ClassroomSubjectsService extends CrudService<
       },
     );
 
-    return { academicYear, assignments };
+    return { academicYear, assignments, homerooms };
   };
 
   // Copia los salones (con director) y su carga académica de un año a otro.

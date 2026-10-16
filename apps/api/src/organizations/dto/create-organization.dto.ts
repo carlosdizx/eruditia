@@ -2,11 +2,14 @@ import {
   IsEmail,
   IsISO31661Alpha2,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
   IsUrl,
   Matches,
+  Max,
   MaxLength,
+  Min,
 } from 'class-validator';
 
 export default class CreateOrganizationDto {
@@ -70,4 +73,11 @@ export default class CreateOrganizationDto {
   @IsOptional()
   @IsUrl()
   logoUrl?: string;
+
+  // Nota mínima de aprobación del año.
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(999.99)
+  passingGrade?: number;
 }

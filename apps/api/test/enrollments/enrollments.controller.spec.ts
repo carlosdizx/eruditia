@@ -6,20 +6,35 @@ import { IS_PUBLIC_KEY } from '@auth/decorators/public.decorator';
 import { AUTH_WITH_PERMISSIONS_KEY } from '@auth/decorators/auth-with-permissions.decorator';
 import EnrollmentsController from '../../src/enrollments/enrollments.controller';
 import EnrollmentsService from '../../src/enrollments/enrollments.service';
+import StudentEnrollmentsController from '../../src/enrollments/student-enrollments.controller';
+import PromotionsController from '../../src/enrollments/promotions.controller';
+import PromotionsService from '../../src/enrollments/promotions.service';
 import authContextFixture from '../auth/fixtures/auth-context.fixture';
 
-const metadataOf = (handler: string, key: string): unknown =>
+const metadataOf = (
+  handler: string,
+  key: string,
+  target: object = EnrollmentsController.prototype,
+): unknown =>
   Reflect.getMetadata(
     key,
-    Object.getOwnPropertyDescriptor(EnrollmentsController.prototype, handler)!
-      .value as object,
+    Object.getOwnPropertyDescriptor(target, handler)!.value as object,
   );
 
 describe('EnrollmentsController', () => {
   const auth = authContextFixture();
 
+  it('lets admins and teachers see the class list', () => {
+    expect(
+      metadataOf('listClassroomEnrollments', AUTH_WITH_PERMISSIONS_KEY),
+    ).toEqual({
+      roles: [RoleNameEnum.ADMIN, RoleNameEnum.TEACHER],
+      permissions: [PermissionEnum.ENROLLMENT_LIST],
+      mode: 'all',
+    });
+  });
+
   describe.each([
-    ['listClassroomEnrollments', PermissionEnum.ENROLLMENT_LIST],
     ['listCandidates', PermissionEnum.ENROLLMENT_CREATE],
     ['enrollStudents', PermissionEnum.ENROLLMENT_CREATE],
     ['updateEnrollment', PermissionEnum.ENROLLMENT_UPDATE],
@@ -69,5 +84,71 @@ describe('EnrollmentsController', () => {
       update,
     );
     expect(service.removeEnrollment).toHaveBeenCalledWith(auth, 'c-id', 'e-id');
+  });
+});
+
+describe('StudentEnrollmentsController', () => {
+  it('lets admins and teachers see the history', () => {
+    expect(
+      metadataOf(
+        'listStudentHistory',
+        AUTH_WITH_PERMISSIONS_KEY,
+        StudentEnrollmentsController.prototype,
+      ),
+    ).toEqual({
+      roles: [RoleNameEnum.ADMIN, RoleNameEnum.TEACHER],
+      permissions: [PermissionEnum.ENROLLMENT_LIST],
+      mode: 'all',
+    });
+  });
+
+  it('delegates with the current session', async () => {
+    const auth = authContextFixture({ roleName: RoleNameEnum.TEACHER });
+    const service = { listStudentHistory: jest.fn().mockResolvedValue({}) };
+    const controller = new StudentEnrollmentsController(
+      service as unknown as EnrollmentsService,
+    );
+
+    await controller.listStudentHistory('s-id', auth);
+
+    expect(service.listStudentHistory).toHaveBeenCalledWith(auth, 's-id');
+  });
+});
+
+describe('PromotionsController', () => {
+  it.each(['preview', 'promote'])(
+    '%s requires the ADMIN role and the promote permission',
+    (handler) => {
+      expect(
+        metadataOf(
+          handler,
+          AUTH_WITH_PERMISSIONS_KEY,
+          PromotionsController.prototype,
+        ),
+      ).toEqual({
+        roles: [RoleNameEnum.ADMIN],
+        permissions: [PermissionEnum.ENROLLMENT_PROMOTE],
+        mode: 'all',
+      });
+    },
+  );
+
+  it('delegates with the current organization', async () => {
+    const auth = authContextFixture();
+    const service = {
+      preview: jest.fn().mockResolvedValue({}),
+      promote: jest.fn().mockResolvedValue({}),
+    };
+    const controller = new PromotionsController(
+      service as unknown as PromotionsService,
+    );
+    const query = { sourceClassroomId: 'c', targetAcademicYearId: 'y' };
+    const body = { ...query, decisions: [] };
+
+    await controller.preview(query, auth);
+    await controller.promote(body, auth);
+
+    expect(service.preview).toHaveBeenCalledWith(auth, query);
+    expect(service.promote).toHaveBeenCalledWith(auth, body);
   });
 });

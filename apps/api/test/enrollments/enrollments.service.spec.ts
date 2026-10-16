@@ -1,13 +1,19 @@
 import 'reflect-metadata';
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Op, Transaction } from 'sequelize';
 import AcademicYearStatusEnum from '@common/enums/academic-year-status.enum';
 import EnrollmentStatusEnum from '@common/enums/enrollment-status.enum';
 import StudentStatusEnum from '@common/enums/student-status.enum';
+import RoleNameEnum from '@common/enums/role-name.enum';
 import EnrollmentsService from '../../src/enrollments/enrollments.service';
 import EnrollmentRepository from '../../src/enrollments/enrollment.repository';
 import ClassroomsService from '../../src/classrooms/classrooms.service';
 import StudentsService from '../../src/students/students.service';
+import ClassroomSubjectRepository from '../../src/classroom-subjects/classroom-subject.repository';
 import {
   ALREADY_ENROLLED_MESSAGE,
   CLASSROOM_FULL_MESSAGE,
@@ -27,11 +33,25 @@ describe('EnrollmentsService', () => {
     transaction: jest.Mock;
   };
   let classroomsService: { findOne: jest.Mock };
-  let studentsService: { findAll: jest.Mock; findByPk: jest.Mock };
+  let studentsService: {
+    findAll: jest.Mock;
+    findByPk: jest.Mock;
+    findOne: jest.Mock;
+  };
+  let classroomSubjectRepository: { findOne: jest.Mock };
   let service: EnrollmentsService;
 
   const transaction = { id: 'tx' } as unknown as Transaction;
-  const actor = { organizationId: 'org-id' };
+  const actor = {
+    organizationId: 'org-id',
+    userId: 'admin-id',
+    roleName: RoleNameEnum.ADMIN,
+  };
+  const teacher = {
+    organizationId: 'org-id',
+    userId: 'teacher-id',
+    roleName: RoleNameEnum.TEACHER,
+  };
 
   const classroom = (
     id = 'classroom-id',
@@ -71,11 +91,16 @@ describe('EnrollmentsService', () => {
     studentsService = {
       findAll: jest.fn().mockResolvedValue(students),
       findByPk: jest.fn().mockResolvedValue(students[0]),
+      findOne: jest.fn().mockResolvedValue(students[0]),
+    };
+    classroomSubjectRepository = {
+      findOne: jest.fn().mockResolvedValue(null),
     };
     service = new EnrollmentsService(
       repository as unknown as EnrollmentRepository,
       classroomsService as unknown as ClassroomsService,
       studentsService as unknown as StudentsService,
+      classroomSubjectRepository as unknown as ClassroomSubjectRepository,
     );
   });
 
@@ -98,6 +123,101 @@ describe('EnrollmentsService', () => {
         { classroomId: 'classroom-id' },
         expect.any(Object),
       );
+    });
+  });
+
+  describe('teacher access', () => {
+    it('lists the class list of a classroom where the teacher teaches', async () => {
+      classroomSubjectRepository.findOne.mockResolvedValue({ id: 'cs-id' });
+
+      await service.listClassroomEnrollments(teacher, 'classroom-id');
+
+      expect(classroomSubjectRepository.findOne).toHaveBeenCalledWith(
+        { classroomId: ['classroom-id'], teacherId: 'teacher-id' },
+        false,
+        { attributes: ['id'] },
+      );
+      expect(repository.findAll).toHaveBeenCalled();
+    });
+
+    it('lists it too for the homeroom teacher', async () => {
+      classroomsService.findOne
+        .mockResolvedValueOnce(classroom())
+        .mockResolvedValueOnce({ id: 'classroom-id' });
+
+      await service.listClassroomEnrollments(teacher, 'classroom-id');
+
+      expect(classroomsService.findOne).toHaveBeenLastCalledWith(
+        { id: ['classroom-id'], homeroomTeacherId: 'teacher-id' },
+        false,
+        { attributes: ['id'] },
+      );
+      expect(repository.findAll).toHaveBeenCalled();
+    });
+
+    it('hides the classrooms the teacher does not teach', async () => {
+      classroomsService.findOne
+        .mockResolvedValueOnce(classroom())
+        .mockResolvedValueOnce(null);
+
+      await expect(
+        service.listClassroomEnrollments(teacher, 'classroom-id'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(repository.findAll).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('listStudentHistory', () => {
+    const history = [
+      { id: 'e2025', classroomId: 'c2025' },
+      { id: 'e2026', classroomId: 'c2026' },
+    ];
+
+    it('returns the student with every enrollment of the organization', async () => {
+      repository.findAll.mockResolvedValue(history);
+
+      await expect(service.listStudentHistory(actor, 's1')).resolves.toEqual({
+        student: expect.objectContaining({ id: 's1' }),
+        enrollments: history,
+      });
+      expect(studentsService.findOne).toHaveBeenCalledWith(
+        { id: 's1', organizationId: 'org-id' },
+        true,
+        expect.any(Object),
+      );
+      expect(repository.findAll).toHaveBeenCalledWith(
+        { studentId: 's1' },
+        expect.objectContaining({ include: expect.any(Array) }),
+      );
+      expect(classroomSubjectRepository.findOne).not.toHaveBeenCalled();
+    });
+
+    it('lets a teacher of any of its classrooms see the history', async () => {
+      repository.findAll.mockResolvedValue(history);
+      classroomSubjectRepository.findOne.mockResolvedValue({ id: 'cs-id' });
+
+      await service.listStudentHistory(teacher, 's1');
+
+      expect(classroomSubjectRepository.findOne).toHaveBeenCalledWith(
+        { classroomId: ['c2025', 'c2026'], teacherId: 'teacher-id' },
+        false,
+        { attributes: ['id'] },
+      );
+    });
+
+    it('hides students that are not of the teacher', async () => {
+      repository.findAll.mockResolvedValue(history);
+      classroomsService.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.listStudentHistory(teacher, 's1'),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('hides students without enrollments from teachers', async () => {
+      await expect(
+        service.listStudentHistory(teacher, 's1'),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 

@@ -23,8 +23,9 @@ import UpdateEnrollmentDto from './dto/update-enrollment.dto';
 export default class EnrollmentsController {
   constructor(private readonly enrollmentsService: EnrollmentsService) {}
 
+  // El profesor, solo de los salones donde dicta.
   @AuthWithPermissions({
-    roles: [RoleNameEnum.ADMIN],
+    roles: [RoleNameEnum.ADMIN, RoleNameEnum.TEACHER],
     permissions: [PermissionEnum.ENROLLMENT_LIST],
   })
   @Get()

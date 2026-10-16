@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { UsersIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -104,10 +105,13 @@ export function EnrollmentsSection({
                 <TableRow key={enrollment.id}>
                   <TableCell className="pl-4">
                     <div className="flex flex-col">
-                      <span className="font-medium">
+                      <Link
+                        href={`/estudiantes/${enrollment.studentId}`}
+                        className="font-medium hover:underline"
+                      >
                         {enrollment.student.lastName}{' '}
                         {enrollment.student.firstName}
-                      </span>
+                      </Link>
                       <span className="text-muted-foreground text-xs">
                         Código {enrollment.student.studentCode}
                       </span>

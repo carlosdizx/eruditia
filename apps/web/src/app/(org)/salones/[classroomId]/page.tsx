@@ -1,13 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Suspense } from 'react';
-import { BookOpenIcon, LockIcon } from 'lucide-react';
+import { BookOpenIcon, LockIcon, TrendingUpIcon } from 'lucide-react';
 import { TableSkeleton } from '@/components/data/table-skeleton';
 import { PanelContent, PanelHeader } from '@/components/panel/panel-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -67,7 +68,12 @@ function NoAccess() {
   );
 }
 
-async function ClassroomLoad({ classroomId }: { classroomId: string }) {
+async function ClassroomLoad({
+  params,
+}: {
+  params: PageProps<'/salones/[classroomId]'>['params'];
+}) {
+  const { classroomId } = await params;
   const me = await requireGrant(CLASSROOM_GRANTS.list);
   const canListSubjects = isGranted(me, CLASSROOM_SUBJECT_GRANTS.list);
   const canListEnrollments = isGranted(me, ENROLLMENT_GRANTS.list);
@@ -97,6 +103,7 @@ async function ClassroomLoad({ classroomId }: { classroomId: string }) {
     editableEnrollments && isGranted(me, ENROLLMENT_GRANTS.update);
   const canDeleteEnrollments =
     editableEnrollments && isGranted(me, ENROLLMENT_GRANTS.delete);
+  const canPromote = isGranted(me, ENROLLMENT_GRANTS.promote);
 
   const [catalog, teachers, candidates, yearClassrooms] = await Promise.all([
     canAssign && isGranted(me, SUBJECT_GRANTS.list)
@@ -147,6 +154,26 @@ async function ClassroomLoad({ classroomId }: { classroomId: string }) {
               : 'sin asignar'}
             {classroom.capacity ? ` · Cupo: ${classroom.capacity}` : ''}
           </CardDescription>
+          {canPromote && (
+            <CardAction>
+              <Button
+                variant="outline"
+                size="sm"
+                nativeButton={false}
+                render={
+                  <Link
+                    href={`/promocion?${new URLSearchParams({
+                      sourceYear: classroom.academicYearId,
+                      classroom: classroom.id,
+                    })}`}
+                  />
+                }
+              >
+                <TrendingUpIcon data-icon="inline-start" />
+                Promover
+              </Button>
+            </CardAction>
+          )}
         </CardHeader>
         <CardContent className="text-muted-foreground flex flex-wrap gap-x-6 gap-y-1 text-sm">
           {canListEnrollments && (
@@ -304,11 +331,10 @@ async function ClassroomLoad({ classroomId }: { classroomId: string }) {
   );
 }
 
-export default async function ClassroomPage({
+// params se espera dentro del Suspense para no bloquear la navegación.
+export default function ClassroomPage({
   params,
 }: PageProps<'/salones/[classroomId]'>) {
-  const { classroomId } = await params;
-
   return (
     <>
       <PanelHeader
@@ -317,7 +343,7 @@ export default async function ClassroomPage({
       />
       <PanelContent>
         <Suspense fallback={<TableSkeleton />}>
-          <ClassroomLoad classroomId={classroomId} />
+          <ClassroomLoad params={params} />
         </Suspense>
       </PanelContent>
     </>

@@ -11,5 +11,23 @@ export const NOT_IN_PROGRESS_MESSAGE =
   'Solo se puede cambiar de salón una matrícula en curso';
 export const OTHER_YEAR_CLASSROOM_MESSAGE =
   'El salón destino debe ser del mismo año lectivo';
+export const SAME_YEAR_PROMOTION_MESSAGE =
+  'El año destino debe ser distinto al de origen';
+export const PAST_YEAR_PROMOTION_MESSAGE =
+  'El año destino debe empezar después del año de origen';
+export const CLOSED_TARGET_YEAR_MESSAGE =
+  'El año destino está cerrado: no se puede matricular en él';
+export const INVALID_PROMOTION_ENROLLMENTS_MESSAGE =
+  'Algunas matrículas ya no están en curso en el salón de origen';
+export const GRADUATE_NOT_FINAL_MESSAGE =
+  'Solo se puede graduar desde el último grado';
+export const PROMOTE_FINAL_MESSAGE =
+  'Desde el último grado no se promueve: se gradúa';
+export const PROMOTION_TARGET_REQUIRED_MESSAGE =
+  'Elige el salón destino de cada estudiante que promueve o repite';
+export const INVALID_PROMOTION_TARGET_MESSAGE =
+  'El salón destino debe ser del año destino y del grado que corresponde';
+export const TARGET_CLASSROOM_FULL_MESSAGE = (name: string, capacity: number) =>
+  `El salón ${name} no tiene cupo suficiente (cupo: ${capacity})`;
 export const CLASSROOM_HAS_ENROLLMENTS_MESSAGE =
   'No puedes eliminar el salón: tiene estudiantes matriculados';
