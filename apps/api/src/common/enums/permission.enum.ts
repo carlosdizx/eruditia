@@ -46,6 +46,8 @@ enum PermissionEnum {
 
   GRADE_LIST = 'grade:list',
   GRADE_RECORD = 'grade:record',
+
+  REPORT_CARD_VIEW = 'report-card:view',
 }
 
 export default PermissionEnum;

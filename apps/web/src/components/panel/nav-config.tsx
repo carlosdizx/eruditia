@@ -4,6 +4,7 @@ import {
   Building2Icon,
   CalendarRangeIcon,
   BookOpenIcon,
+  FileTextIcon,
   TrendingUpIcon,
   DoorOpenIcon,
   PresentationIcon,
@@ -23,6 +24,7 @@ import {
   SUBJECT_GRANTS,
   GRADE_LEVEL_GRANTS,
   GRADING_SCALE_GRANTS,
+  REPORT_CARD_GRANTS,
   STUDENT_GRANTS,
   USER_GRANTS,
   type Grant,
@@ -90,6 +92,12 @@ export const NAV: Record<PanelKind, { label: string; items: NavItem[] }> = {
         url: '/mis-clases',
         icon: PresentationIcon,
         grant: CLASSROOM_SUBJECT_GRANTS.mine,
+      },
+      {
+        title: 'Mi boletín',
+        url: '/boletin',
+        icon: FileTextIcon,
+        grant: REPORT_CARD_GRANTS.own,
       },
       {
         title: 'Ajustes',

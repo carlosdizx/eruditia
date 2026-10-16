@@ -50,6 +50,8 @@ const permissionDescriptions: Record<PermissionEnum, string> = {
     'Ver planillas de notas (los profesores, de sus materias y su dirección de grupo)',
   [PermissionEnum.GRADE_RECORD]:
     'Registrar notas y configurar actividades evaluativas (los profesores, solo en periodos abiertos)',
+  [PermissionEnum.REPORT_CARD_VIEW]:
+    'Boletín de notas: los estudiantes lo consultan con su cuenta o con documento + PIN en el portal público',
 };
 
 export interface PermissionCatalogEntry {

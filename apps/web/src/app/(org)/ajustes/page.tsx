@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
+import { headers } from 'next/headers';
 import { Suspense } from 'react';
-import { InfoIcon } from 'lucide-react';
+import { ExternalLinkIcon, InfoIcon } from 'lucide-react';
 import { PanelContent, PanelHeader } from '@/components/panel/panel-header';
 import {
   Card,
@@ -12,7 +13,11 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { authFetch } from '@/lib/api/auth-fetch';
 import { requireGrant } from '@/lib/auth/current-user';
-import { GRADING_SCALE_GRANTS } from '@/lib/auth/permissions';
+import {
+  GRADING_SCALE_GRANTS,
+  hasPermission,
+  Permission,
+} from '@/lib/auth/permissions';
 import type { GradingScale } from '@/lib/grading/scale';
 import { GradingScaleForm } from './_components/grading-scale-form';
 
@@ -47,6 +52,45 @@ async function GradingScaleCard() {
   );
 }
 
+// Enlace que el colegio comparte con estudiantes y acudientes sin cuenta.
+async function ReportCardPortalCard() {
+  const me = await requireGrant(GRADING_SCALE_GRANTS.update);
+  if (
+    !me.organization ||
+    !hasPermission(me.permissions, Permission.REPORT_CARD_VIEW)
+  )
+    return null;
+
+  const incoming = await headers();
+  const host = incoming.get('x-forwarded-host') ?? incoming.get('host');
+  const protocol = incoming.get('x-forwarded-proto') ?? 'http';
+  const url = `${protocol}://${host}/consulta-notas/${me.organization.slug}`;
+
+  return (
+    <Card className="max-w-3xl">
+      <CardHeader>
+        <CardTitle>Portal de consulta de notas</CardTitle>
+        <CardDescription>
+          Los estudiantes sin cuenta y sus acudientes ven el boletín con el
+          documento del estudiante y su PIN de 6 dígitos (se genera en la ficha
+          de cada estudiante).
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <a
+          href={url}
+          target="_blank"
+          rel="noreferrer"
+          className="text-primary inline-flex items-center gap-1.5 text-sm font-medium break-all underline-offset-4 hover:underline"
+        >
+          {url}
+          <ExternalLinkIcon className="size-4 shrink-0" />
+        </a>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function SettingsPage() {
   return (
     <>
@@ -54,6 +98,9 @@ export default function SettingsPage() {
       <PanelContent>
         <Suspense fallback={<Skeleton className="h-96 max-w-3xl rounded-xl" />}>
           <GradingScaleCard />
+        </Suspense>
+        <Suspense>
+          <ReportCardPortalCard />
         </Suspense>
       </PanelContent>
     </>

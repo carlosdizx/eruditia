@@ -35,6 +35,7 @@ export const Permission = {
   GRADING_SCALE_UPDATE: 'grading-scale:update',
   GRADE_LIST: 'grade:list',
   GRADE_RECORD: 'grade:record',
+  REPORT_CARD_VIEW: 'report-card:view',
 } as const;
 
 export type Permission = (typeof Permission)[keyof typeof Permission];
@@ -75,6 +76,7 @@ export const PERMISSION_LABELS: Record<string, string> = {
   [Permission.GRADING_SCALE_UPDATE]: 'Configurar escala de calificación',
   [Permission.GRADE_LIST]: 'Ver planillas de notas',
   [Permission.GRADE_RECORD]: 'Registrar notas',
+  [Permission.REPORT_CARD_VIEW]: 'Boletín de notas (cuenta y portal con PIN)',
 };
 
 export const hasPermission = (
@@ -171,6 +173,11 @@ export const GRADING_SCALE_GRANTS = {
 export const GRADE_GRANTS = {
   view: { permission: Permission.GRADE_LIST },
   record: { permission: Permission.GRADE_RECORD },
+} satisfies Record<string, Grant>;
+
+// Espejo de los @AuthWithPermissions de ReportCardsController.
+export const REPORT_CARD_GRANTS = {
+  own: { permission: Permission.REPORT_CARD_VIEW, role: 'STUDENT' },
 } satisfies Record<string, Grant>;
 
 export const GRADEBOOK_ROLES = ['ADMIN', 'TEACHER'];
