@@ -38,6 +38,7 @@ import {
   CLASSROOM_GRANTS,
   CLASSROOM_SUBJECT_GRANTS,
   ENROLLMENT_GRANTS,
+  canOpenGradebooks,
   isGranted,
   SUBJECT_GRANTS,
 } from '@/lib/auth/permissions';
@@ -77,6 +78,7 @@ async function ClassroomLoad({
   const me = await requireGrant(CLASSROOM_GRANTS.list);
   const canListSubjects = isGranted(me, CLASSROOM_SUBJECT_GRANTS.list);
   const canListEnrollments = isGranted(me, ENROLLMENT_GRANTS.list);
+  const canOpenGradebook = canOpenGradebooks(me);
 
   const [classroom, assignments, enrollments, { years }] = await Promise.all([
     authFetch<Classroom>(`/classrooms/${classroomId}`),
@@ -283,9 +285,18 @@ async function ClassroomLoad({
                         <TableRow key={assignment.id}>
                           <TableCell className="pl-4">
                             <div className="flex flex-col">
-                              <span className="font-medium">
-                                {assignment.subject.name}
-                              </span>
+                              {canOpenGradebook ? (
+                                <Link
+                                  href={`/planillas/${assignment.id}`}
+                                  className="font-medium hover:underline"
+                                >
+                                  {assignment.subject.name}
+                                </Link>
+                              ) : (
+                                <span className="font-medium">
+                                  {assignment.subject.name}
+                                </span>
+                              )}
                               <span className="text-muted-foreground text-xs">
                                 {assignment.subject.code}
                                 {assignment.subject.areaName &&

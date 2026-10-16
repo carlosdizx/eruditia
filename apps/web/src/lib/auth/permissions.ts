@@ -33,6 +33,8 @@ export const Permission = {
   ENROLLMENT_DELETE: 'enrollment:delete',
   ENROLLMENT_PROMOTE: 'enrollment:promote',
   GRADING_SCALE_UPDATE: 'grading-scale:update',
+  GRADE_LIST: 'grade:list',
+  GRADE_RECORD: 'grade:record',
 } as const;
 
 export type Permission = (typeof Permission)[keyof typeof Permission];
@@ -71,6 +73,8 @@ export const PERMISSION_LABELS: Record<string, string> = {
   [Permission.ENROLLMENT_DELETE]: 'Anular matrículas',
   [Permission.ENROLLMENT_PROMOTE]: 'Promoción anual de estudiantes',
   [Permission.GRADING_SCALE_UPDATE]: 'Configurar escala de calificación',
+  [Permission.GRADE_LIST]: 'Ver planillas de notas',
+  [Permission.GRADE_RECORD]: 'Registrar notas',
 };
 
 export const hasPermission = (
@@ -161,3 +165,19 @@ export const ENROLLMENT_GRANTS = {
 export const GRADING_SCALE_GRANTS = {
   update: { permission: Permission.GRADING_SCALE_UPDATE, role: 'ADMIN' },
 } satisfies Record<string, Grant>;
+
+// Espejo de los @AuthWithPermissions de GradebooksController: además del
+// permiso exige ser ADMIN o TEACHER (el profesor, solo de sus materias).
+export const GRADE_GRANTS = {
+  view: { permission: Permission.GRADE_LIST },
+  record: { permission: Permission.GRADE_RECORD },
+} satisfies Record<string, Grant>;
+
+export const GRADEBOOK_ROLES = ['ADMIN', 'TEACHER'];
+
+export const canOpenGradebooks = (user: {
+  role: { name: string };
+  permissions: readonly string[];
+}) =>
+  GRADEBOOK_ROLES.includes(user.role.name) &&
+  isGranted(user, GRADE_GRANTS.view);

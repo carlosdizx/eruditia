@@ -1,11 +1,19 @@
 import 'reflect-metadata';
-import { BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Transaction } from 'sequelize';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+} from '@nestjs/common';
 import GradingScalesService, {
   DEFAULT_GRADING_SCALE,
 } from '../../src/grading-scales/grading-scales.service';
 import GradingScaleRepository from '../../src/grading-scales/grading-scale.repository';
+import StudentGradeRepository from '../../src/gradebooks/repositories/student-grade.repository';
+import PeriodSubjectSummaryRepository from '../../src/gradebooks/repositories/period-subject-summary.repository';
 import {
   GRADING_SCALE_DECIMALS_MESSAGE,
+  GRADING_SCALE_GRADES_OUTSIDE_MESSAGE,
   GRADING_SCALE_PASSING_MESSAGE,
   GRADING_SCALE_RANGE_MESSAGE,
 } from '../../src/grading-scales/constants/grading-scale-messages.constant';
@@ -15,9 +23,13 @@ describe('GradingScalesService', () => {
     findOne: jest.Mock;
     create: jest.Mock;
     updateByPk: jest.Mock;
+    transaction: jest.Mock;
   };
+  let studentGradeRepository: { findOutsideScale: jest.Mock };
+  let summaryRepository: { refreshPassed: jest.Mock };
   let service: GradingScalesService;
 
+  const transaction = { id: 'tx' } as unknown as Transaction;
   const actor = { organizationId: 'org-id' };
   const scale = {
     minScore: 0,
@@ -31,9 +43,18 @@ describe('GradingScalesService', () => {
       findOne: jest.fn().mockResolvedValue(null),
       create: jest.fn().mockResolvedValue({ id: 'scale-id' }),
       updateByPk: jest.fn().mockResolvedValue({ id: 'scale-id' }),
+      transaction: jest.fn((run: (tx: Transaction) => unknown) =>
+        run(transaction),
+      ),
     };
+    studentGradeRepository = {
+      findOutsideScale: jest.fn().mockResolvedValue(null),
+    };
+    summaryRepository = { refreshPassed: jest.fn().mockResolvedValue({}) };
     service = new GradingScalesService(
       repository as unknown as GradingScaleRepository,
+      studentGradeRepository as unknown as StudentGradeRepository,
+      summaryRepository as unknown as PeriodSubjectSummaryRepository,
     );
   });
 
@@ -73,22 +94,55 @@ describe('GradingScalesService', () => {
       });
       expect(repository.create).toHaveBeenCalledWith(
         { ...scale, organizationId: 'org-id' },
-        undefined,
+        { transaction },
       );
       expect(repository.updateByPk).not.toHaveBeenCalled();
+      expect(summaryRepository.refreshPassed).toHaveBeenCalledWith(
+        'org-id',
+        6,
+        transaction,
+      );
     });
 
     it('replaces the existing scale', async () => {
-      repository.findOne.mockResolvedValue({ id: 'scale-id' });
+      repository.findOne.mockResolvedValue({ id: 'scale-id', passingScore: 6 });
 
       await service.setScale(actor, scale);
 
-      expect(repository.updateByPk).toHaveBeenCalledWith(
-        'scale-id',
-        scale,
-        undefined,
-      );
+      expect(repository.updateByPk).toHaveBeenCalledWith('scale-id', scale, {
+        transaction,
+      });
       expect(repository.create).not.toHaveBeenCalled();
+      // Misma nota aprobatoria: no hay definitivas que reevaluar.
+      expect(summaryRepository.refreshPassed).not.toHaveBeenCalled();
+    });
+
+    it('re-evaluates the summaries when the passing score changes', async () => {
+      repository.findOne.mockResolvedValue({ id: 'scale-id', passingScore: 3 });
+
+      await service.setScale(actor, scale);
+
+      expect(summaryRepository.refreshPassed).toHaveBeenCalledWith(
+        'org-id',
+        6,
+        transaction,
+      );
+    });
+
+    it('rejects a scale that would leave recorded grades outside', async () => {
+      studentGradeRepository.findOutsideScale.mockResolvedValue({
+        id: 'grade-id',
+        score: 4.25,
+      });
+
+      await expect(service.setScale(actor, scale)).rejects.toThrow(
+        new ConflictException(GRADING_SCALE_GRADES_OUTSIDE_MESSAGE(4.25)),
+      );
+      expect(studentGradeRepository.findOutsideScale).toHaveBeenCalledWith(
+        'org-id',
+        scale,
+      );
+      expect(repository.transaction).not.toHaveBeenCalled();
     });
 
     it.each([

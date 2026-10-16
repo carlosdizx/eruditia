@@ -43,6 +43,9 @@ enum PermissionEnum {
   ENROLLMENT_PROMOTE = 'enrollment:promote',
 
   GRADING_SCALE_UPDATE = 'grading-scale:update',
+
+  GRADE_LIST = 'grade:list',
+  GRADE_RECORD = 'grade:record',
 }
 
 export default PermissionEnum;

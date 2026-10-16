@@ -1,13 +1,21 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+} from '@nestjs/common';
 import GradingScaleModel from '@database/models/grading-scale.model';
 import CrudService from '@database/services/crud.service';
+import { hasAtMostDecimals } from '@common/utils/score.util';
 import organizationOf, {
   type OrganizationActor,
 } from '@common/utils/organization-of.util';
 import GradingScaleRepository from './grading-scale.repository';
+import StudentGradeRepository from '../gradebooks/repositories/student-grade.repository';
+import PeriodSubjectSummaryRepository from '../gradebooks/repositories/period-subject-summary.repository';
 import SetGradingScaleDto from './dto/set-grading-scale.dto';
 import {
   GRADING_SCALE_DECIMALS_MESSAGE,
+  GRADING_SCALE_GRADES_OUTSIDE_MESSAGE,
   GRADING_SCALE_PASSING_MESSAGE,
   GRADING_SCALE_RANGE_MESSAGE,
 } from './constants/grading-scale-messages.constant';
@@ -37,17 +45,16 @@ const SCALE_ATTRIBUTES = [
   'decimalPlaces',
 ];
 
-const hasAtMostDecimals = (value: number, decimalPlaces: number) => {
-  const scaled = value * 10 ** decimalPlaces;
-  return Math.abs(Math.round(scaled) - scaled) < 1e-6;
-};
-
 @Injectable()
 export default class GradingScalesService extends CrudService<
   GradingScaleModel,
   GradingScaleRepository
 > {
-  constructor(protected readonly repository: GradingScaleRepository) {
+  constructor(
+    protected readonly repository: GradingScaleRepository,
+    private readonly studentGradeRepository: StudentGradeRepository,
+    private readonly periodSubjectSummaryRepository: PeriodSubjectSummaryRepository,
+  ) {
     super(repository);
   }
 
@@ -103,11 +110,30 @@ export default class GradingScalesService extends CrudService<
     const { minScore, maxScore, passingScore, decimalPlaces } = dto;
     const values = { minScore, maxScore, passingScore, decimalPlaces };
 
+    // Las notas ya registradas deben seguir siendo válidas.
+    const outside = await this.studentGradeRepository.findOutsideScale(
+      organizationId,
+      values,
+    );
+    if (outside)
+      throw new ConflictException(
+        GRADING_SCALE_GRADES_OUTSIDE_MESSAGE(outside.score),
+      );
+
     const existing = await this.findOne({ organizationId }, false, {
-      attributes: ['id'],
+      attributes: ['id', 'passingScore'],
     });
-    if (existing) await this.updateByPk(existing.id, values);
-    else await this.create({ ...values, organizationId });
+    await this.transaction(async (transaction) => {
+      if (existing) await this.updateByPk(existing.id, values, { transaction });
+      else await this.create({ ...values, organizationId }, { transaction });
+
+      if (existing?.passingScore !== passingScore)
+        await this.periodSubjectSummaryRepository.refreshPassed(
+          organizationId,
+          passingScore,
+          transaction,
+        );
+    });
 
     return { ...values, isDefault: false };
   };
