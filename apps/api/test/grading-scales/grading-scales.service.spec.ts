@@ -31,12 +31,13 @@ describe('GradingScalesService', () => {
 
   const transaction = { id: 'tx' } as unknown as Transaction;
   const actor = { organizationId: 'org-id' };
-  const scale = {
+  const range = {
     minScore: 0,
     maxScore: 10,
     passingScore: 6,
     decimalPlaces: 1,
   };
+  const scale = { ...range, maxFailedSubjects: 3 };
 
   beforeEach(() => {
     repository = {
@@ -140,7 +141,7 @@ describe('GradingScalesService', () => {
       );
       expect(studentGradeRepository.findOutsideScale).toHaveBeenCalledWith(
         'org-id',
-        scale,
+        range,
       );
       expect(repository.transaction).not.toHaveBeenCalled();
     });
@@ -156,6 +157,12 @@ describe('GradingScalesService', () => {
         service.setScale(actor, { ...scale, ...override }),
       ).rejects.toThrow(new BadRequestException(message));
       expect(repository.create).not.toHaveBeenCalled();
+    });
+
+    it('turns off the failed subjects rule without a value', async () => {
+      await expect(service.setScale(actor, range)).resolves.toMatchObject({
+        maxFailedSubjects: null,
+      });
     });
 
     it('accepts two decimals when configured', async () => {

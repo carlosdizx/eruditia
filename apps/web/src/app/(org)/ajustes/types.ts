@@ -1,5 +1,12 @@
 export type GradingScaleFormValues = Partial<
-  Record<'minScore' | 'maxScore' | 'passingScore' | 'decimalPlaces', string>
+  Record<
+    | 'minScore'
+    | 'maxScore'
+    | 'passingScore'
+    | 'decimalPlaces'
+    | 'maxFailedSubjects',
+    string
+  >
 >;
 
 export type GradingScaleFormState =

@@ -27,6 +27,15 @@ export const PROMOTION_TARGET_REQUIRED_MESSAGE =
   'Elige el salón destino de cada estudiante que promueve o repite';
 export const INVALID_PROMOTION_TARGET_MESSAGE =
   'El salón destino debe ser del año destino y del grado que corresponde';
+export const ADJUSTMENT_REASON_REQUIRED_MESSAGE = (student: string) =>
+  `Escribe en la observación por qué ajustas el promedio de ${student}`;
+export const MANUAL_DECISION_REASON_REQUIRED_MESSAGE = (student: string) =>
+  `La decisión de ${student} no coincide con sus notas: escribe el motivo en la observación`;
+export const ADJUSTED_AVERAGE_RANGE_MESSAGE = (
+  student: string,
+  min: string,
+  max: string,
+) => `El promedio ajustado de ${student} debe estar entre ${min} y ${max}`;
 export const TARGET_CLASSROOM_FULL_MESSAGE = (name: string, capacity: number) =>
   `El salón ${name} no tiene cupo suficiente (cupo: ${capacity})`;
 export const CLASSROOM_HAS_ENROLLMENTS_MESSAGE =

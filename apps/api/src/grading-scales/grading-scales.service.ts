@@ -25,6 +25,9 @@ export interface GradingScale {
   maxScore: number;
   passingScore: number;
   decimalPlaces: number;
+  // Con esta cantidad de materias reprobadas se reprueba el año (null: no
+  // aplica).
+  maxFailedSubjects: number | null;
   // Aún no la configuró el admin: se usa la escala colombiana habitual.
   isDefault: boolean;
 }
@@ -34,6 +37,7 @@ export const DEFAULT_GRADING_SCALE: GradingScale = {
   maxScore: 5,
   passingScore: 3,
   decimalPlaces: 1,
+  maxFailedSubjects: 3,
   isDefault: true,
 };
 
@@ -43,6 +47,7 @@ const SCALE_ATTRIBUTES = [
   'maxScore',
   'passingScore',
   'decimalPlaces',
+  'maxFailedSubjects',
 ];
 
 @Injectable()
@@ -85,12 +90,19 @@ export default class GradingScalesService extends CrudService<
     });
     if (!scale) return DEFAULT_GRADING_SCALE;
 
-    const { minScore, maxScore, passingScore, decimalPlaces } = scale;
+    const {
+      minScore,
+      maxScore,
+      passingScore,
+      decimalPlaces,
+      maxFailedSubjects,
+    } = scale;
     return {
       minScore,
       maxScore,
       passingScore,
       decimalPlaces,
+      maxFailedSubjects,
       isDefault: false,
     };
   };
@@ -108,12 +120,16 @@ export default class GradingScalesService extends CrudService<
     this.assertValid(dto);
 
     const { minScore, maxScore, passingScore, decimalPlaces } = dto;
-    const values = { minScore, maxScore, passingScore, decimalPlaces };
+    const range = { minScore, maxScore, passingScore, decimalPlaces };
+    const values = {
+      ...range,
+      maxFailedSubjects: dto.maxFailedSubjects ?? null,
+    };
 
     // Las notas ya registradas deben seguir siendo válidas.
     const outside = await this.studentGradeRepository.findOutsideScale(
       organizationId,
-      values,
+      range,
     );
     if (outside)
       throw new ConflictException(

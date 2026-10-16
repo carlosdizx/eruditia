@@ -6,6 +6,7 @@ import ClassroomSubjectRepository from '../classroom-subjects/classroom-subject.
 import EnrollmentRepository from '../enrollments/enrollment.repository';
 import GradebooksController from './gradebooks.controller';
 import GradebooksService from './gradebooks.service';
+import AnnualResultsService from './annual-results.service';
 import EvaluationItemRepository from './repositories/evaluation-item.repository';
 import StudentGradeRepository from './repositories/student-grade.repository';
 import PeriodSubjectSummaryRepository from './repositories/period-subject-summary.repository';
@@ -22,6 +23,8 @@ import PeriodSubjectSummaryRepository from './repositories/period-subject-summar
     StudentGradeRepository,
     PeriodSubjectSummaryRepository,
     GradebooksService,
+    AnnualResultsService,
   ],
+  exports: [AnnualResultsService],
 })
 export default class GradebooksModule {}

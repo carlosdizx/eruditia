@@ -13,6 +13,7 @@ import ReportCardsService, {
   MAX_FAILED_LOOKUPS,
 } from '../../src/report-cards/report-cards.service';
 import AcademicPeriodRepository from '../../src/academic-years/repositories/academic-period.repository';
+import AnnualResultsService from '../../src/gradebooks/annual-results.service';
 import ClassroomSubjectRepository from '../../src/classroom-subjects/classroom-subject.repository';
 import EnrollmentRepository from '../../src/enrollments/enrollment.repository';
 import EvaluationItemRepository from '../../src/gradebooks/repositories/evaluation-item.repository';
@@ -121,12 +122,14 @@ describe('ReportCardsService', () => {
     summaryRepository = {
       findAll: jest.fn().mockResolvedValue([
         {
+          enrollmentId: 'e2026',
           classroomSubjectId: 'math',
           academicPeriodId: 'p1',
           finalPeriodScore: 4,
           teacherObservation: 'Muy bien',
         },
         {
+          enrollmentId: 'e2026',
           classroomSubjectId: 'art',
           academicPeriodId: 'p1',
           finalPeriodScore: 2.5,
@@ -153,11 +156,13 @@ describe('ReportCardsService', () => {
       organizationRepository as unknown as OrganizationRepository,
       studentRepository as unknown as StudentRepository,
       enrollmentRepository as unknown as EnrollmentRepository,
-      {
-        findAll: jest.fn().mockResolvedValue(periods),
-      } as unknown as AcademicPeriodRepository,
-      classroomSubjectRepository as unknown as ClassroomSubjectRepository,
-      summaryRepository as unknown as PeriodSubjectSummaryRepository,
+      new AnnualResultsService(
+        {
+          findAll: jest.fn().mockResolvedValue(periods),
+        } as unknown as AcademicPeriodRepository,
+        classroomSubjectRepository as unknown as ClassroomSubjectRepository,
+        summaryRepository as unknown as PeriodSubjectSummaryRepository,
+      ),
       {
         findAll: jest.fn().mockResolvedValue([
           {
@@ -232,7 +237,7 @@ describe('ReportCardsService', () => {
       await service.getOwnReportCard(actor, 'y2025');
 
       expect(summaryRepository.findAll).toHaveBeenCalledWith(
-        { enrollmentId: 'e2025' },
+        { enrollmentId: ['e2025'], classroomSubjectId: ['math', 'art'] },
         expect.any(Object),
       );
     });

@@ -11,12 +11,16 @@ import ClassroomsService from '../../src/classrooms/classrooms.service';
 import AcademicYearsService from '../../src/academic-years/academic-years.service';
 import StudentsService from '../../src/students/students.service';
 import GradingScalesService from '../../src/grading-scales/grading-scales.service';
+import AnnualResultsService from '../../src/gradebooks/annual-results.service';
 import {
+  ADJUSTED_AVERAGE_RANGE_MESSAGE,
+  ADJUSTMENT_REASON_REQUIRED_MESSAGE,
   ALREADY_ENROLLED_MESSAGE,
   CLOSED_TARGET_YEAR_MESSAGE,
   GRADUATE_NOT_FINAL_MESSAGE,
   INVALID_PROMOTION_ENROLLMENTS_MESSAGE,
   INVALID_PROMOTION_TARGET_MESSAGE,
+  MANUAL_DECISION_REASON_REQUIRED_MESSAGE,
   PAST_YEAR_PROMOTION_MESSAGE,
   PROMOTE_FINAL_MESSAGE,
   PROMOTION_TARGET_REQUIRED_MESSAGE,
@@ -37,6 +41,7 @@ describe('PromotionsService', () => {
   let academicYearsService: { findOne: jest.Mock };
   let studentsService: { updateByPk: jest.Mock };
   let gradingScalesService: { findScale: jest.Mock };
+  let annualResultsService: { loadClassroom: jest.Mock };
   let service: PromotionsService;
 
   const transaction = { id: 'tx' } as unknown as Transaction;
@@ -108,25 +113,35 @@ describe('PromotionsService', () => {
     {
       id: 'e1',
       studentId: 's1',
-      finalAverage: 4.2,
       promotionNotes: null,
       student: { id: 's1', firstName: 'Ana', lastName: 'López' },
     },
     {
       id: 'e2',
       studentId: 's2',
-      finalAverage: 2.5,
       promotionNotes: null,
       student: { id: 's2', firstName: 'Luis', lastName: 'Pérez' },
     },
     {
       id: 'e3',
       studentId: 's3',
-      finalAverage: null,
       promotionNotes: null,
       student: { id: 's3', firstName: 'Eva', lastName: 'Ruiz' },
     },
   ];
+
+  const scale = {
+    minScore: 1,
+    maxScore: 5,
+    passingScore: 3,
+    decimalPlaces: 1,
+    maxFailedSubjects: 2,
+    isDefault: false,
+  };
+  const failed = (...names: string[]) =>
+    names.map((name) => ({ subject: { name } }));
+  // Resultado de las planillas: Ana aprueba, Luis no, Eva sin notas.
+  let annualResults: Record<string, object>;
 
   let alreadyEnrolled: object[];
   let inProgressCounts: object[];
@@ -134,6 +149,23 @@ describe('PromotionsService', () => {
   beforeEach(() => {
     alreadyEnrolled = [];
     inProgressCounts = [];
+    annualResults = {
+      e1: {
+        averages: { general: 4.2 },
+        failedSubjects: failed(),
+        incomplete: false,
+      },
+      e2: {
+        averages: { general: 2.5 },
+        failedSubjects: failed('Matemáticas'),
+        incomplete: false,
+      },
+      e3: {
+        averages: { general: null },
+        failedSubjects: failed(),
+        incomplete: true,
+      },
+    };
     enrollmentsService = {
       findAll: jest.fn((query: Query) => {
         if (query.academicYearId === 'y2027')
@@ -169,7 +201,12 @@ describe('PromotionsService', () => {
     };
     studentsService = { updateByPk: jest.fn().mockResolvedValue({}) };
     gradingScalesService = {
-      findScale: jest.fn().mockResolvedValue({ passingScore: 3 }),
+      findScale: jest.fn().mockResolvedValue(scale),
+    };
+    annualResultsService = {
+      loadClassroom: jest.fn().mockResolvedValue({
+        resultsFor: (id: string) => annualResults[id],
+      }),
     };
     service = new PromotionsService(
       enrollmentsService as unknown as EnrollmentsService,
@@ -177,6 +214,7 @@ describe('PromotionsService', () => {
       academicYearsService as unknown as AcademicYearsService,
       studentsService as unknown as StudentsService,
       gradingScalesService as unknown as GradingScalesService,
+      annualResultsService as unknown as AnnualResultsService,
     );
   });
 
@@ -242,6 +280,16 @@ describe('PromotionsService', () => {
       const result = await service.preview(actor, query);
 
       expect(result.passingGrade).toBe(3);
+      expect(annualResultsService.loadClassroom).toHaveBeenCalledWith(
+        { id: 'source', academicYearId: 'y2026' },
+        ['e1', 'e2', 'e3'],
+        scale,
+      );
+      expect(result.students[1]).toMatchObject({
+        computedAverage: 2.5,
+        failedSubjects: ['Matemáticas'],
+        incomplete: false,
+      });
       expect(result.sameClassrooms.map(({ id }) => id)).toEqual(['t1a', 't1b']);
       expect(result.nextClassrooms).toEqual([
         { id: 't2a', name: '2°A', capacity: 2, enrolled: 1 },
@@ -265,6 +313,38 @@ describe('PromotionsService', () => {
         classroomId: 't1a',
         classroomName: '1°A',
       });
+    });
+
+    it('fails the year with too many failed subjects despite the average', async () => {
+      annualResults.e1 = {
+        averages: { general: 3.8 },
+        failedSubjects: failed('Inglés', 'Química'),
+        incomplete: false,
+      };
+
+      const result = await service.preview(actor, query);
+
+      expect(result.students[0].suggestedOutcome).toBe(
+        PromotionOutcomeEnum.REPEAT,
+      );
+    });
+
+    it('ignores failed subjects when the rule is off', async () => {
+      gradingScalesService.findScale.mockResolvedValue({
+        ...scale,
+        maxFailedSubjects: null,
+      });
+      annualResults.e1 = {
+        averages: { general: 3.8 },
+        failedSubjects: failed('Inglés', 'Química', 'Física'),
+        incomplete: false,
+      };
+
+      const result = await service.preview(actor, query);
+
+      expect(result.students[0].suggestedOutcome).toBe(
+        PromotionOutcomeEnum.PROMOTE,
+      );
     });
 
     it('suggests graduating from the final grade', async () => {
@@ -295,7 +375,6 @@ describe('PromotionsService', () => {
             enrollmentId: 'e1',
             outcome: PromotionOutcomeEnum.PROMOTE,
             targetClassroomId: 't2b',
-            finalAverage: 4.2,
           },
           {
             enrollmentId: 'e2',
@@ -309,12 +388,23 @@ describe('PromotionsService', () => {
 
       expect(enrollmentsService.updateByPk).toHaveBeenCalledWith(
         'e1',
-        { status: EnrollmentStatusEnum.PROMOTED, finalAverage: 4.2 },
+        {
+          status: EnrollmentStatusEnum.PROMOTED,
+          finalAverage: 4.2,
+          computedAverage: 4.2,
+          averageAdjustedBy: null,
+        },
         { transaction },
       );
       expect(enrollmentsService.updateByPk).toHaveBeenCalledWith(
         'e2',
-        { status: EnrollmentStatusEnum.FAILED, promotionNotes: 'Comité 12/11' },
+        {
+          status: EnrollmentStatusEnum.FAILED,
+          finalAverage: 2.5,
+          computedAverage: 2.5,
+          averageAdjustedBy: null,
+          promotionNotes: 'Comité 12/11',
+        },
         { transaction },
       );
       expect(enrollmentsService.insertMany).toHaveBeenCalledWith(
@@ -351,7 +441,12 @@ describe('PromotionsService', () => {
 
       expect(enrollmentsService.updateByPk).toHaveBeenCalledWith(
         'e1',
-        { status: EnrollmentStatusEnum.GRADUATED },
+        {
+          status: EnrollmentStatusEnum.GRADUATED,
+          finalAverage: 4.2,
+          computedAverage: 4.2,
+          averageAdjustedBy: null,
+        },
         { transaction },
       );
       expect(enrollmentsService.insertMany).not.toHaveBeenCalled();
@@ -434,6 +529,129 @@ describe('PromotionsService', () => {
         new ConflictException(ALREADY_ENROLLED_MESSAGE(['Luis Pérez'])),
       );
       expect(enrollmentsService.transaction).not.toHaveBeenCalled();
+    });
+
+    it('saves an adjusted average with who adjusted it and why', async () => {
+      await promote([
+        {
+          enrollmentId: 'e2',
+          outcome: PromotionOutcomeEnum.REPEAT,
+          targetClassroomId: 't1a',
+          adjustedAverage: 2.8,
+          promotionNotes: 'Recuperó Matemáticas',
+        },
+      ]);
+
+      expect(enrollmentsService.updateByPk).toHaveBeenCalledWith(
+        'e2',
+        expect.objectContaining({
+          finalAverage: 2.8,
+          computedAverage: 2.5,
+          averageAdjustedBy: 'admin-id',
+        }),
+        { transaction },
+      );
+    });
+
+    it('requires the reason to adjust the average', async () => {
+      await expect(
+        promote([
+          {
+            enrollmentId: 'e2',
+            outcome: PromotionOutcomeEnum.REPEAT,
+            targetClassroomId: 't1a',
+            adjustedAverage: 2.8,
+          },
+        ]),
+      ).rejects.toThrow(
+        new BadRequestException(
+          ADJUSTMENT_REASON_REQUIRED_MESSAGE('Luis Pérez'),
+        ),
+      );
+      expect(enrollmentsService.transaction).not.toHaveBeenCalled();
+    });
+
+    it('keeps the adjusted average inside the scale', async () => {
+      await expect(
+        promote([
+          {
+            enrollmentId: 'e1',
+            outcome: PromotionOutcomeEnum.PROMOTE,
+            targetClassroomId: 't2a',
+            adjustedAverage: 7,
+            promotionNotes: 'Error',
+          },
+        ]),
+      ).rejects.toThrow(
+        new BadRequestException(
+          ADJUSTED_AVERAGE_RANGE_MESSAGE('Ana López', '1.0', '5.0'),
+        ),
+      );
+    });
+
+    it('does not count sending the same average as an adjustment', async () => {
+      await promote([
+        {
+          enrollmentId: 'e1',
+          outcome: PromotionOutcomeEnum.PROMOTE,
+          targetClassroomId: 't2a',
+          adjustedAverage: 4.2,
+        },
+      ]);
+
+      expect(enrollmentsService.updateByPk).toHaveBeenCalledWith(
+        'e1',
+        expect.objectContaining({ averageAdjustedBy: null }),
+        { transaction },
+      );
+    });
+
+    it.each([
+      [
+        'promoting a failing student',
+        'e2',
+        PromotionOutcomeEnum.PROMOTE,
+        't2a',
+      ],
+      ['failing a passing student', 'e1', PromotionOutcomeEnum.REPEAT, 't1a'],
+      ['deciding without grades', 'e3', PromotionOutcomeEnum.PROMOTE, 't2a'],
+    ])(
+      'requires the reason for %s',
+      async (_, enrollmentId, outcome, targetClassroomId) => {
+        const name = sourceEnrollments.find(
+          ({ id }) => id === enrollmentId,
+        )!.student;
+
+        await expect(
+          promote([{ enrollmentId, outcome, targetClassroomId }]),
+        ).rejects.toThrow(
+          new BadRequestException(
+            MANUAL_DECISION_REASON_REQUIRED_MESSAGE(
+              `${name.firstName} ${name.lastName}`,
+            ),
+          ),
+        );
+      },
+    );
+
+    it('accepts a manual decision with its reason', async () => {
+      await promote([
+        {
+          enrollmentId: 'e2',
+          outcome: PromotionOutcomeEnum.PROMOTE,
+          targetClassroomId: 't2a',
+          promotionNotes: 'Comisión de evaluación',
+        },
+      ]);
+
+      expect(enrollmentsService.updateByPk).toHaveBeenCalledWith(
+        'e2',
+        expect.objectContaining({
+          status: EnrollmentStatusEnum.PROMOTED,
+          promotionNotes: 'Comisión de evaluación',
+        }),
+        { transaction },
+      );
     });
 
     it('respects the capacity of the target classroom', async () => {

@@ -1,3 +1,4 @@
+import type { GradingScale } from '@/lib/grading/scale';
 import type { EnrollmentStudent } from '../salones/[classroomId]/types';
 
 export type PromotionOutcome = 'promote' | 'repeat' | 'graduate';
@@ -37,6 +38,7 @@ export type PromotionPreview = {
   };
   targetAcademicYear: { id: string; name: string };
   passingGrade: number;
+  scale: GradingScale;
   sameClassrooms: PromotionClassroom[];
   nextClassrooms: PromotionClassroom[];
   nextGradeLevel: GradeLevel | null;
@@ -45,7 +47,12 @@ export type PromotionPreview = {
   students: {
     enrollmentId: string;
     student: EnrollmentStudent;
-    finalAverage: number | null;
+    // Promedio general calculado de las planillas (null: sin notas).
+    computedAverage: number | null;
+    // Materias con acumulado por debajo de la aprobatoria.
+    failedSubjects: string[];
+    // Alguna materia tiene periodos sin definitiva.
+    incomplete: boolean;
     promotionNotes: string | null;
     suggestedOutcome: PromotionOutcome | null;
     // Ya cursa en el año destino: no se puede incluir.
@@ -57,7 +64,8 @@ export type PromotionDecision = {
   enrollmentId: string;
   outcome: PromotionOutcome;
   targetClassroomId?: string;
-  finalAverage?: number;
+  // Solo si se ajusta a mano el promedio calculado (exige el motivo).
+  adjustedAverage?: number;
   promotionNotes?: string;
 };
 

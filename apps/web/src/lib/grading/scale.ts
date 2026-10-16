@@ -4,6 +4,8 @@ export type GradingScale = {
   maxScore: number;
   passingScore: number;
   decimalPlaces: number;
+  // Materias reprobadas con las que se reprueba el año; null: no aplica.
+  maxFailedSubjects: number | null;
   isDefault: boolean;
 };
 

@@ -33,6 +33,9 @@ export async function saveGradingScale(
         maxScore: Number(values.maxScore),
         passingScore: Number(values.passingScore),
         decimalPlaces: Number(values.decimalPlaces),
+        maxFailedSubjects: values.maxFailedSubjects
+          ? Number(values.maxFailedSubjects)
+          : null,
       },
     });
   } catch (error) {

@@ -10,6 +10,8 @@ export type HistoryEnrollment = {
   enrollmentDate: string;
   status: EnrollmentStatus;
   finalAverage: number | null;
+  // Calculado de las planillas al promover; si difiere, se ajustó a mano.
+  computedAverage: number | null;
   promotionNotes: string | null;
   promotedFromEnrollmentId: string | null;
   academicYear: {

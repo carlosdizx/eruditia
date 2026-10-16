@@ -8,6 +8,7 @@ import EnrollmentRepository from './enrollment.repository';
 import StudentEnrollmentsController from './student-enrollments.controller';
 import ClassroomSubjectRepository from '../classroom-subjects/classroom-subject.repository';
 import GradingScalesModule from '../grading-scales/grading-scales.module';
+import GradebooksModule from '../gradebooks/gradebooks.module';
 import PromotionsController from './promotions.controller';
 import PromotionsService from './promotions.service';
 
@@ -17,6 +18,7 @@ import PromotionsService from './promotions.service';
     StudentsModule,
     AcademicYearsModule,
     GradingScalesModule,
+    GradebooksModule,
   ],
   controllers: [
     EnrollmentsController,

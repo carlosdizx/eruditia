@@ -33,11 +33,13 @@ const toValues = ({
   maxScore,
   passingScore,
   decimalPlaces,
+  maxFailedSubjects,
 }: GradingScale): GradingScaleFormValues => ({
   minScore: minScore.toFixed(decimalPlaces),
   maxScore: maxScore.toFixed(decimalPlaces),
   passingScore: passingScore.toFixed(decimalPlaces),
   decimalPlaces: String(decimalPlaces),
+  maxFailedSubjects: maxFailedSubjects?.toString() ?? '',
 });
 
 // Barra de min a max: en rojo lo que reprueba, en verde lo que aprueba.
@@ -190,6 +192,29 @@ export function GradingScaleForm({ scale }: { scale: GradingScale }) {
           <FieldDescription>
             Cuántos decimales se pueden digitar en las planillas y se muestran
             en los boletines.
+          </FieldDescription>
+        </Field>
+
+        <Field>
+          <FieldLabel htmlFor="maxFailedSubjects">
+            Materias perdidas para reprobar el año
+          </FieldLabel>
+          <Input
+            id="maxFailedSubjects"
+            name="maxFailedSubjects"
+            type="number"
+            min={1}
+            max={50}
+            step={1}
+            placeholder="No aplica"
+            className="sm:w-64"
+            value={values.maxFailedSubjects ?? ''}
+            onChange={change('maxFailedSubjects')}
+          />
+          <FieldDescription>
+            En la promoción anual se sugiere repetir el grado si el promedio
+            general queda bajo la aprobatoria o si el estudiante pierde esta
+            cantidad de materias o más. Déjalo vacío para usar solo el promedio.
           </FieldDescription>
         </Field>
 

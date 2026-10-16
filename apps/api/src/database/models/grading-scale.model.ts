@@ -1,4 +1,5 @@
 import {
+  AllowNull,
   BelongsTo,
   Column,
   CreatedAt,
@@ -42,6 +43,11 @@ export default class GradingScaleModel extends Model {
 
   @Column(DataType.SMALLINT)
   declare decimalPlaces: number;
+
+  // Materias reprobadas con las que se reprueba el año; null: no aplica.
+  @AllowNull
+  @Column(DataType.SMALLINT)
+  declare maxFailedSubjects: number | null;
 
   @CreatedAt
   declare createdAt: Date;
