@@ -7,6 +7,7 @@ import {
   FileTextIcon,
   LifeBuoyIcon,
   TrophyIcon,
+  AwardIcon,
   TrendingUpIcon,
   DoorOpenIcon,
   PresentationIcon,
@@ -102,6 +103,12 @@ export const NAV: Record<PanelKind, { label: string; items: NavItem[] }> = {
         url: '/recuperaciones',
         icon: LifeBuoyIcon,
         grant: RECOVERY_GRANTS.manage,
+      },
+      {
+        title: 'Cuadro de honor',
+        url: '/cuadro-de-honor',
+        icon: AwardIcon,
+        grant: RANKING_GRANTS.view,
       },
       {
         title: 'Ranking',

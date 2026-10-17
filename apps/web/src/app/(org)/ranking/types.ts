@@ -75,3 +75,18 @@ export const RANKING_VIEWS = [
 ] as const;
 
 export type RankingView = (typeof RANKING_VIEWS)[number]['value'];
+
+// Contrato de GET /rankings/honor-roll.
+export type HonorRoll = {
+  academicYear: { id: string; name: string } | null;
+  period: { id: string; name: string } | null;
+  scale: GradingScale;
+  groups: {
+    id: string;
+    name: string;
+    gradeLevel: { id: string; name: string } | null;
+    // Estudiantes con notas que cumplen el filtro.
+    total: number;
+    rows: RankingRow[];
+  }[];
+};

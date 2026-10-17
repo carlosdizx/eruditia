@@ -57,5 +57,7 @@ export type ReportCardResponse = {
       periods: Record<string, number | null>;
       general: number | null;
     };
+    // Puesto en el salón (acumulado del año); null si el colegio no lo publica.
+    rank: { position: number; total: number } | null;
   } | null;
 };

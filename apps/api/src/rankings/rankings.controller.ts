@@ -8,6 +8,7 @@ import RankingsService from './rankings.service';
 import GetRankingDto from './dto/get-ranking.dto';
 import GetRankingOptionsDto from './dto/get-ranking-options.dto';
 import GetSubjectLeadersDto from './dto/get-subject-leaders.dto';
+import GetHonorRollDto from './dto/get-honor-roll.dto';
 
 // El admin ve todos los rankings; el profesor, los de su dirección de grupo y
 // los de las materias que dicta.
@@ -33,6 +34,14 @@ export default class RankingsController {
     @CurrentAuth() auth: AuthContextInterface,
   ) {
     return await this.rankingsService.getSubjectLeaders(auth, dto);
+  }
+
+  @Get('honor-roll')
+  public async getHonorRoll(
+    @Query() dto: GetHonorRollDto,
+    @CurrentAuth() auth: AuthContextInterface,
+  ) {
+    return await this.rankingsService.getHonorRoll(auth, dto);
   }
 
   @Get()

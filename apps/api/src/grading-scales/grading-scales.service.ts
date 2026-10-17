@@ -30,6 +30,8 @@ export interface GradingScale {
   maxFailedSubjects: number | null;
   // También se reprueba con el promedio general bajo la aprobatoria.
   failByAverage: boolean;
+  // El boletín muestra el puesto del estudiante en su salón.
+  showRankInReportCard: boolean;
   // Aún no la configuró el admin: se usa la escala colombiana habitual.
   isDefault: boolean;
 }
@@ -42,6 +44,7 @@ export const DEFAULT_GRADING_SCALE: GradingScale = {
   decimalPlaces: 1,
   maxFailedSubjects: 1,
   failByAverage: false,
+  showRankInReportCard: false,
   isDefault: true,
 };
 
@@ -53,6 +56,7 @@ const SCALE_ATTRIBUTES = [
   'decimalPlaces',
   'maxFailedSubjects',
   'failByAverage',
+  'showRankInReportCard',
 ];
 
 @Injectable()
@@ -102,6 +106,7 @@ export default class GradingScalesService extends CrudService<
       decimalPlaces,
       maxFailedSubjects,
       failByAverage,
+      showRankInReportCard,
     } = scale;
     return {
       minScore,
@@ -110,6 +115,7 @@ export default class GradingScalesService extends CrudService<
       decimalPlaces,
       maxFailedSubjects,
       failByAverage,
+      showRankInReportCard,
       isDefault: false,
     };
   };
@@ -132,6 +138,7 @@ export default class GradingScalesService extends CrudService<
       ...range,
       maxFailedSubjects: dto.maxFailedSubjects ?? null,
       failByAverage: dto.failByAverage ?? false,
+      showRankInReportCard: dto.showRankInReportCard ?? false,
     };
 
     // Las notas ya registradas deben seguir siendo válidas.

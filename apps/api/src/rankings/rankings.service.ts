@@ -23,6 +23,7 @@ import GradingScalesService, {
 } from '../grading-scales/grading-scales.service';
 import GetRankingDto from './dto/get-ranking.dto';
 import GetSubjectLeadersDto from './dto/get-subject-leaders.dto';
+import GetHonorRollDto from './dto/get-honor-roll.dto';
 import rankCandidates, {
   type RankingCandidate,
   rawWeightedAverage,
@@ -503,5 +504,104 @@ export default class RankingsService {
         };
       }),
     };
+  };
+
+  // Cuadro de honor: los primeros puestos del promedio general de cada salón
+  // (o de cada grado, con todos sus salones juntos).
+  public getHonorRoll = async (actor: Actor, dto: GetHonorRollDto) => {
+    const organizationId = organizationOf(actor);
+    const [academicYear, scale] = await Promise.all([
+      this.findYear(organizationId, dto.academicYearId),
+      this.gradingScalesService.findScale(organizationId),
+    ]);
+    if (!academicYear)
+      return { academicYear: null, period: null, scale, groups: [] };
+
+    const period = await this.findPeriod(academicYear.id, dto.periodId);
+    const { classrooms, assignments } = await this.loadClassrooms(
+      organizationId,
+      academicYear.id,
+    );
+    const access = this.accessFor(actor, assignments);
+    const ranked = classrooms.filter((classroom) => access.general(classroom));
+    if (!ranked.length) return { academicYear, period, scale, groups: [] };
+
+    const { candidatesFor } = await this.loadScores(
+      academicYear.id,
+      period,
+      ranked,
+      assignments,
+      scale,
+    );
+    const candidates = candidatesFor().filter(
+      ({ allPassed }) => !dto.onlyAllPassed || allPassed,
+    );
+
+    const byGrade = dto.groupBy === 'gradeLevel';
+    const groups = new Map<
+      string,
+      { id: string; name: string; classroomIds: string[] }
+    >();
+    for (const classroom of ranked) {
+      const key = byGrade ? classroom.gradeLevelId : classroom.id;
+      const group = groups.get(key) ?? {
+        id: key,
+        name: byGrade
+          ? (classroom.gradeLevel?.name ?? classroom.name)
+          : classroom.name,
+        classroomIds: [],
+      };
+      group.classroomIds.push(classroom.id);
+      groups.set(key, group);
+    }
+
+    return {
+      academicYear,
+      period,
+      scale,
+      groups: [...groups.values()].map(({ id, name, classroomIds }) => {
+        const members = candidates.filter(({ classroom }) =>
+          classroomIds.includes(classroom.id),
+        );
+        return {
+          id,
+          name,
+          gradeLevel: byGrade
+            ? null
+            : (ranked.find((classroom) => classroom.id === id)?.gradeLevel ??
+              null),
+          total: members.length,
+          rows: this.toRows(members, { limit: dto.limit }, scale),
+        };
+      }),
+    };
+  };
+
+  // Puesto de una matrícula en el ranking general de su salón (acumulado del
+  // año). Lo usa el boletín.
+  public classroomPosition = async (
+    organizationId: string,
+    enrollment: { id: string; classroomId: string; academicYearId: string },
+  ) => {
+    const scale = await this.gradingScalesService.findScale(organizationId);
+    const { classrooms, assignments } = await this.loadClassrooms(
+      organizationId,
+      enrollment.academicYearId,
+      { classroomId: enrollment.classroomId },
+    );
+    if (!classrooms.length) return null;
+
+    const { candidatesFor } = await this.loadScores(
+      enrollment.academicYearId,
+      null,
+      classrooms,
+      assignments,
+      scale,
+    );
+    const candidates = candidatesFor();
+    const row = rankCandidates(candidates, { prioritizeAllPassed: true }).find(
+      ({ enrollmentId }) => enrollmentId === enrollment.id,
+    );
+    return row ? { position: row.position, total: candidates.length } : null;
   };
 }

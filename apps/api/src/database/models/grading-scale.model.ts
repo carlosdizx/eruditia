@@ -54,6 +54,11 @@ export default class GradingScaleModel extends Model {
   @Column(DataType.BOOLEAN)
   declare failByAverage: boolean;
 
+  // El boletín muestra el puesto del estudiante en su salón.
+  @Default(false)
+  @Column(DataType.BOOLEAN)
+  declare showRankInReportCard: boolean;
+
   @CreatedAt
   declare createdAt: Date;
 

@@ -404,6 +404,71 @@ describe('RankingsService', () => {
     });
   });
 
+  describe('getHonorRoll', () => {
+    it('lists the top of each classroom', async () => {
+      const result = await service.getHonorRoll(admin, { limit: 1 });
+
+      expect(
+        result.groups.map(({ id, name, total, rows: top }) => [
+          id,
+          name,
+          total,
+          top.map(({ student, position }) => [position, student.lastName]),
+        ]),
+      ).toEqual([
+        [
+          'c5a',
+          '5°A',
+          3,
+          [
+            [1, 'Gil'],
+            [1, 'Ruiz'],
+          ],
+        ],
+        ['c5b', '5°B', 1, [[1, 'Paz']]],
+      ]);
+    });
+
+    it('groups the whole grade and excludes failed subjects', async () => {
+      const result = await service.getHonorRoll(admin, {
+        groupBy: 'gradeLevel',
+        onlyAllPassed: true,
+      });
+
+      expect(result.groups).toHaveLength(1);
+      expect(result.groups[0]).toMatchObject({ id: 'g5', name: 'Quinto' });
+      // Arias perdió Artes; Paz (5 en Matemáticas) va primero.
+      expect(
+        result.groups[0].rows.map(({ position, student }) => [
+          position,
+          student.lastName,
+        ]),
+      ).toEqual([
+        [1, 'Paz'],
+        [2, 'Gil'],
+        [2, 'Ruiz'],
+      ]);
+    });
+
+    it('shows the homeroom teacher only their classroom', async () => {
+      const result = await service.getHonorRoll(teacher('homeroom-id'), {});
+
+      expect(result.groups.map(({ id }) => id)).toEqual(['c5a']);
+    });
+  });
+
+  describe('classroomPosition', () => {
+    it('returns the position in the annual classroom ranking', async () => {
+      await expect(
+        service.classroomPosition('org-id', {
+          id: 'e1',
+          classroomId: 'c5a',
+          academicYearId: 'y2026',
+        }),
+      ).resolves.toEqual({ position: 3, total: 3 });
+    });
+  });
+
   describe('getOptions', () => {
     it('lists everything for the admin', async () => {
       const result = await service.getOptions(admin);

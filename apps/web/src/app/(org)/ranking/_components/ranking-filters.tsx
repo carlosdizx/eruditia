@@ -26,11 +26,13 @@ export function RankingFilters({
   filters,
   base,
   resets = {},
+  path = '/ranking',
 }: {
   filters: RankingFilter[];
   // Parámetros fijos de la vista (ej. vista=materia).
   base: Record<string, string>;
   resets?: Record<string, string[]>;
+  path?: string;
 }) {
   const router = useRouter();
   const navigate = (param: string, value: string) => {
@@ -44,7 +46,7 @@ export function RankingFilters({
         .map((filter) => [filter.param, filter.value]),
       [param, value],
     ]);
-    router.push(`/ranking?${new URLSearchParams(params)}`);
+    router.push(`${path}?${new URLSearchParams(params)}`);
   };
 
   return (

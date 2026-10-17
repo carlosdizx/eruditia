@@ -37,6 +37,7 @@ export async function saveGradingScale(
           ? Number(values.maxFailedSubjects)
           : null,
         failByAverage: values.failByAverage === 'on',
+        showRankInReportCard: values.showRankInReportCard === 'on',
       },
     });
   } catch (error) {

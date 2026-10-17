@@ -23,5 +23,6 @@ import RankingsService from './rankings.service';
     SubjectRecoveryRepository,
     RankingsService,
   ],
+  exports: [RankingsService],
 })
 export default class RankingsModule {}
