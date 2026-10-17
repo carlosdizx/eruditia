@@ -8,6 +8,8 @@ export type GradingScale = {
   maxFailedSubjects: number | null;
   // También se reprueba con el promedio general bajo la aprobatoria.
   failByAverage: boolean;
+  // El boletín muestra el puesto del estudiante en su salón.
+  showRankInReportCard: boolean;
   isDefault: boolean;
 };
 

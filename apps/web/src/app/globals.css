@@ -143,3 +143,12 @@
     opacity: 0;
   }
 }
+
+/* Vistas imprimibles: solo el contenido de la página, sin el panel. */
+@media print {
+  [data-slot='sidebar'],
+  [data-slot='sidebar-gap'],
+  [data-slot='sidebar-container'] {
+    display: none !important;
+  }
+}

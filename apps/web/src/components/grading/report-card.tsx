@@ -105,6 +105,16 @@ function ReportCardBody({ card }: { card: Card }) {
             />
           </Stat>
         ))}
+        {card.rank && (
+          <Stat label="Puesto en el salón">
+            <span className="text-xl font-semibold">
+              {card.rank.position}{' '}
+              <span className="text-muted-foreground text-sm font-normal">
+                de {card.rank.total} estudiantes
+              </span>
+            </span>
+          </Stat>
+        )}
         <Stat label="Materias en riesgo">
           <span
             className={

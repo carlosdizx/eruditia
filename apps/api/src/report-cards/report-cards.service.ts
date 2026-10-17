@@ -23,6 +23,7 @@ import StudentGradeRepository from '../gradebooks/repositories/student-grade.rep
 import GradingScalesService from '../grading-scales/grading-scales.service';
 import OrganizationRepository from '../organizations/organization.repository';
 import PermissionsService from '../permissions/services/permissions.service';
+import RankingsService from '../rankings/rankings.service';
 import StudentRepository from '../students/student.repository';
 import LookupReportCardDto from './dto/lookup-report-card.dto';
 import {
@@ -61,6 +62,7 @@ export default class ReportCardsService {
     private readonly studentGradeRepository: StudentGradeRepository,
     private readonly gradingScalesService: GradingScalesService,
     private readonly permissionsService: PermissionsService,
+    private readonly rankingsService: RankingsService,
     @Inject(CACHE_MANAGER) private readonly cache: Cache,
   ) {}
 
@@ -267,6 +269,10 @@ export default class ReportCardsService {
         }));
 
     const results = resultsFor(enrollment.id);
+    // Puesto en el salón (acumulado del año), si el colegio lo publica.
+    const rank = scale.showRankInReportCard
+      ? await this.rankingsService.classroomPosition(organizationId, enrollment)
+      : null;
 
     return {
       ...base,
@@ -293,6 +299,7 @@ export default class ReportCardsService {
           ),
         })),
         averages: results.averages,
+        rank,
       },
     };
   };

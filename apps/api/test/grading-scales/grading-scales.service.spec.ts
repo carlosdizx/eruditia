@@ -37,7 +37,12 @@ describe('GradingScalesService', () => {
     passingScore: 6,
     decimalPlaces: 1,
   };
-  const scale = { ...range, maxFailedSubjects: 1, failByAverage: false };
+  const scale = {
+    ...range,
+    maxFailedSubjects: 1,
+    failByAverage: false,
+    showRankInReportCard: false,
+  };
 
   beforeEach(() => {
     repository = {

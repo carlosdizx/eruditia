@@ -49,6 +49,8 @@ enum PermissionEnum {
   GRADE_RECOVER = 'grade:recover',
 
   REPORT_CARD_VIEW = 'report-card:view',
+
+  RANKING_VIEW = 'ranking:view',
 }
 
 export default PermissionEnum;

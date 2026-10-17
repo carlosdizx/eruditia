@@ -20,6 +20,7 @@ import EnrollmentsModule from './enrollments/enrollments.module';
 import GradingScalesModule from './grading-scales/grading-scales.module';
 import GradebooksModule from './gradebooks/gradebooks.module';
 import ReportCardsModule from './report-cards/report-cards.module';
+import RankingsModule from './rankings/rankings.module';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -51,6 +52,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     GradingScalesModule,
     GradebooksModule,
     ReportCardsModule,
+    RankingsModule,
     AuthModule,
   ],
 })

@@ -23,6 +23,7 @@ import StudentGradeRepository from '../../src/gradebooks/repositories/student-gr
 import GradingScalesService from '../../src/grading-scales/grading-scales.service';
 import OrganizationRepository from '../../src/organizations/organization.repository';
 import PermissionsService from '../../src/permissions/services/permissions.service';
+import RankingsService from '../../src/rankings/rankings.service';
 import StudentRepository from '../../src/students/student.repository';
 import {
   INVALID_ACCESS_PIN_MESSAGE,
@@ -39,6 +40,8 @@ describe('ReportCardsService', () => {
   let summaryRepository: Mocked;
   let classroomSubjectRepository: Mocked;
   let permissionsService: Mocked;
+  let rankingsService: Mocked;
+  let findScale: jest.Mock;
   let cacheStore: Map<string, unknown>;
   let cache: Mocked;
   let service: ReportCardsService;
@@ -138,6 +141,12 @@ describe('ReportCardsService', () => {
         },
       ]),
     };
+    findScale = jest.fn().mockResolvedValue(scale);
+    rankingsService = {
+      classroomPosition: jest
+        .fn()
+        .mockResolvedValue({ position: 2, total: 28 }),
+    };
     permissionsService = {
       getEffectivePermissions: jest
         .fn()
@@ -183,10 +192,9 @@ describe('ReportCardsService', () => {
           .fn()
           .mockResolvedValue([{ evaluationItemId: 'i1', score: 4 }]),
       } as unknown as StudentGradeRepository,
-      {
-        findScale: jest.fn().mockResolvedValue(scale),
-      } as unknown as GradingScalesService,
+      { findScale } as unknown as GradingScalesService,
       permissionsService as unknown as PermissionsService,
+      rankingsService as unknown as RankingsService,
       cache as unknown as Cache,
     );
   });
@@ -235,6 +243,25 @@ describe('ReportCardsService', () => {
         periods: { p1: 3.5, p2: null },
         general: 3.5,
       });
+    });
+
+    it('hides the classroom position unless the school publishes it', async () => {
+      const hidden = await service.getOwnReportCard(actor);
+      expect(hidden.reportCard!.rank).toBeNull();
+      expect(rankingsService.classroomPosition).not.toHaveBeenCalled();
+
+      findScale.mockResolvedValue({ ...scale, showRankInReportCard: true });
+      const shown = await service.getOwnReportCard(actor);
+
+      expect(shown.reportCard!.rank).toEqual({ position: 2, total: 28 });
+      expect(rankingsService.classroomPosition).toHaveBeenCalledWith(
+        'org-id',
+        expect.objectContaining({
+          id: 'e2026',
+          classroomId: 'c5',
+          academicYearId: 'y2026',
+        }),
+      );
     });
 
     it('opens a previous year on demand', async () => {

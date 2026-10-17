@@ -44,4 +44,9 @@ export default class SetGradingScaleDto {
   @IsOptional()
   @IsBoolean()
   failByAverage?: boolean;
+
+  // El boletín muestra el puesto del estudiante en su salón.
+  @IsOptional()
+  @IsBoolean()
+  showRankInReportCard?: boolean;
 }

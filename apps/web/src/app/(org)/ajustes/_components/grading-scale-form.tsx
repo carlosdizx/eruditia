@@ -37,8 +37,10 @@ const toValues = ({
   decimalPlaces,
   maxFailedSubjects,
   failByAverage,
+  showRankInReportCard,
 }: GradingScale): GradingScaleFormValues => ({
   failByAverage: failByAverage ? 'on' : '',
+  showRankInReportCard: showRankInReportCard ? 'on' : '',
   minScore: minScore.toFixed(decimalPlaces),
   maxScore: maxScore.toFixed(decimalPlaces),
   passingScore: passingScore.toFixed(decimalPlaces),
@@ -241,6 +243,30 @@ export function GradingScaleForm({ scale }: { scale: GradingScale }) {
               setValues((current) => ({
                 ...current,
                 failByAverage: checked ? 'on' : '',
+              }))
+            }
+          />
+        </Field>
+
+        <Field orientation="horizontal">
+          <FieldContent>
+            <FieldLabel htmlFor="showRankInReportCard">
+              Mostrar el puesto en el boletín
+            </FieldLabel>
+            <FieldDescription>
+              El boletín del estudiante (con su cuenta o con PIN) muestra su
+              puesto en el salón según el promedio acumulado del año, por
+              ejemplo «Puesto 3 de 28».
+            </FieldDescription>
+          </FieldContent>
+          <Switch
+            id="showRankInReportCard"
+            name="showRankInReportCard"
+            checked={values.showRankInReportCard === 'on'}
+            onCheckedChange={(checked) =>
+              setValues((current) => ({
+                ...current,
+                showRankInReportCard: checked ? 'on' : '',
               }))
             }
           />

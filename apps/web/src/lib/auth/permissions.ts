@@ -37,6 +37,7 @@ export const Permission = {
   GRADE_RECORD: 'grade:record',
   GRADE_RECOVER: 'grade:recover',
   REPORT_CARD_VIEW: 'report-card:view',
+  RANKING_VIEW: 'ranking:view',
 } as const;
 
 export type Permission = (typeof Permission)[keyof typeof Permission];
@@ -79,6 +80,7 @@ export const PERMISSION_LABELS: Record<string, string> = {
   [Permission.GRADE_RECORD]: 'Registrar notas',
   [Permission.GRADE_RECOVER]: 'Registrar recuperaciones',
   [Permission.REPORT_CARD_VIEW]: 'Boletín de notas (cuenta y portal con PIN)',
+  [Permission.RANKING_VIEW]: 'Rankings y cuadro de honor',
 };
 
 export const hasPermission = (
@@ -180,6 +182,11 @@ export const GRADE_GRANTS = {
 // Espejo de los @AuthWithPermissions de RecoveriesController.
 export const RECOVERY_GRANTS = {
   manage: { permission: Permission.GRADE_RECOVER, role: ['ADMIN', 'TEACHER'] },
+} satisfies Record<string, Grant>;
+
+// Espejo de los @AuthWithPermissions de RankingsController.
+export const RANKING_GRANTS = {
+  view: { permission: Permission.RANKING_VIEW, role: ['ADMIN', 'TEACHER'] },
 } satisfies Record<string, Grant>;
 
 // Espejo de los @AuthWithPermissions de ReportCardsController.

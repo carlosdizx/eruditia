@@ -5,7 +5,8 @@ export type GradingScaleFormValues = Partial<
     | 'passingScore'
     | 'decimalPlaces'
     | 'maxFailedSubjects'
-    | 'failByAverage',
+    | 'failByAverage'
+    | 'showRankInReportCard',
     string
   >
 >;
