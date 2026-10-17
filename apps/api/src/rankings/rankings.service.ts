@@ -1,10 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type AuthContextInterface from '@auth/interfaces/auth-context.interface';
+import AcademicPeriodModel from '@database/models/academic-period.model';
 import ClassroomModel from '@database/models/classroom.model';
 import ClassroomSubjectModel from '@database/models/classroom-subject.model';
 import GradeLevelModel from '@database/models/grade-level.model';
 import StudentModel from '@database/models/student.model';
 import SubjectModel from '@database/models/subject.model';
+import UserModel from '@database/models/user.model';
 import EnrollmentStatusEnum from '@common/enums/enrollment-status.enum';
 import RoleNameEnum from '@common/enums/role-name.enum';
 import organizationOf from '@common/utils/organization-of.util';
@@ -16,9 +18,15 @@ import ClassroomSubjectRepository from '../classroom-subjects/classroom-subject.
 import EnrollmentRepository from '../enrollments/enrollment.repository';
 import PeriodSubjectSummaryRepository from '../gradebooks/repositories/period-subject-summary.repository';
 import SubjectRecoveryRepository from '../gradebooks/repositories/subject-recovery.repository';
-import GradingScalesService from '../grading-scales/grading-scales.service';
+import GradingScalesService, {
+  type GradingScale,
+} from '../grading-scales/grading-scales.service';
 import GetRankingDto from './dto/get-ranking.dto';
-import rankCandidates, { rawWeightedAverage } from './utils/ranking.util';
+import GetSubjectLeadersDto from './dto/get-subject-leaders.dto';
+import rankCandidates, {
+  type RankingCandidate,
+  rawWeightedAverage,
+} from './utils/ranking.util';
 import {
   RANKING_CLASSROOM_NOT_FOUND_MESSAGE,
   RANKING_PERIOD_NOT_FOUND_MESSAGE,
@@ -44,6 +52,15 @@ const RANKED_STATUSES = [
   EnrollmentStatusEnum.FAILED,
   EnrollmentStatusEnum.GRADUATED,
 ];
+
+interface Candidate extends RankingCandidate {
+  enrollmentId: string;
+  student: StudentModel;
+  classroom: { id: string; name: string };
+  gradedSubjects: number;
+  passedSubjects: number;
+  failedSubjects: number;
+}
 
 @Injectable()
 export default class RankingsService {
@@ -108,7 +125,14 @@ export default class RankingsService {
               'teacherId',
               'weightInGpa',
             ],
-            include: [{ model: SubjectModel, attributes: ['id', 'name'] }],
+            include: [
+              { model: SubjectModel, attributes: ['id', 'name'] },
+              {
+                model: UserModel,
+                as: 'teacher',
+                attributes: ['id', 'firstName', 'lastName'],
+              },
+            ],
             order: [[{ model: SubjectModel, as: 'subject' }, 'name', 'ASC']],
           },
         )
@@ -195,61 +219,15 @@ export default class RankingsService {
     };
   };
 
-  // Ranking de un salón, un grado o todo el año, general o por materia, de un
-  // periodo o del acumulado anual.
-  public getRanking = async (actor: Actor, dto: GetRankingDto) => {
-    const organizationId = organizationOf(actor);
-    const [academicYear, scale] = await Promise.all([
-      this.findYear(organizationId, dto.academicYearId),
-      this.gradingScalesService.findScale(organizationId),
-    ]);
-    const empty = {
-      academicYear,
-      period: null,
-      scale,
-      scope: { classroom: null, gradeLevel: null, subject: null },
-      total: 0,
-      rows: [],
-    };
-    if (!academicYear) return empty;
-
-    const period = dto.periodId
-      ? await this.academicPeriodRepository.findOne(
-          { id: dto.periodId, academicYearId: academicYear.id },
-          false,
-          { attributes: ['id', 'name', 'orderIndex', 'weightPercentage'] },
-        )
-      : null;
-    if (dto.periodId && !period)
-      throw new NotFoundException(RANKING_PERIOD_NOT_FOUND_MESSAGE);
-
-    const { classrooms, assignments } = await this.loadClassrooms(
-      organizationId,
-      academicYear.id,
-      dto,
-    );
-    const access = this.accessFor(actor, assignments);
-    const { subjectId } = dto;
-    const ranked = classrooms.filter((classroom) =>
-      subjectId
-        ? access.subject(classroom, subjectId)
-        : access.general(classroom),
-    );
-    if (dto.classroomId && !ranked.length)
-      throw new NotFoundException(RANKING_CLASSROOM_NOT_FOUND_MESSAGE);
-
-    const scope = {
-      classroom: dto.classroomId
-        ? { id: ranked[0].id, name: ranked[0].name }
-        : null,
-      gradeLevel: dto.gradeLevelId ? (classrooms[0]?.gradeLevel ?? null) : null,
-      subject: subjectId
-        ? (assignments.find((assignment) => assignment.subjectId === subjectId)
-            ?.subject ?? null)
-        : null,
-    };
-    if (!ranked.length) return { ...empty, period, scope };
-
+  // Notas sin redondear de las matrículas de los salones y candidatos al
+  // ranking general (sin materia) o de una materia.
+  private loadScores = async (
+    academicYearId: string,
+    period: Pick<AcademicPeriodModel, 'id'> | null,
+    ranked: ClassroomModel[],
+    assignments: ClassroomSubjectModel[],
+    scale: GradingScale,
+  ) => {
     const rankedIds = new Set(ranked.map(({ id }) => id));
     const subjectsOf = (classroomId: string) =>
       assignments.filter(
@@ -289,7 +267,7 @@ export default class RankingsService {
             period
               ? []
               : this.academicPeriodRepository.findAll(
-                  { academicYearId: academicYear.id },
+                  { academicYearId: academicYearId },
                   { attributes: ['id', 'weightPercentage'] },
                 ),
             period
@@ -339,49 +317,53 @@ export default class RankingsService {
     const passes = (score: number) =>
       roundScore(score, scale.decimalPlaces) >= scale.passingScore;
 
-    const candidates = enrollments.flatMap(({ id, classroomId, student }) => {
-      const graded = subjectsOf(classroomId).flatMap((assignment) => {
-        const score = scoreOf(id, assignment.id);
-        return score === null ? [] : [{ assignment, score }];
+    const candidatesFor = (subjectId?: string): Candidate[] =>
+      enrollments.flatMap(({ id, classroomId, student }) => {
+        const graded = subjectsOf(classroomId).flatMap((assignment) => {
+          const score = scoreOf(id, assignment.id);
+          return score === null ? [] : [{ assignment, score }];
+        });
+        const failedSubjects = graded.filter(
+          ({ score }) => !passes(score),
+        ).length;
+        const score = subjectId
+          ? (graded.find(({ assignment }) => assignment.subjectId === subjectId)
+              ?.score ?? null)
+          : rawWeightedAverage(
+              graded.map(({ assignment, score: value }) => ({
+                score: value,
+                weight: assignment.weightInGpa,
+              })),
+            );
+        if (score === null) return [];
+
+        const classroom = ranked.find((item) => item.id === classroomId)!;
+        return [
+          {
+            enrollmentId: id,
+            student: student!,
+            firstName: student!.firstName,
+            lastName: student!.lastName,
+            classroom: { id: classroom.id, name: classroom.name },
+            score,
+            allPassed: subjectId ? passes(score) : failedSubjects === 0,
+            gradedSubjects: graded.length,
+            passedSubjects: graded.length - failedSubjects,
+            failedSubjects,
+          },
+        ];
       });
-      const failedSubjects = graded.filter(
-        ({ score }) => !passes(score),
-      ).length;
-      const score = subjectId
-        ? (graded.find(({ assignment }) => assignment.subjectId === subjectId)
-            ?.score ?? null)
-        : rawWeightedAverage(
-            graded.map(({ assignment, score: value }) => ({
-              score: value,
-              weight: assignment.weightInGpa,
-            })),
-          );
-      if (score === null) return [];
 
-      const classroom = ranked.find((item) => item.id === classroomId)!;
-      return [
-        {
-          enrollmentId: id,
-          student: student!,
-          firstName: student!.firstName,
-          lastName: student!.lastName,
-          classroom: { id: classroom.id, name: classroom.name },
-          score,
-          allPassed: subjectId ? passes(score) : failedSubjects === 0,
-          gradedSubjects: graded.length,
-          passedSubjects: graded.length - failedSubjects,
-          failedSubjects,
-        },
-      ];
-    });
+    return { candidatesFor };
+  };
 
-    const eligible = dto.onlyAllPassed
-      ? candidates.filter(({ allPassed }) => allPassed)
-      : candidates;
-    const rows = rankCandidates(eligible, {
-      prioritizeAllPassed: !subjectId,
-    })
-      .filter(({ position }) => !dto.limit || position <= dto.limit)
+  private toRows = (
+    candidates: Candidate[],
+    { subjectId, limit }: { subjectId?: string; limit?: number },
+    scale: GradingScale,
+  ) =>
+    rankCandidates(candidates, { prioritizeAllPassed: !subjectId })
+      .filter(({ position }) => !limit || position <= limit)
       .map((row) => ({
         position: row.position,
         enrollmentId: row.enrollmentId,
@@ -393,6 +375,133 @@ export default class RankingsService {
         failedSubjects: row.failedSubjects,
       }));
 
+  private findPeriod = async (academicYearId: string, periodId?: string) => {
+    if (!periodId) return null;
+    const period = await this.academicPeriodRepository.findOne(
+      { id: periodId, academicYearId },
+      false,
+      { attributes: ['id', 'name', 'orderIndex', 'weightPercentage'] },
+    );
+    if (!period) throw new NotFoundException(RANKING_PERIOD_NOT_FOUND_MESSAGE);
+    return period;
+  };
+
+  // Ranking de un salón, un grado o todo el año, general o por materia, de un
+  // periodo o del acumulado anual.
+  public getRanking = async (actor: Actor, dto: GetRankingDto) => {
+    const organizationId = organizationOf(actor);
+    const [academicYear, scale] = await Promise.all([
+      this.findYear(organizationId, dto.academicYearId),
+      this.gradingScalesService.findScale(organizationId),
+    ]);
+    const empty = {
+      academicYear,
+      period: null,
+      scale,
+      scope: { classroom: null, gradeLevel: null, subject: null },
+      total: 0,
+      rows: [],
+    };
+    if (!academicYear) return empty;
+
+    const period = await this.findPeriod(academicYear.id, dto.periodId);
+
+    const { classrooms, assignments } = await this.loadClassrooms(
+      organizationId,
+      academicYear.id,
+      dto,
+    );
+    const access = this.accessFor(actor, assignments);
+    const { subjectId } = dto;
+    const ranked = classrooms.filter((classroom) =>
+      subjectId
+        ? access.subject(classroom, subjectId)
+        : access.general(classroom),
+    );
+    if (dto.classroomId && !ranked.length)
+      throw new NotFoundException(RANKING_CLASSROOM_NOT_FOUND_MESSAGE);
+
+    const scope = {
+      classroom: dto.classroomId
+        ? { id: ranked[0].id, name: ranked[0].name }
+        : null,
+      gradeLevel: dto.gradeLevelId ? (classrooms[0]?.gradeLevel ?? null) : null,
+      subject: subjectId
+        ? (assignments.find((assignment) => assignment.subjectId === subjectId)
+            ?.subject ?? null)
+        : null,
+    };
+    if (!ranked.length) return { ...empty, period, scope };
+
+    const { candidatesFor } = await this.loadScores(
+      academicYear.id,
+      period,
+      ranked,
+      assignments,
+      scale,
+    );
+    const candidates = candidatesFor(subjectId);
+
+    const eligible = dto.onlyAllPassed
+      ? candidates.filter(({ allPassed }) => allPassed)
+      : candidates;
+    const rows = this.toRows(eligible, { subjectId, limit: dto.limit }, scale);
+
     return { academicYear, period, scale, scope, total: eligible.length, rows };
+  };
+
+  // Mejor estudiante de cada materia de un salón (los empatados en el primer
+  // puesto aparecen juntos).
+  public getSubjectLeaders = async (
+    actor: Actor,
+    { academicYearId, classroomId, periodId }: GetSubjectLeadersDto,
+  ) => {
+    const organizationId = organizationOf(actor);
+    const [academicYear, scale] = await Promise.all([
+      this.findYear(organizationId, academicYearId),
+      this.gradingScalesService.findScale(organizationId),
+    ]);
+    if (!academicYear)
+      throw new NotFoundException(RANKING_CLASSROOM_NOT_FOUND_MESSAGE);
+
+    const period = await this.findPeriod(academicYear.id, periodId);
+    const { classrooms, assignments } = await this.loadClassrooms(
+      organizationId,
+      academicYear.id,
+      { classroomId },
+    );
+    const classroom = classrooms[0];
+    const access = this.accessFor(actor, assignments);
+    const visible = classroom
+      ? assignments.filter(({ subjectId }) =>
+          access.subject(classroom, subjectId),
+        )
+      : [];
+    if (!visible.length)
+      throw new NotFoundException(RANKING_CLASSROOM_NOT_FOUND_MESSAGE);
+
+    const { candidatesFor } = await this.loadScores(
+      academicYear.id,
+      period,
+      [classroom],
+      assignments,
+      scale,
+    );
+
+    return {
+      academicYear,
+      period,
+      scale,
+      classroom: { id: classroom.id, name: classroom.name },
+      subjects: visible.map(({ subjectId, subject, teacher }) => {
+        const candidates = candidatesFor(subjectId);
+        return {
+          subject: subject!,
+          teacher: teacher ?? null,
+          graded: candidates.length,
+          leaders: this.toRows(candidates, { subjectId, limit: 1 }, scale),
+        };
+      }),
+    };
   };
 }

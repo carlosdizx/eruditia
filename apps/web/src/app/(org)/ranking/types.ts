@@ -51,3 +51,27 @@ export type Ranking = {
 
 // Valor de ?periodo= para el acumulado del año.
 export const ANNUAL = 'anual';
+
+// Contrato de GET /rankings/subject-leaders.
+export type SubjectLeaders = {
+  academicYear: { id: string; name: string };
+  period: { id: string; name: string } | null;
+  scale: GradingScale;
+  classroom: { id: string; name: string };
+  subjects: {
+    subject: { id: string; name: string };
+    teacher: { id: string; firstName: string; lastName: string } | null;
+    // Estudiantes con nota en la materia.
+    graded: number;
+    // Primer puesto (varios si empatan).
+    leaders: RankingRow[];
+  }[];
+};
+
+export const RANKING_VIEWS = [
+  { value: 'salon', label: 'Por salón' },
+  { value: 'materia', label: 'Por materia' },
+  { value: 'destacados', label: 'Mejores por materia' },
+] as const;
+
+export type RankingView = (typeof RANKING_VIEWS)[number]['value'];

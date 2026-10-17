@@ -12,74 +12,64 @@ import {
 
 type Item = { value: string; label: string };
 
-function Picker({
-  id,
-  label,
-  items,
-  value,
-  onChange,
-}: {
-  id: string;
+export type RankingFilter = {
+  // Parámetro de la URL que controla.
+  param: string;
   label: string;
   items: Item[];
   value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <Field>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <Select
-        items={items}
-        value={value}
-        onValueChange={(next) => onChange(String(next))}
-      >
-        <SelectTrigger id={id} className="w-full">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {items.map((item) => (
-            <SelectItem key={item.value} value={item.value}>
-              {item.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </Field>
-  );
-}
+};
 
-// Salón y periodo del ranking; la selección vive en la URL.
+// Filtros del ranking; la selección vive en la URL. Cambiar uno conserva los
+// demás salvo los que se listen en resets.
 export function RankingFilters({
-  classrooms,
-  periods,
-  classroomId,
-  periodValue,
+  filters,
+  base,
+  resets = {},
 }: {
-  classrooms: Item[];
-  periods: Item[];
-  classroomId: string;
-  periodValue: string;
+  filters: RankingFilter[];
+  // Parámetros fijos de la vista (ej. vista=materia).
+  base: Record<string, string>;
+  resets?: Record<string, string[]>;
 }) {
   const router = useRouter();
-  const navigate = (salon: string, periodo: string) =>
-    router.push(`/ranking?${new URLSearchParams({ salon, periodo })}`);
+  const navigate = (param: string, value: string) => {
+    const params = Object.fromEntries([
+      ...Object.entries(base),
+      ...filters
+        .filter(
+          (filter) =>
+            filter.param !== param && !resets[param]?.includes(filter.param),
+        )
+        .map((filter) => [filter.param, filter.value]),
+      [param, value],
+    ]);
+    router.push(`/ranking?${new URLSearchParams(params)}`);
+  };
 
   return (
-    <FieldGroup className="grid gap-4 sm:grid-cols-2 lg:max-w-2xl">
-      <Picker
-        id="rankingClassroom"
-        label="Salón"
-        items={classrooms}
-        value={classroomId}
-        onChange={(salon) => navigate(salon, periodValue)}
-      />
-      <Picker
-        id="rankingPeriod"
-        label="Periodo"
-        items={periods}
-        value={periodValue}
-        onChange={(periodo) => navigate(classroomId, periodo)}
-      />
+    <FieldGroup className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {filters.map(({ param, label, items, value }) => (
+        <Field key={param}>
+          <FieldLabel htmlFor={`ranking-${param}`}>{label}</FieldLabel>
+          <Select
+            items={items}
+            value={value}
+            onValueChange={(next) => navigate(param, String(next))}
+          >
+            <SelectTrigger id={`ranking-${param}`} className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {items.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+      ))}
     </FieldGroup>
   );
 }

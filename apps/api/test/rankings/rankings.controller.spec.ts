@@ -10,6 +10,7 @@ describe('RankingsController', () => {
   const service = {
     getOptions: jest.fn().mockResolvedValue({}),
     getRanking: jest.fn().mockResolvedValue({}),
+    getSubjectLeaders: jest.fn().mockResolvedValue({}),
   };
   const controller = new RankingsController(
     service as unknown as RankingsService,
@@ -31,8 +32,12 @@ describe('RankingsController', () => {
 
     await controller.getOptions({ academicYearId: 'y1' }, auth);
     await controller.getRanking(dto, auth);
+    await controller.getSubjectLeaders({ classroomId: 'c1' }, auth);
 
     expect(service.getOptions).toHaveBeenCalledWith(auth, 'y1');
     expect(service.getRanking).toHaveBeenCalledWith(auth, dto);
+    expect(service.getSubjectLeaders).toHaveBeenCalledWith(auth, {
+      classroomId: 'c1',
+    });
   });
 });

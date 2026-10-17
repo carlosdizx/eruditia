@@ -359,6 +359,51 @@ describe('RankingsService', () => {
     });
   });
 
+  describe('getSubjectLeaders', () => {
+    it('lists the best student of each subject of the classroom', async () => {
+      const result = await service.getSubjectLeaders(admin, {
+        classroomId: 'c5a',
+      });
+
+      expect(result.classroom).toEqual({ id: 'c5a', name: '5°A' });
+      expect(
+        result.subjects.map(({ subject, graded, leaders }) => [
+          subject.name,
+          graded,
+          leaders.map(({ student, score }) => [student.lastName, score]),
+        ]),
+      ).toEqual([
+        ['Matemáticas', 3, [['Arias', 4]]],
+        // Gil y Ruiz empatan en Artes.
+        [
+          'Artes',
+          3,
+          [
+            ['Gil', 4],
+            ['Ruiz', 4],
+          ],
+        ],
+      ]);
+    });
+
+    it('shows the teacher only the subjects they can see', async () => {
+      const result = await service.getSubjectLeaders(teacher('art-teacher'), {
+        classroomId: 'c5a',
+      });
+
+      expect(result.subjects.map(({ subject }) => subject.name)).toEqual([
+        'Artes',
+      ]);
+      await expect(
+        service.getSubjectLeaders(teacher('art-teacher'), {
+          classroomId: 'c5b',
+        }),
+      ).rejects.toThrow(
+        new NotFoundException(RANKING_CLASSROOM_NOT_FOUND_MESSAGE),
+      );
+    });
+  });
+
   describe('getOptions', () => {
     it('lists everything for the admin', async () => {
       const result = await service.getOptions(admin);
