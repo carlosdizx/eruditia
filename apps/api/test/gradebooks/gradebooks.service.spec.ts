@@ -21,6 +21,7 @@ import EvaluationItemRepository from '../../src/gradebooks/repositories/evaluati
 import StudentGradeRepository from '../../src/gradebooks/repositories/student-grade.repository';
 import PeriodSubjectSummaryRepository from '../../src/gradebooks/repositories/period-subject-summary.repository';
 import SubjectRecoveryRepository from '../../src/gradebooks/repositories/subject-recovery.repository';
+import SubjectPeriodConceptRepository from '../../src/gradebooks/repositories/subject-period-concept.repository';
 import {
   EVALUATION_ITEMS_WEIGHT_MESSAGE,
   GRADEBOOK_PERIOD_CLOSED_MESSAGE,
@@ -43,6 +44,7 @@ describe('GradebooksService', () => {
   let gradeRepository: Mocked;
   let summaryRepository: Mocked;
   let recoveryRepository: Mocked;
+  let conceptRepository: Mocked;
   let gradingScalesService: Mocked;
   let service: GradebooksService;
 
@@ -143,6 +145,7 @@ describe('GradebooksService', () => {
       upsertMany: jest.fn().mockResolvedValue(undefined),
     };
     recoveryRepository = { findAll: jest.fn().mockResolvedValue([]) };
+    conceptRepository = { findAll: jest.fn().mockResolvedValue([]) };
     gradingScalesService = { findScale: jest.fn().mockResolvedValue(scale) };
 
     service = new GradebooksService(
@@ -154,6 +157,7 @@ describe('GradebooksService', () => {
       gradeRepository as unknown as StudentGradeRepository,
       summaryRepository as unknown as PeriodSubjectSummaryRepository,
       recoveryRepository as unknown as SubjectRecoveryRepository,
+      conceptRepository as unknown as SubjectPeriodConceptRepository,
       gradingScalesService as unknown as GradingScalesService,
     );
   });
@@ -186,6 +190,11 @@ describe('GradebooksService', () => {
       );
       expect(result.period).toBe(open);
       expect(result.lock).toBeNull();
+      expect(result.concepts).toEqual([]);
+      expect(conceptRepository.findAll).toHaveBeenCalledWith(
+        { classroomSubjectId: 'cs-id', academicPeriodId: 'p1' },
+        expect.any(Object),
+      );
       expect(result.scale).toBe(scale);
       expect(result.students).toEqual([
         {
