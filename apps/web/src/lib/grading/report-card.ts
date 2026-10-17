@@ -18,6 +18,8 @@ export type ReportCardSubject = {
     {
       score: number | null;
       observation: string | null;
+      // Concepto del profesor según el rango en que cae la definitiva.
+      concept: string | null;
       activities: {
         title: string;
         weightPercentage: number;
@@ -33,9 +35,14 @@ export type ReportCardYear = {
   id: string;
   name: string;
   status: 'open' | 'closed';
+  // Solo en GET /enrollments/:id/report-card (el panel navega por matrícula).
+  enrollmentId?: string;
 };
 
-// Contrato de GET /report-cards/me y POST /public/report-cards/:slug.
+export type ClassroomPosition = { position: number; total: number };
+
+// Contrato de GET /report-cards/me, GET /enrollments/:id/report-card y
+// POST /public/report-cards/:slug.
 export type ReportCardResponse = {
   organization: { name: string; logoUrl: string | null };
   student: {
@@ -57,7 +64,11 @@ export type ReportCardResponse = {
       periods: Record<string, number | null>;
       general: number | null;
     };
-    // Puesto en el salón (acumulado del año); null si el colegio no lo publica.
-    rank: { position: number; total: number } | null;
+    // Puesto en el salón, anual y por periodo; null si el colegio no lo
+    // publica.
+    rank: {
+      annual: ClassroomPosition | null;
+      periods: Record<string, ClassroomPosition | null>;
+    } | null;
   } | null;
 };

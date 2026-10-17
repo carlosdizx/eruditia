@@ -25,6 +25,7 @@ import { ORG_HOME, requireOrgUser } from '@/lib/auth/current-user';
 import {
   ENROLLMENT_GRANTS,
   isGranted,
+  REPORT_CARD_GRANTS,
   STUDENT_GRANTS,
 } from '@/lib/auth/permissions';
 import {
@@ -56,7 +57,7 @@ async function access() {
     isGranted(me, ENROLLMENT_GRANTS.classes);
   const canProfile = isGranted(me, STUDENT_GRANTS.list);
   if (!canHistory && !canProfile) redirect(ORG_HOME);
-  return { canHistory, canProfile };
+  return { me, canHistory, canProfile };
 }
 
 function Row({ label, value }: { label: string; value: string | null }) {
@@ -72,7 +73,7 @@ type Params = PageProps<'/estudiantes/[studentId]'>['params'];
 
 async function StudentLoad({ params }: { params: Params }) {
   const { studentId } = await params;
-  const { canHistory, canProfile } = await access();
+  const { me, canHistory, canProfile } = await access();
 
   const [history, profile] = await Promise.all([
     canHistory
@@ -125,7 +126,19 @@ async function StudentLoad({ params }: { params: Params }) {
 
       <h2 className="text-base font-semibold">Historial académico</h2>
       {history ? (
-        <HistoryTimeline enrollments={history.enrollments} />
+        <HistoryTimeline
+          enrollments={history.enrollments}
+          // El admin abre cualquier boletín; el profesor, los de su dirección
+          // de grupo.
+          reportCardFrom={
+            isGranted(me, REPORT_CARD_GRANTS.preview)
+              ? `/estudiantes/${studentId}`
+              : null
+          }
+          canOpenReportCard={({ classroom }) =>
+            me.role.name !== 'TEACHER' || classroom?.homeroomTeacherId === me.id
+          }
+        />
       ) : (
         <Empty className="border">
           <EmptyHeader>

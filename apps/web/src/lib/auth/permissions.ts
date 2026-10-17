@@ -192,6 +192,11 @@ export const RANKING_GRANTS = {
 // Espejo de los @AuthWithPermissions de ReportCardsController.
 export const REPORT_CARD_GRANTS = {
   own: { permission: Permission.REPORT_CARD_VIEW, role: 'STUDENT' },
+  // Vista previa del admin o del director de grupo.
+  preview: {
+    permission: Permission.REPORT_CARD_VIEW,
+    role: ['ADMIN', 'TEACHER'],
+  },
 } satisfies Record<string, Grant>;
 
 export const GRADEBOOK_ROLES = ['ADMIN', 'TEACHER'];

@@ -40,6 +40,7 @@ import {
   ENROLLMENT_GRANTS,
   canOpenGradebooks,
   isGranted,
+  REPORT_CARD_GRANTS,
   SUBJECT_GRANTS,
 } from '@/lib/auth/permissions';
 import type { Classroom, Teacher } from '../types';
@@ -218,6 +219,7 @@ async function ClassroomLoad({
               canEnroll={canEnroll}
               canUpdate={canUpdateEnrollments}
               canDelete={canDeleteEnrollments}
+              canViewReportCards={isGranted(me, REPORT_CARD_GRANTS.preview)}
             />
           ) : (
             <NoAccess />

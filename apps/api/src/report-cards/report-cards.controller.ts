@@ -5,6 +5,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Post,
   Query,
 } from '@nestjs/common';
@@ -32,6 +33,22 @@ export default class ReportCardsController {
     @CurrentAuth() auth: AuthContextInterface,
   ) {
     return await this.reportCardsService.getOwnReportCard(auth, academicYearId);
+  }
+
+  // Admin o director de grupo del salón de la matrícula.
+  @AuthWithPermissions({
+    roles: [RoleNameEnum.ADMIN, RoleNameEnum.TEACHER],
+    permissions: [PermissionEnum.REPORT_CARD_VIEW],
+  })
+  @Get('enrollments/:enrollmentId/report-card')
+  public async getEnrollmentReportCard(
+    @Param('enrollmentId', ParseUUIDPipe) enrollmentId: string,
+    @CurrentAuth() auth: AuthContextInterface,
+  ) {
+    return await this.reportCardsService.getEnrollmentReportCard(
+      auth,
+      enrollmentId,
+    );
   }
 
   @Public()

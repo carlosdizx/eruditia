@@ -61,7 +61,7 @@ const HISTORY_INCLUDE = [
   },
   {
     model: ClassroomModel,
-    attributes: ['id', 'name'],
+    attributes: ['id', 'name', 'homeroomTeacherId'],
     include: [
       {
         model: GradeLevelModel,

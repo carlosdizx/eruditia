@@ -1,5 +1,6 @@
 import { HistoryIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ReportCardLink } from '@/components/grading/report-card-link';
 import { Badge } from '@/components/ui/badge';
 import {
   Empty,
@@ -46,8 +47,13 @@ const formatDate = (value: string) =>
 // Del año más reciente al más antiguo.
 export function HistoryTimeline({
   enrollments,
+  reportCardFrom = null,
+  canOpenReportCard = () => false,
 }: {
   enrollments: HistoryEnrollment[];
+  // Ruta a la que vuelve el boletín; null si no puede ver boletines.
+  reportCardFrom?: string | null;
+  canOpenReportCard?: (enrollment: HistoryEnrollment) => boolean;
 }) {
   if (!enrollments.length)
     return (
@@ -110,6 +116,12 @@ export function HistoryTimeline({
                     </span>
                   )}
               </span>
+              {reportCardFrom && canOpenReportCard(enrollment) && (
+                <ReportCardLink
+                  enrollmentId={enrollment.id}
+                  from={reportCardFrom}
+                />
+              )}
             </div>
           </div>
         </li>

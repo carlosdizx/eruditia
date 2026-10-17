@@ -6,6 +6,7 @@ import RankingsModule from '../rankings/rankings.module';
 import EnrollmentRepository from '../enrollments/enrollment.repository';
 import EvaluationItemRepository from '../gradebooks/repositories/evaluation-item.repository';
 import StudentGradeRepository from '../gradebooks/repositories/student-grade.repository';
+import SubjectPeriodConceptRepository from '../gradebooks/repositories/subject-period-concept.repository';
 import OrganizationRepository from '../organizations/organization.repository';
 import StudentRepository from '../students/student.repository';
 import ReportCardsController from './report-cards.controller';
@@ -25,6 +26,7 @@ import ReportCardsService from './report-cards.service';
     EnrollmentRepository,
     EvaluationItemRepository,
     StudentGradeRepository,
+    SubjectPeriodConceptRepository,
     ReportCardsService,
   ],
 })

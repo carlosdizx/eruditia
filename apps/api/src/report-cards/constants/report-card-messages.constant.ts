@@ -7,3 +7,4 @@ export const REPORT_CARD_YEAR_NOT_FOUND_MESSAGE =
 export const INVALID_ACCESS_PIN_MESSAGE = 'Documento o PIN incorrectos';
 export const TOO_MANY_LOOKUPS_MESSAGE =
   'Demasiados intentos fallidos. Espera 15 minutos e inténtalo de nuevo';
+export const REPORT_CARD_NOT_FOUND_MESSAGE = 'Boletín no encontrado';

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { UsersIcon } from 'lucide-react';
+import { ReportCardLink } from '@/components/grading/report-card-link';
 import { Badge } from '@/components/ui/badge';
 import {
   Empty,
@@ -41,6 +42,7 @@ export function EnrollmentsSection({
   canEnroll,
   canUpdate,
   canDelete,
+  canViewReportCards,
 }: {
   classroom: Classroom;
   enrollments: Enrollment[];
@@ -50,6 +52,7 @@ export function EnrollmentsSection({
   canEnroll: boolean;
   canUpdate: boolean;
   canDelete: boolean;
+  canViewReportCards: boolean;
 }) {
   const inProgress = enrollments.filter(
     ({ status }) => status === 'in_progress',
@@ -57,7 +60,7 @@ export function EnrollmentsSection({
   const available = classroom.capacity
     ? Math.max(classroom.capacity - inProgress, 0)
     : null;
-  const withActions = canUpdate || canDelete;
+  const withActions = canUpdate || canDelete || canViewReportCards;
 
   return (
     <>
@@ -97,7 +100,7 @@ export function EnrollmentsSection({
                   Matriculado
                 </TableHead>
                 <TableHead>Estado</TableHead>
-                {withActions && <TableHead className="w-12 pr-4" />}
+                {withActions && <TableHead className="pr-4" />}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -137,14 +140,22 @@ export function EnrollmentsSection({
                     </Badge>
                   </TableCell>
                   {withActions && (
-                    <TableCell className="pr-4 text-right">
-                      <EnrollmentRowActions
-                        classroomId={classroom.id}
-                        enrollment={enrollment}
-                        classrooms={classrooms}
-                        canUpdate={canUpdate}
-                        canDelete={canDelete}
-                      />
+                    <TableCell className="pr-4">
+                      <div className="flex items-center justify-end gap-1">
+                        {canViewReportCards && (
+                          <ReportCardLink
+                            enrollmentId={enrollment.id}
+                            from={`/salones/${classroom.id}`}
+                          />
+                        )}
+                        <EnrollmentRowActions
+                          classroomId={classroom.id}
+                          enrollment={enrollment}
+                          classrooms={classrooms}
+                          canUpdate={canUpdate}
+                          canDelete={canDelete}
+                        />
+                      </div>
                     </TableCell>
                   )}
                 </TableRow>

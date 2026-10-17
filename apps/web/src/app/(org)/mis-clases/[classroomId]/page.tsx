@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 import { EyeIcon, TableIcon, UsersIcon } from 'lucide-react';
 import { TableSkeleton } from '@/components/data/table-skeleton';
+import { ReportCardLink } from '@/components/grading/report-card-link';
 import { PanelContent, PanelHeader } from '@/components/panel/panel-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -25,7 +26,12 @@ import {
 import { ApiError } from '@/lib/api/api-fetch';
 import { authFetch } from '@/lib/api/auth-fetch';
 import { requireGrant } from '@/lib/auth/current-user';
-import { ENROLLMENT_GRANTS, canOpenGradebooks } from '@/lib/auth/permissions';
+import {
+  ENROLLMENT_GRANTS,
+  REPORT_CARD_GRANTS,
+  canOpenGradebooks,
+  isGranted,
+} from '@/lib/auth/permissions';
 import type { ClassroomGradebooks } from '../../planillas/types';
 import {
   ENROLLMENT_STATUS_LABELS,
@@ -80,6 +86,10 @@ async function ClassList({
           ).catch(() => null)
         : null,
     ]);
+  // El boletín solo lo previsualiza el director de grupo.
+  const canViewReportCards =
+    homerooms.some(({ id }) => id === classroomId) &&
+    isGranted(me, REPORT_CARD_GRANTS.preview);
   const classroom = [
     ...homerooms,
     ...assignments.map((assignment) => assignment.classroom),
@@ -156,6 +166,7 @@ async function ClassList({
                   Documento
                 </TableHead>
                 <TableHead className="pr-4">Estado</TableHead>
+                {canViewReportCards && <TableHead className="pr-4" />}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -185,6 +196,14 @@ async function ClassList({
                       {ENROLLMENT_STATUS_LABELS[enrollment.status]}
                     </Badge>
                   </TableCell>
+                  {canViewReportCards && (
+                    <TableCell className="pr-4 text-right">
+                      <ReportCardLink
+                        enrollmentId={enrollment.id}
+                        from={`/mis-clases/${classroomId}`}
+                      />
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

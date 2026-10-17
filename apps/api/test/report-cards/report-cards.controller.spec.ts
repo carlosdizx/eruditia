@@ -22,9 +22,12 @@ describe('ReportCardsController', () => {
 
   beforeEach(() => {
     service = Object.fromEntries(
-      ['getOwnReportCard', 'getPublicPortal', 'lookupReportCard'].map(
-        (name) => [name, jest.fn().mockResolvedValue({ ok: true })],
-      ),
+      [
+        'getOwnReportCard',
+        'getEnrollmentReportCard',
+        'getPublicPortal',
+        'lookupReportCard',
+      ].map((name) => [name, jest.fn().mockResolvedValue({ ok: true })]),
     );
     controller = new ReportCardsController(
       service as unknown as ReportCardsService,
@@ -42,6 +45,16 @@ describe('ReportCardsController', () => {
     expect(handlerMetadata('getOwnReportCard', IS_PUBLIC_KEY)).toBeUndefined();
   });
 
+  it('lets admins and teachers preview an enrollment report card', () => {
+    expect(
+      handlerMetadata('getEnrollmentReportCard', AUTH_WITH_PERMISSIONS_KEY),
+    ).toEqual({
+      roles: [RoleNameEnum.ADMIN, RoleNameEnum.TEACHER],
+      permissions: [PermissionEnum.REPORT_CARD_VIEW],
+      mode: 'all',
+    });
+  });
+
   it.each(['getPortal', 'lookupReportCard'])('%s is public', (handler) => {
     expect(handlerMetadata(handler, IS_PUBLIC_KEY)).toBe(true);
   });
@@ -50,10 +63,12 @@ describe('ReportCardsController', () => {
     const dto = { documentNumber: '123', accessPin: '123456' };
 
     await controller.getOwnReportCard({ academicYearId: 'y1' }, auth);
+    await controller.getEnrollmentReportCard('e1', auth);
     await controller.getPortal('colegio');
     await controller.lookupReportCard('colegio', dto);
 
     expect(service.getOwnReportCard).toHaveBeenCalledWith(auth, 'y1');
+    expect(service.getEnrollmentReportCard).toHaveBeenCalledWith(auth, 'e1');
     expect(service.getPublicPortal).toHaveBeenCalledWith('colegio');
     expect(service.lookupReportCard).toHaveBeenCalledWith('colegio', dto);
   });

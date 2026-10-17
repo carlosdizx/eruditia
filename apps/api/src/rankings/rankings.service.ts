@@ -54,6 +54,8 @@ const RANKED_STATUSES = [
   EnrollmentStatusEnum.GRADUATED,
 ];
 
+type Position = { position: number; total: number };
+
 interface Candidate extends RankingCandidate {
   enrollmentId: string;
   student: StudentModel;
@@ -577,31 +579,56 @@ export default class RankingsService {
     };
   };
 
-  // Puesto de una matrícula en el ranking general de su salón (acumulado del
-  // año). Lo usa el boletín.
-  public classroomPosition = async (
+  // Puestos de las matrículas de un salón en su ranking general, del acumulado
+  // anual y de cada periodo. Lo usan el boletín y su PDF (un salón completo
+  // se calcula de una vez).
+  public classroomPositions = async (
     organizationId: string,
-    enrollment: { id: string; classroomId: string; academicYearId: string },
+    classroom: { id: string; academicYearId: string },
   ) => {
     const scale = await this.gradingScalesService.findScale(organizationId);
-    const { classrooms, assignments } = await this.loadClassrooms(
-      organizationId,
-      enrollment.academicYearId,
-      { classroomId: enrollment.classroomId },
-    );
-    if (!classrooms.length) return null;
+    const [{ classrooms, assignments }, periods] = await Promise.all([
+      this.loadClassrooms(organizationId, classroom.academicYearId, {
+        classroomId: classroom.id,
+      }),
+      this.academicPeriodRepository.findAll(
+        { academicYearId: classroom.academicYearId },
+        { attributes: ['id'] },
+      ),
+    ]);
 
-    const { candidatesFor } = await this.loadScores(
-      enrollment.academicYearId,
-      null,
-      classrooms,
-      assignments,
-      scale,
-    );
-    const candidates = candidatesFor();
-    const row = rankCandidates(candidates, { prioritizeAllPassed: true }).find(
-      ({ enrollmentId }) => enrollmentId === enrollment.id,
-    );
-    return row ? { position: row.position, total: candidates.length } : null;
+    const rank = async (period: { id: string } | null) => {
+      if (!classrooms.length) return new Map<string, Position>();
+      const { candidatesFor } = await this.loadScores(
+        classroom.academicYearId,
+        period,
+        classrooms,
+        assignments,
+        scale,
+      );
+      const candidates = candidatesFor();
+      return new Map<string, Position>(
+        rankCandidates(candidates, { prioritizeAllPassed: true }).map(
+          ({ enrollmentId, position }) => [
+            enrollmentId,
+            { position, total: candidates.length },
+          ],
+        ),
+      );
+    };
+    const [annual, ...byPeriod] = await Promise.all([
+      rank(null),
+      ...periods.map(rank),
+    ]);
+
+    return (enrollmentId: string) => ({
+      annual: annual.get(enrollmentId) ?? null,
+      periods: Object.fromEntries(
+        periods.map(({ id }, index) => [
+          id,
+          byPeriod[index].get(enrollmentId) ?? null,
+        ]),
+      ),
+    });
   };
 }

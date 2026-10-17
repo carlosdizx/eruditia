@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import type { Cache } from 'cache-manager';
 import PermissionEnum from '@common/enums/permission.enum';
+import RoleNameEnum from '@common/enums/role-name.enum';
 import { hashPassword } from '@common/utils/password.util';
 import ReportCardsService, {
   LOOKUP_WINDOW_MS,
@@ -20,6 +21,7 @@ import EnrollmentRepository from '../../src/enrollments/enrollment.repository';
 import EvaluationItemRepository from '../../src/gradebooks/repositories/evaluation-item.repository';
 import PeriodSubjectSummaryRepository from '../../src/gradebooks/repositories/period-subject-summary.repository';
 import StudentGradeRepository from '../../src/gradebooks/repositories/student-grade.repository';
+import SubjectPeriodConceptRepository from '../../src/gradebooks/repositories/subject-period-concept.repository';
 import GradingScalesService from '../../src/grading-scales/grading-scales.service';
 import OrganizationRepository from '../../src/organizations/organization.repository';
 import PermissionsService from '../../src/permissions/services/permissions.service';
@@ -27,6 +29,7 @@ import RankingsService from '../../src/rankings/rankings.service';
 import StudentRepository from '../../src/students/student.repository';
 import {
   INVALID_ACCESS_PIN_MESSAGE,
+  REPORT_CARD_NOT_FOUND_MESSAGE,
   REPORT_CARD_YEAR_NOT_FOUND_MESSAGE,
   STUDENT_PROFILE_NOT_FOUND_MESSAGE,
 } from '../../src/report-cards/constants/report-card-messages.constant';
@@ -81,7 +84,12 @@ describe('ReportCardsService', () => {
       academicYearId: 'y2026',
       classroomId: 'c5',
       academicYear: year2026,
-      classroom: { id: 'c5', name: '5°A', gradeLevel: { name: 'Quinto' } },
+      classroom: {
+        id: 'c5',
+        name: '5°A',
+        homeroomTeacherId: 'homeroom-id',
+        gradeLevel: { name: 'Quinto' },
+      },
     },
     {
       id: 'e2025',
@@ -143,9 +151,10 @@ describe('ReportCardsService', () => {
     };
     findScale = jest.fn().mockResolvedValue(scale);
     rankingsService = {
-      classroomPosition: jest
-        .fn()
-        .mockResolvedValue({ position: 2, total: 28 }),
+      classroomPositions: jest.fn().mockResolvedValue(() => ({
+        annual: { position: 2, total: 28 },
+        periods: { p1: { position: 1, total: 28 }, p2: null },
+      })),
     };
     permissionsService = {
       getEffectivePermissions: jest
@@ -192,6 +201,24 @@ describe('ReportCardsService', () => {
           .fn()
           .mockResolvedValue([{ evaluationItemId: 'i1', score: 4 }]),
       } as unknown as StudentGradeRepository,
+      {
+        findAll: jest.fn().mockResolvedValue([
+          {
+            classroomSubjectId: 'math',
+            academicPeriodId: 'p1',
+            minScore: 3.5,
+            maxScore: 5,
+            conceptText: 'Superó los logros',
+          },
+          {
+            classroomSubjectId: 'art',
+            academicPeriodId: 'p1',
+            minScore: 3,
+            maxScore: 5,
+            conceptText: 'Aprobó',
+          },
+        ]),
+      } as unknown as SubjectPeriodConceptRepository,
       { findScale } as unknown as GradingScalesService,
       permissionsService as unknown as PermissionsService,
       rankingsService as unknown as RankingsService,
@@ -231,12 +258,20 @@ describe('ReportCardsService', () => {
           p1: {
             score: 4,
             observation: 'Muy bien',
+            concept: 'Superó los logros',
             activities: [{ title: 'Examen', weightPercentage: 100, score: 4 }],
           },
-          p2: { score: null, observation: null, activities: [] },
+          p2: {
+            score: null,
+            observation: null,
+            concept: null,
+            activities: [],
+          },
         },
         annual: { accumulated: 2, projected: 4, status: 'passing' },
       });
+      // 2.5 cae fuera del único rango de Artes.
+      expect(card.subjects[1].periods.p1.concept).toBeNull();
       expect(card.subjects[1].annual).toMatchObject({ status: 'at_risk' });
       // (4 × 2 + 2.5 × 1) / 3
       expect(card.averages).toEqual({
@@ -248,19 +283,18 @@ describe('ReportCardsService', () => {
     it('hides the classroom position unless the school publishes it', async () => {
       const hidden = await service.getOwnReportCard(actor);
       expect(hidden.reportCard!.rank).toBeNull();
-      expect(rankingsService.classroomPosition).not.toHaveBeenCalled();
+      expect(rankingsService.classroomPositions).not.toHaveBeenCalled();
 
       findScale.mockResolvedValue({ ...scale, showRankInReportCard: true });
       const shown = await service.getOwnReportCard(actor);
 
-      expect(shown.reportCard!.rank).toEqual({ position: 2, total: 28 });
-      expect(rankingsService.classroomPosition).toHaveBeenCalledWith(
+      expect(shown.reportCard!.rank).toEqual({
+        annual: { position: 2, total: 28 },
+        periods: { p1: { position: 1, total: 28 }, p2: null },
+      });
+      expect(rankingsService.classroomPositions).toHaveBeenCalledWith(
         'org-id',
-        expect.objectContaining({
-          id: 'e2026',
-          classroomId: 'c5',
-          academicYearId: 'y2026',
-        }),
+        { id: 'c5', academicYearId: 'y2026' },
       );
     });
 
@@ -294,6 +328,64 @@ describe('ReportCardsService', () => {
       await expect(service.getOwnReportCard(actor)).rejects.toThrow(
         STUDENT_PROFILE_NOT_FOUND_MESSAGE,
       );
+    });
+  });
+
+  describe('getEnrollmentReportCard', () => {
+    const admin = {
+      organizationId: 'org-id',
+      userId: 'admin-id',
+      roleName: RoleNameEnum.ADMIN,
+    };
+    const teacher = {
+      ...admin,
+      userId: 'homeroom-id',
+      roleName: RoleNameEnum.TEACHER,
+    };
+
+    beforeEach(() => {
+      enrollmentRepository.findOne = jest.fn((query: { id: string }) =>
+        Promise.resolve(
+          query.id === 'missing'
+            ? null
+            : {
+                id: query.id,
+                student,
+                classroom: enrollments.find(({ id }) => id === query.id)
+                  ?.classroom,
+              },
+        ),
+      );
+    });
+
+    it('opens any enrollment of the organization for the admin', async () => {
+      const result = await service.getEnrollmentReportCard(admin, 'e2025');
+
+      expect(enrollmentRepository.findOne).toHaveBeenCalledWith(
+        { id: 'e2025', organizationId: 'org-id' },
+        false,
+        expect.any(Object),
+      );
+      expect(result.reportCard!.classroom.name).toBe('4°A');
+      expect(result.years).toEqual([
+        { id: 'y2026', name: '2026', status: 'open', enrollmentId: 'e2026' },
+        { id: 'y2025', name: '2025', status: 'open', enrollmentId: 'e2025' },
+      ]);
+    });
+
+    it('lets the homeroom teacher open only their classroom', async () => {
+      const result = await service.getEnrollmentReportCard(teacher, 'e2026');
+
+      expect(result.years.map(({ id }) => id)).toEqual(['y2026']);
+      await expect(
+        service.getEnrollmentReportCard(teacher, 'e2025'),
+      ).rejects.toThrow(new NotFoundException(REPORT_CARD_NOT_FOUND_MESSAGE));
+    });
+
+    it('is not found for another organization', async () => {
+      await expect(
+        service.getEnrollmentReportCard(admin, 'missing'),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 
