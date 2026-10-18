@@ -35,5 +35,3 @@ export type UserFormState =
   | { status: 'idle' }
   | { status: 'success'; message: string }
   | { status: 'error'; message: string; values: UserFormValues };
-
-export type UserActionResult = { ok: true } | { ok: false; message: string };

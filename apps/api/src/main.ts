@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import AppModule, { ObserveInstrument } from './app.module';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import Env from './common/schemas/env.schema';
@@ -6,10 +7,15 @@ import { ConfigService } from '@nestjs/config';
 import { format } from 'util';
 
 const bootstrap = async () => {
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     instrument: ObserveInstrument,
     bufferLogs: true,
   });
+
+  // La web llama a la API desde su servidor: se confía en X-Forwarded-For solo
+  // si viene de la red privada, para tener la IP real del navegador (límite de
+  // consultas del portal y sesiones) sin que un cliente externo la falsifique.
+  app.set('trust proxy', ['loopback', 'linklocal', 'uniquelocal']);
 
   const configService = app.get(ConfigService<Env, true>);
 

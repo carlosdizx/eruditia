@@ -1,19 +1,11 @@
 import 'reflect-metadata';
-import {
-  HttpException,
-  HttpStatus,
-  NotFoundException,
-  UnauthorizedException,
-} from '@nestjs/common';
-import type { Cache } from 'cache-manager';
+import { NotFoundException } from '@nestjs/common';
+import { Op } from 'sequelize';
 import PermissionEnum from '@common/enums/permission.enum';
 import RoleNameEnum from '@common/enums/role-name.enum';
-import { hashPassword } from '@common/utils/password.util';
-import ReportCardsService, {
-  LOOKUP_WINDOW_MS,
-  MAX_FAILED_LOOKUPS,
-} from '../../src/report-cards/report-cards.service';
+import ReportCardsService from '../../src/report-cards/report-cards.service';
 import AcademicPeriodRepository from '../../src/academic-years/repositories/academic-period.repository';
+import AcademicYearRepository from '../../src/academic-years/repositories/academic-year.repository';
 import AnnualResultsService from '../../src/gradebooks/annual-results.service';
 import SubjectRecoveryRepository from '../../src/gradebooks/repositories/subject-recovery.repository';
 import ClassroomSubjectRepository from '../../src/classroom-subjects/classroom-subject.repository';
@@ -29,12 +21,12 @@ import PermissionsService from '../../src/permissions/services/permissions.servi
 import RankingsService from '../../src/rankings/rankings.service';
 import StudentRepository from '../../src/students/student.repository';
 import {
-  INVALID_ACCESS_PIN_MESSAGE,
+  PORTAL_NOT_FOUND_MESSAGE,
+  PUBLIC_STUDENT_NOT_FOUND_MESSAGE,
   REPORT_CARD_CLASSROOM_NOT_FOUND_MESSAGE,
+  REPORT_CARD_PORTAL_NOT_FOUND_MESSAGE,
   REPORT_CARD_NOT_FOUND_MESSAGE,
   REPORT_CARD_PERIOD_NOT_FOUND_MESSAGE,
-  REPORT_CARD_YEAR_NOT_FOUND_MESSAGE,
-  STUDENT_PROFILE_NOT_FOUND_MESSAGE,
 } from '../../src/report-cards/constants/report-card-messages.constant';
 
 type Mocked = Record<string, jest.Mock>;
@@ -44,13 +36,12 @@ describe('ReportCardsService', () => {
   let studentRepository: Mocked;
   let enrollmentRepository: Mocked;
   let classroomRepository: Mocked;
+  let academicYearRepository: Mocked;
   let summaryRepository: Mocked;
   let classroomSubjectRepository: Mocked;
   let permissionsService: Mocked;
   let rankingsService: Mocked;
   let findScale: jest.Mock;
-  let cacheStore: Map<string, unknown>;
-  let cache: Mocked;
   let service: ReportCardsService;
 
   const scale = {
@@ -176,14 +167,8 @@ describe('ReportCardsService', () => {
         .fn()
         .mockResolvedValue([PermissionEnum.REPORT_CARD_VIEW]),
     };
-    cacheStore = new Map();
-    cache = {
-      get: jest.fn((key: string) => Promise.resolve(cacheStore.get(key))),
-      set: jest.fn((key: string, value: unknown) => {
-        cacheStore.set(key, value);
-        return Promise.resolve(value);
-      }),
-      del: jest.fn((key: string) => Promise.resolve(cacheStore.delete(key))),
+    academicYearRepository = {
+      findAll: jest.fn().mockResolvedValue([year2026, year2025]),
     };
 
     service = new ReportCardsService(
@@ -194,6 +179,7 @@ describe('ReportCardsService', () => {
       {
         findAll: jest.fn().mockResolvedValue(periods),
       } as unknown as AcademicPeriodRepository,
+      academicYearRepository as unknown as AcademicYearRepository,
       new AnnualResultsService(
         {
           findAll: jest.fn().mockResolvedValue(periods),
@@ -243,21 +229,19 @@ describe('ReportCardsService', () => {
       { findScale } as unknown as GradingScalesService,
       permissionsService as unknown as PermissionsService,
       rankingsService as unknown as RankingsService,
-      cache as unknown as Cache,
     );
   });
 
-  describe('getOwnReportCard', () => {
-    const actor = { organizationId: 'org-id', userId: 'user-id' };
+  describe('report card content', () => {
+    const lookup = () =>
+      service.lookupReportCard('sol', {
+        documentNumber: '1001',
+        academicYearId: 'y2026',
+      });
 
-    it('builds the latest year with every subject, activity and average', async () => {
-      const result = await service.getOwnReportCard(actor);
+    it('builds the year with every subject, activity and average', async () => {
+      const result = await lookup();
 
-      expect(studentRepository.findOne).toHaveBeenCalledWith(
-        { userId: 'user-id', organizationId: 'org-id' },
-        false,
-        expect.any(Object),
-      );
       expect(result.years).toEqual([
         { id: 'y2026', name: '2026', status: 'open' },
         { id: 'y2025', name: '2025', status: 'open' },
@@ -303,12 +287,12 @@ describe('ReportCardsService', () => {
     });
 
     it('hides the classroom position unless the school publishes it', async () => {
-      const hidden = await service.getOwnReportCard(actor);
+      const hidden = await lookup();
       expect(hidden.reportCard!.rank).toBeNull();
       expect(rankingsService.classroomPositions).not.toHaveBeenCalled();
 
       findScale.mockResolvedValue({ ...scale, showRankInReportCard: true });
-      const shown = await service.getOwnReportCard(actor);
+      const shown = await lookup();
 
       expect(shown.reportCard!.rank).toEqual({
         annual: { position: 2, total: 28 },
@@ -321,7 +305,10 @@ describe('ReportCardsService', () => {
     });
 
     it('opens a previous year on demand', async () => {
-      await service.getOwnReportCard(actor, 'y2025');
+      await service.lookupReportCard('sol', {
+        documentNumber: '1001',
+        academicYearId: 'y2025',
+      });
 
       expect(summaryRepository.findAll).toHaveBeenCalledWith(
         { enrollmentId: ['e2025'], classroomSubjectId: ['math', 'art'] },
@@ -329,27 +316,13 @@ describe('ReportCardsService', () => {
       );
     });
 
-    it('rejects a year without enrollment', async () => {
-      await expect(service.getOwnReportCard(actor, 'y2020')).rejects.toThrow(
-        REPORT_CARD_YEAR_NOT_FOUND_MESSAGE,
-      );
-    });
-
     it('has no report card without enrollments', async () => {
       enrollmentRepository.findAll.mockResolvedValue([]);
 
-      await expect(service.getOwnReportCard(actor)).resolves.toMatchObject({
+      await expect(lookup()).resolves.toMatchObject({
         years: [],
         reportCard: null,
       });
-    });
-
-    it('requires an account linked to a student', async () => {
-      studentRepository.findOne.mockResolvedValue(null);
-
-      await expect(service.getOwnReportCard(actor)).rejects.toThrow(
-        STUDENT_PROFILE_NOT_FOUND_MESSAGE,
-      );
     });
   });
 
@@ -420,22 +393,13 @@ describe('ReportCardsService', () => {
     const isPdf = (content: Buffer) =>
       content.subarray(0, 5).toString() === '%PDF-';
 
-    it("renders the student's own report card", async () => {
-      const result = await service.getOwnReportCardPdf(
-        { organizationId: 'org-id', userId: 'user-id' },
-        { periodId: 'p1' },
-      );
-
-      expect(result.filename).toBe('boletin-perez-ana-2026-p1.pdf');
-      expect(isPdf(result.content)).toBe(true);
-    });
-
     it('rejects a period from another year', async () => {
       await expect(
-        service.getOwnReportCardPdf(
-          { organizationId: 'org-id', userId: 'user-id' },
-          { periodId: 'other' },
-        ),
+        service.lookupReportCardPdf('sol', {
+          documentNumber: '1001',
+          academicYearId: 'y2026',
+          periodId: 'other',
+        }),
       ).rejects.toThrow(REPORT_CARD_PERIOD_NOT_FOUND_MESSAGE);
     });
 
@@ -482,112 +446,121 @@ describe('ReportCardsService', () => {
         ),
       ).rejects.toThrow(REPORT_CARD_CLASSROOM_NOT_FOUND_MESSAGE);
     });
-
-    it('needs an enrollment to print', async () => {
-      enrollmentRepository.findAll.mockResolvedValue([]);
-
-      await expect(
-        service.getOwnReportCardPdf(
-          { organizationId: 'org-id', userId: 'user-id' },
-          {},
-        ),
-      ).rejects.toThrow(REPORT_CARD_NOT_FOUND_MESSAGE);
-    });
   });
 
   describe('public portal', () => {
-    it('shows only the public data of the school', async () => {
+    it('lists the school and its years, newest first', async () => {
       await expect(service.getPublicPortal('SOL')).resolves.toEqual({
         name: 'Colegio Sol',
         slug: 'sol',
         logoUrl: null,
+        reportCardsEnabled: true,
+        academicYears: [year2026, year2025],
       });
       expect(organizationRepository.findOne).toHaveBeenCalledWith(
         { slug: 'sol', isActive: true },
         false,
         expect.any(Object),
       );
+      expect(academicYearRepository.findAll).toHaveBeenCalledWith(
+        { organizationId: 'org-id' },
+        expect.objectContaining({ order: [['startDate', 'DESC']] }),
+      );
     });
 
-    it.each([
-      ['an unknown school', null, [PermissionEnum.REPORT_CARD_VIEW]],
-      ['a school without the permission', organization, []],
-    ])('is not found for %s', async (_, found, permissions) => {
-      organizationRepository.findOne.mockResolvedValue(found);
-      permissionsService.getEffectivePermissions.mockResolvedValue(permissions);
+    it('tells when the school has not enabled report cards', async () => {
+      permissionsService.getEffectivePermissions.mockResolvedValue([]);
 
-      await expect(service.getPublicPortal('sol')).rejects.toBeInstanceOf(
-        NotFoundException,
+      await expect(service.getPublicPortal('sol')).resolves.toMatchObject({
+        reportCardsEnabled: false,
+        academicYears: [],
+      });
+      expect(academicYearRepository.findAll).not.toHaveBeenCalled();
+    });
+
+    it('is not found for an unknown school', async () => {
+      organizationRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.getPublicPortal('sol')).rejects.toThrow(
+        PORTAL_NOT_FOUND_MESSAGE,
       );
     });
   });
 
   describe('lookupReportCard', () => {
-    const key = 'report-card-lookup:org-id:1001';
-
-    beforeEach(async () => {
+    it('finds the student by document, with or without an account', async () => {
       studentRepository.findOne.mockResolvedValue({
         ...student,
-        accessPin: await hashPassword('123456'),
+        userId: 'user-id',
       });
-    });
-
-    it('returns the report card with the right PIN and clears failures', async () => {
-      cacheStore.set(key, 2);
 
       const result = await service.lookupReportCard('sol', {
-        documentNumber: '1001',
-        accessPin: '123456',
+        documentNumber: 'ab1001',
+        academicYearId: 'y2025',
       });
 
       expect(studentRepository.findOne).toHaveBeenCalledWith(
-        { organizationId: 'org-id', documentNumber: '1001' },
+        {
+          organizationId: 'org-id',
+          documentNumber: { [Op.iLike]: 'ab1001' },
+        },
         false,
         expect.any(Object),
       );
-      expect(result.student).not.toHaveProperty('accessPin');
-      expect(result.reportCard).not.toBeNull();
-      expect(cacheStore.has(key)).toBe(false);
+      expect(result.student).not.toHaveProperty('userId');
+      expect(result.reportCard?.academicYear.id).toBe('y2025');
     });
 
-    it('counts a wrong PIN as a failure', async () => {
+    it('offers the enrolled years when there is no enrollment that year', async () => {
+      const result = await service.lookupReportCard('sol', {
+        documentNumber: '1001',
+        academicYearId: 'y2024',
+      });
+
+      expect(result.reportCard).toBeNull();
+      expect(result.years.map(({ id }) => id)).toEqual(['y2026', 'y2025']);
+    });
+
+    it('renders the PDF of the year asked for', async () => {
+      const result = await service.lookupReportCardPdf('sol', {
+        documentNumber: '1001',
+        academicYearId: 'y2026',
+        periodId: 'p1',
+      });
+
+      expect(result.filename).toBe('boletin-perez-ana-2026-p1.pdf');
+      expect(result.content.subarray(0, 5).toString()).toBe('%PDF-');
+    });
+
+    it('has no PDF for a year without enrollment', async () => {
+      await expect(
+        service.lookupReportCardPdf('sol', {
+          documentNumber: '1001',
+          academicYearId: 'y2024',
+        }),
+      ).rejects.toThrow(REPORT_CARD_NOT_FOUND_MESSAGE);
+    });
+
+    it('is not found for an unknown document', async () => {
+      studentRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.lookupReportCard('sol', {
+          documentNumber: '9999',
+          academicYearId: 'y2026',
+        }),
+      ).rejects.toThrow(PUBLIC_STUDENT_NOT_FOUND_MESSAGE);
+    });
+
+    it('is not available without the permission', async () => {
+      permissionsService.getEffectivePermissions.mockResolvedValue([]);
+
       await expect(
         service.lookupReportCard('sol', {
           documentNumber: '1001',
-          accessPin: '654321',
+          academicYearId: 'y2026',
         }),
-      ).rejects.toThrow(new UnauthorizedException(INVALID_ACCESS_PIN_MESSAGE));
-      expect(cache.set).toHaveBeenCalledWith(key, 1, LOOKUP_WINDOW_MS);
-    });
-
-    it.each([
-      ['an unknown document', null],
-      ['a student with an account', { ...student, accessPin: null }],
-    ])('answers the same for %s', async (_, found) => {
-      studentRepository.findOne.mockResolvedValue(found);
-
-      await expect(
-        service.lookupReportCard('sol', {
-          documentNumber: '1001',
-          accessPin: '000000',
-        }),
-      ).rejects.toThrow(INVALID_ACCESS_PIN_MESSAGE);
-    });
-
-    it('locks the document after too many failures', async () => {
-      cacheStore.set(key, MAX_FAILED_LOOKUPS);
-
-      const error = await service
-        .lookupReportCard('sol', {
-          documentNumber: '1001',
-          accessPin: '123456',
-        })
-        .catch((caught: unknown) => caught);
-
-      expect(error).toBeInstanceOf(HttpException);
-      expect((error as HttpException).getStatus()).toBe(
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
+      ).rejects.toThrow(REPORT_CARD_PORTAL_NOT_FOUND_MESSAGE);
       expect(studentRepository.findOne).not.toHaveBeenCalled();
     });
   });

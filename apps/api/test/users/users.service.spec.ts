@@ -43,7 +43,6 @@ describe('UsersService', () => {
     findAll: jest.Mock;
     create: jest.Mock;
     updateByPk: jest.Mock;
-    deleteByPk: jest.Mock;
     transaction: jest.Mock;
   };
   let rolesService: { findOne: jest.Mock };
@@ -74,7 +73,6 @@ describe('UsersService', () => {
       findAll: jest.fn().mockResolvedValue([]),
       create: jest.fn().mockResolvedValue(createdUser),
       updateByPk: jest.fn(),
-      deleteByPk: jest.fn().mockResolvedValue({ id: 'target-id' }),
       transaction: jest.fn((run: (tx: Transaction) => unknown) =>
         run(transaction),
       ),
@@ -580,44 +578,6 @@ describe('UsersService', () => {
         });
 
         expect(repository.updateByPk).toHaveBeenCalled();
-      });
-    });
-
-    describe('deleteOrganizationUser', () => {
-      it('soft deletes a user of the organization', async () => {
-        mockTarget(target());
-
-        await expect(
-          service.deleteOrganizationUser(actor, 'target-id'),
-        ).resolves.toBeUndefined();
-        expect(repository.deleteByPk).toHaveBeenCalledWith(
-          'target-id',
-          undefined,
-        );
-      });
-
-      it.each([
-        ['their own account', target({ id: 'admin-id' })],
-        [
-          'the organization owner',
-          target({ organization: { id: 'org-id', ownerId: 'target-id' } }),
-        ],
-      ])('does not let the admin delete %s', async (_, user) => {
-        mockTarget(user);
-
-        await expect(
-          service.deleteOrganizationUser(actor, user.id),
-        ).rejects.toBeInstanceOf(ForbiddenException);
-        expect(repository.deleteByPk).not.toHaveBeenCalled();
-      });
-
-      it('returns 404 for a user of another organization', async () => {
-        mockTarget(null);
-
-        await expect(
-          service.deleteOrganizationUser(actor, 'target-id'),
-        ).rejects.toBeInstanceOf(NotFoundException);
-        expect(repository.deleteByPk).not.toHaveBeenCalled();
       });
     });
   });

@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { SESSION_COOKIE } from '@/lib/auth/constants';
 
 const PUBLIC_ROUTES = ['/login'];
-// Portal de consulta de notas con documento + PIN.
+// Portal de consulta de notas con año lectivo + documento.
 const PUBLIC_PREFIXES = ['/consulta-notas/'];
 
 // Chequeo optimista: solo mira si existe la cookie. La validez real de la

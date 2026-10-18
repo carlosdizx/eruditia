@@ -71,9 +71,8 @@ async function ReportCardPortalCard() {
       <CardHeader>
         <CardTitle>Portal de consulta de notas</CardTitle>
         <CardDescription>
-          Los estudiantes sin cuenta y sus acudientes ven el boletín con el
-          documento del estudiante y su PIN de 6 dígitos (se genera en la ficha
-          de cada estudiante).
+          Estudiantes y acudientes ven el boletín eligiendo el año escolar y
+          escribiendo el documento del estudiante, sin claves.
         </CardDescription>
       </CardHeader>
       <CardContent>

@@ -254,9 +254,8 @@ export function GradingScaleForm({ scale }: { scale: GradingScale }) {
               Mostrar el puesto en el boletín
             </FieldLabel>
             <FieldDescription>
-              El boletín del estudiante (con su cuenta o con PIN) muestra su
-              puesto en el salón según el promedio acumulado del año, por
-              ejemplo «Puesto 3 de 28».
+              El boletín del portal público muestra su puesto en el salón según
+              el promedio acumulado del año, por ejemplo «Puesto 3 de 28».
             </FieldDescription>
           </FieldContent>
           <Switch

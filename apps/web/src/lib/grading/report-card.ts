@@ -42,7 +42,7 @@ export type ReportCardYear = {
 export type ClassroomPosition = { position: number; total: number };
 
 // Contrato de GET /report-cards/me, GET /enrollments/:id/report-card y
-// POST /public/report-cards/:slug.
+// POST /public/organizations/:slug/report-card.
 export type ReportCardResponse = {
   organization: { name: string; logoUrl: string | null };
   student: {

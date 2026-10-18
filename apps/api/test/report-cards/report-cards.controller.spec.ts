@@ -1,10 +1,17 @@
 import 'reflect-metadata';
+import { RequestMethod } from '@nestjs/common';
+import {
+  GUARDS_METADATA,
+  METHOD_METADATA,
+  PATH_METADATA,
+} from '@nestjs/common/constants';
 import PermissionEnum from '@common/enums/permission.enum';
 import RoleNameEnum from '@common/enums/role-name.enum';
 import { AUTH_WITH_PERMISSIONS_KEY } from '@auth/decorators/auth-with-permissions.decorator';
 import { IS_PUBLIC_KEY } from '@auth/decorators/public.decorator';
 import ReportCardsController from '../../src/report-cards/report-cards.controller';
 import ReportCardsService from '../../src/report-cards/report-cards.service';
+import PortalRateLimitGuard from '../../src/report-cards/guards/portal-rate-limit.guard';
 import authContextFixture from '../auth/fixtures/auth-context.fixture';
 
 const handlerMetadata = (handler: string, key: string): unknown =>
@@ -23,9 +30,7 @@ describe('ReportCardsController', () => {
   beforeEach(() => {
     service = Object.fromEntries(
       [
-        'getOwnReportCard',
         'getEnrollmentReportCard',
-        'getOwnReportCardPdf',
         'getEnrollmentReportCardPdf',
         'getClassroomReportCardsPdf',
         'listClassroomPeriods',
@@ -46,17 +51,6 @@ describe('ReportCardsController', () => {
     controller = new ReportCardsController(
       service as unknown as ReportCardsService,
     );
-  });
-
-  it('lets only students with the permission see their own report card', () => {
-    expect(
-      handlerMetadata('getOwnReportCard', AUTH_WITH_PERMISSIONS_KEY),
-    ).toEqual({
-      roles: [RoleNameEnum.STUDENT],
-      permissions: [PermissionEnum.REPORT_CARD_VIEW],
-      mode: 'all',
-    });
-    expect(handlerMetadata('getOwnReportCard', IS_PUBLIC_KEY)).toBeUndefined();
   });
 
   it('lets admins and teachers preview an enrollment report card', () => {
@@ -106,15 +100,37 @@ describe('ReportCardsController', () => {
     },
   );
 
-  it('delegates', async () => {
-    const dto = { documentNumber: '123', accessPin: '123456' };
+  it.each(['lookupReportCard', 'lookupReportCardPdf'])(
+    '%s is rate limited by IP',
+    (handler) => {
+      expect(handlerMetadata(handler, GUARDS_METADATA)).toEqual([
+        PortalRateLimitGuard,
+      ]);
+    },
+  );
 
-    await controller.getOwnReportCard({ academicYearId: 'y1' }, auth);
+  it('downloads the public PDF with a GET link', async () => {
+    const dto = { documentNumber: '123', academicYearId: 'y1', periodId: 'p1' };
+
+    const file = await controller.lookupReportCardPdf('colegio', dto);
+
+    expect(handlerMetadata('lookupReportCardPdf', METHOD_METADATA)).toBe(
+      RequestMethod.GET,
+    );
+    expect(handlerMetadata('lookupReportCardPdf', PATH_METADATA)).toBe(
+      'public/organizations/:slug/report-card/pdf',
+    );
+    expect(service.lookupReportCardPdf).toHaveBeenCalledWith('colegio', dto);
+    expect(file.getHeaders()).toMatchObject({ type: 'application/pdf' });
+  });
+
+  it('delegates', async () => {
+    const dto = { documentNumber: '123', academicYearId: 'y1' };
+
     await controller.getEnrollmentReportCard('e1', auth);
     await controller.getPortal('colegio');
     await controller.lookupReportCard('colegio', dto);
 
-    expect(service.getOwnReportCard).toHaveBeenCalledWith(auth, 'y1');
     expect(service.getEnrollmentReportCard).toHaveBeenCalledWith(auth, 'e1');
     expect(service.getPublicPortal).toHaveBeenCalledWith('colegio');
     expect(service.lookupReportCard).toHaveBeenCalledWith('colegio', dto);

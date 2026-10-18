@@ -4,7 +4,6 @@ import {
   Building2Icon,
   CalendarRangeIcon,
   BookOpenIcon,
-  FileTextIcon,
   LifeBuoyIcon,
   TrophyIcon,
   AwardIcon,
@@ -29,7 +28,6 @@ import {
   GRADING_SCALE_GRANTS,
   RANKING_GRANTS,
   RECOVERY_GRANTS,
-  REPORT_CARD_GRANTS,
   STUDENT_GRANTS,
   USER_GRANTS,
   type Grant,
@@ -115,12 +113,6 @@ export const NAV: Record<PanelKind, { label: string; items: NavItem[] }> = {
         url: '/ranking',
         icon: TrophyIcon,
         grant: RANKING_GRANTS.view,
-      },
-      {
-        title: 'Mi boletín',
-        url: '/boletin',
-        icon: FileTextIcon,
-        grant: REPORT_CARD_GRANTS.own,
       },
       {
         title: 'Ajustes',

@@ -12,10 +12,9 @@ import StudentDocumentTypeEnum from '@common/enums/student-document-type.enum';
 import BaseModel from './base.model';
 import type { Relation } from '@database/types/relation.type';
 import OrganizationModel from './organization.model';
-import UserModel from './user.model';
 
-// Ficha académica: independiente de la cuenta de acceso (userId es opcional),
-// así se pueden matricular niños sin correo.
+// Ficha académica, sin cuenta de acceso: el boletín se consulta en el portal
+// público con año lectivo + documento.
 @Table({ tableName: 'students', underscored: true, paranoid: true })
 export default class StudentModel extends BaseModel {
   @ForeignKey(() => OrganizationModel)
@@ -24,14 +23,6 @@ export default class StudentModel extends BaseModel {
 
   @BelongsTo(() => OrganizationModel, 'organizationId')
   declare organization?: Relation<OrganizationModel>;
-
-  @ForeignKey(() => UserModel)
-  @AllowNull
-  @Column(DataType.UUID)
-  declare userId: string | null;
-
-  @BelongsTo(() => UserModel, 'userId')
-  declare user?: Relation<UserModel>;
 
   @Column(DataType.STRING(30))
   declare studentCode: string;
@@ -63,11 +54,6 @@ export default class StudentModel extends BaseModel {
   @AllowNull
   @Column(DataType.STRING)
   declare guardianEmail: string | null;
-
-  // Hash del PIN de consulta rápida; nunca se expone.
-  @AllowNull
-  @Column(DataType.STRING)
-  declare accessPin: string | null;
 
   @Default(StudentStatusEnum.ACTIVE)
   @Column(DataType.ENUM(...Object.values(StudentStatusEnum)))

@@ -5,7 +5,7 @@ import { ApiError } from '@/lib/api/api-fetch';
 import { authFetch } from '@/lib/api/auth-fetch';
 import { requireGrant } from '@/lib/auth/current-user';
 import { USER_GRANTS } from '@/lib/auth/permissions';
-import type { UserActionResult, UserFormState, UserFormValues } from './types';
+import type { UserFormState, UserFormValues } from './types';
 
 const toMessage = (error: unknown) =>
   error instanceof ApiError ? error.message : 'Ocurrió un error inesperado';
@@ -81,17 +81,4 @@ export async function updateUser(
 
   refresh();
   return { status: 'success', message: `Se actualizó a ${firstName}` };
-}
-
-export async function deleteUser(userId: string): Promise<UserActionResult> {
-  await requireGrant(USER_GRANTS.delete);
-
-  try {
-    await authFetch(`/users/${userId}`, { method: 'DELETE' });
-  } catch (error) {
-    return { ok: false, message: toMessage(error) };
-  }
-
-  refresh();
-  return { ok: true };
 }

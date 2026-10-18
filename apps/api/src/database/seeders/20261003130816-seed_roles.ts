@@ -20,12 +20,6 @@ const roles = [
     label_es: 'Profesor',
     category: 'client',
   },
-  {
-    label: 'Student',
-    name: 'STUDENT',
-    label_es: 'Estudiante',
-    category: 'client',
-  },
 ];
 
 export const up: MigrationFn<QueryInterface> = async ({

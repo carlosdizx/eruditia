@@ -1,10 +1,7 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
-  HttpCode,
-  HttpStatus,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -83,18 +80,5 @@ export default class UsersController {
     @CurrentAuth() auth: AuthContextInterface,
   ) {
     return await this.usersService.updateOrganizationUser(auth, userId, dto);
-  }
-
-  @AuthWithPermissions({
-    roles: [RoleNameEnum.ADMIN],
-    permissions: [PermissionEnum.USER_DELETE],
-  })
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @Delete(':userId')
-  public async deleteUser(
-    @Param('userId', ParseUUIDPipe) userId: string,
-    @CurrentAuth() auth: AuthContextInterface,
-  ) {
-    await this.usersService.deleteOrganizationUser(auth, userId);
   }
 }

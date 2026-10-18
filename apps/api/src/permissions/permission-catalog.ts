@@ -5,7 +5,6 @@ const permissionDescriptions: Record<PermissionEnum, string> = {
   [PermissionEnum.USER_LIST]: 'Listar usuarios de la organización',
   [PermissionEnum.USER_CREATE]: 'Crear usuarios en la organización',
   [PermissionEnum.USER_UPDATE]: 'Editar usuarios de la organización',
-  [PermissionEnum.USER_DELETE]: 'Eliminar usuarios de la organización',
   [PermissionEnum.ROLE_LIST]: 'Listar roles disponibles',
   [PermissionEnum.STUDENT_LIST]: 'Listar estudiantes de la organización',
   [PermissionEnum.STUDENT_CREATE]: 'Matricular estudiantes en la organización',
@@ -53,7 +52,7 @@ const permissionDescriptions: Record<PermissionEnum, string> = {
   [PermissionEnum.GRADE_RECOVER]:
     'Registrar recuperaciones de materias perdidas al final del año (los profesores, de sus materias)',
   [PermissionEnum.REPORT_CARD_VIEW]:
-    'Boletín de notas: los estudiantes lo consultan con su cuenta o con documento + PIN en el portal público; el admin y el director de grupo lo previsualizan',
+    'Boletín de notas: estudiantes y acudientes lo consultan en el portal público con año lectivo + documento; el admin y el director de grupo lo previsualizan',
   [PermissionEnum.REPORT_CARD_EXPORT]:
     'Generar y exportar boletines en PDF (individuales y por salón; los profesores, de su dirección de grupo)',
   [PermissionEnum.RANKING_VIEW]:
