@@ -40,9 +40,6 @@ export type Student = {
   guardianPhone: string | null;
   guardianEmail: string | null;
   status: StudentStatus;
-  // Cuenta propia para iniciar sesión. Con o sin ella, el boletín se consulta
-  // en el portal público con año lectivo + documento.
-  user: { id: string; email: string; isActive: boolean } | null;
 };
 
 export type StudentFormValues = Partial<
@@ -56,9 +53,7 @@ export type StudentFormValues = Partial<
     | 'guardianName'
     | 'guardianPhone'
     | 'guardianEmail'
-    | 'status'
-    | 'createAccount'
-    | 'email',
+    | 'status',
     string
   >
 >;

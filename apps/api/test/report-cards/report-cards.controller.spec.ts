@@ -30,9 +30,7 @@ describe('ReportCardsController', () => {
   beforeEach(() => {
     service = Object.fromEntries(
       [
-        'getOwnReportCard',
         'getEnrollmentReportCard',
-        'getOwnReportCardPdf',
         'getEnrollmentReportCardPdf',
         'getClassroomReportCardsPdf',
         'listClassroomPeriods',
@@ -53,17 +51,6 @@ describe('ReportCardsController', () => {
     controller = new ReportCardsController(
       service as unknown as ReportCardsService,
     );
-  });
-
-  it('lets only students with the permission see their own report card', () => {
-    expect(
-      handlerMetadata('getOwnReportCard', AUTH_WITH_PERMISSIONS_KEY),
-    ).toEqual({
-      roles: [RoleNameEnum.STUDENT],
-      permissions: [PermissionEnum.REPORT_CARD_VIEW],
-      mode: 'all',
-    });
-    expect(handlerMetadata('getOwnReportCard', IS_PUBLIC_KEY)).toBeUndefined();
   });
 
   it('lets admins and teachers preview an enrollment report card', () => {
@@ -140,12 +127,10 @@ describe('ReportCardsController', () => {
   it('delegates', async () => {
     const dto = { documentNumber: '123', academicYearId: 'y1' };
 
-    await controller.getOwnReportCard({ academicYearId: 'y1' }, auth);
     await controller.getEnrollmentReportCard('e1', auth);
     await controller.getPortal('colegio');
     await controller.lookupReportCard('colegio', dto);
 
-    expect(service.getOwnReportCard).toHaveBeenCalledWith(auth, 'y1');
     expect(service.getEnrollmentReportCard).toHaveBeenCalledWith(auth, 'e1');
     expect(service.getPublicPortal).toHaveBeenCalledWith('colegio');
     expect(service.lookupReportCard).toHaveBeenCalledWith('colegio', dto);

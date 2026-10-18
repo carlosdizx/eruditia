@@ -18,9 +18,7 @@ import AuthWithPermissions from '@auth/decorators/auth-with-permissions.decorato
 import PermissionEnum from '@common/enums/permission.enum';
 import RoleNameEnum from '@common/enums/role-name.enum';
 import ReportCardsService, { type ReportCardPdf } from './report-cards.service';
-import GetReportCardDto from './dto/get-report-card.dto';
 import LookupReportCardDto from './dto/lookup-report-card.dto';
-import GetReportCardPdfDto from './dto/get-report-card-pdf.dto';
 import LookupReportCardPdfDto from './dto/lookup-report-card-pdf.dto';
 import ReportCardPeriodDto from './dto/report-card-period.dto';
 import PortalRateLimitGuard from './guards/portal-rate-limit.guard';
@@ -41,32 +39,6 @@ const STAFF_EXPORT = {
 @Controller()
 export default class ReportCardsController {
   constructor(private readonly reportCardsService: ReportCardsService) {}
-
-  @AuthWithPermissions({
-    roles: [RoleNameEnum.STUDENT],
-    permissions: [PermissionEnum.REPORT_CARD_VIEW],
-  })
-  @Get('report-cards/me')
-  public async getOwnReportCard(
-    @Query() { academicYearId }: GetReportCardDto,
-    @CurrentAuth() auth: AuthContextInterface,
-  ) {
-    return await this.reportCardsService.getOwnReportCard(auth, academicYearId);
-  }
-
-  @AuthWithPermissions({
-    roles: [RoleNameEnum.STUDENT],
-    permissions: [PermissionEnum.REPORT_CARD_VIEW],
-  })
-  @Get('report-cards/me/pdf')
-  public async getOwnReportCardPdf(
-    @Query() dto: GetReportCardPdfDto,
-    @CurrentAuth() auth: AuthContextInterface,
-  ) {
-    return download(
-      await this.reportCardsService.getOwnReportCardPdf(auth, dto),
-    );
-  }
 
   @AuthWithPermissions(STAFF_EXPORT)
   @Get('enrollments/:enrollmentId/report-card/pdf')

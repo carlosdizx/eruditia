@@ -16,11 +16,9 @@ import {
   toCreateStudentDto,
 } from './utils/students-csv.util';
 import type { StudentsImportSummary } from './interfaces/students-import-summary.interface';
-import StudentAccessService from './student-access.service';
 import organizationOf, {
   type OrganizationActor,
 } from '@common/utils/organization-of.util';
-import { STUDENT_USER_INCLUDE } from './utils/public-student.util';
 
 const SEARCHABLE_FIELDS = [
   'firstName',
@@ -36,10 +34,7 @@ export default class StudentsService extends CrudService<
   StudentModel,
   StudentRepository
 > {
-  constructor(
-    protected readonly repository: StudentRepository,
-    private readonly studentAccessService: StudentAccessService,
-  ) {
+  constructor(protected readonly repository: StudentRepository) {
     super(repository);
   }
 
@@ -104,7 +99,6 @@ export default class StudentsService extends CrudService<
         ...this.searchWhere(search),
       },
       {
-        include: STUDENT_USER_INCLUDE,
         order: [
           ['lastName', 'ASC'],
           ['firstName', 'ASC'],
@@ -120,13 +114,11 @@ export default class StudentsService extends CrudService<
     (await this.findOne(
       { id: studentId, organizationId: organizationOf(actor) },
       true,
-      { include: STUDENT_USER_INCLUDE },
     ))!;
 
-  // Con createAccount se crea o vincula su cuenta.
   public createStudent = async (
     actor: OrganizationActor,
-    { createAccount, email, ...dto }: CreateStudentDto,
+    dto: CreateStudentDto,
   ) => {
     const organizationId = organizationOf(actor);
     const studentCode = dto.studentCode ?? dto.documentNumber;
@@ -136,31 +128,7 @@ export default class StudentsService extends CrudService<
       studentCode,
     });
 
-    return await this.transaction(async (transaction) => {
-      const user = createAccount
-        ? await this.studentAccessService.provideAccount(
-            organizationId,
-            email!,
-            dto,
-            transaction,
-          )
-        : null;
-
-      const student = await this.create(
-        {
-          ...dto,
-          studentCode,
-          organizationId,
-          userId: user?.id ?? null,
-        },
-        { transaction },
-      );
-
-      return {
-        ...student,
-        user: user && { id: user.id, email: user.email, isActive: true },
-      };
-    });
+    return await this.create({ ...dto, studentCode, organizationId });
   };
 
   public updateStudent = async (

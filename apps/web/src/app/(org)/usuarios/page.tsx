@@ -42,7 +42,6 @@ async function UsersTable({
   const can = {
     create: isGranted(me, USER_GRANTS.create),
     update: isGranted(me, USER_GRANTS.update),
-    delete: isGranted(me, USER_GRANTS.delete),
   };
 
   const page = parsePage((await searchParams).page);
@@ -74,8 +73,6 @@ async function UsersTable({
       </Empty>
     );
 
-  const showActions = can.update || can.delete;
-
   return (
     <>
       {createButton && <div className="flex justify-end">{createButton}</div>}
@@ -89,7 +86,7 @@ async function UsersTable({
               <TableHead className="hidden lg:table-cell">Teléfono</TableHead>
               <TableHead>Rol</TableHead>
               <TableHead>Estado</TableHead>
-              {showActions && <TableHead className="w-12 pr-4" />}
+              {can.update && <TableHead className="w-12 pr-4" />}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -130,14 +127,12 @@ async function UsersTable({
                       {user.isActive ? 'Activo' : 'Inactivo'}
                     </Badge>
                   </TableCell>
-                  {showActions && (
+                  {can.update && (
                     <TableCell className="pr-4 text-right">
                       <UserRowActions
                         user={user}
                         roles={roles}
                         isSelf={isSelf}
-                        canUpdate={can.update}
-                        canDelete={can.delete}
                       />
                     </TableCell>
                   )}

@@ -27,8 +27,8 @@ export function CreateStudentDialog() {
         <DialogHeader>
           <DialogTitle>Nuevo estudiante</DialogTitle>
           <DialogDescription>
-            No necesita correo: sus notas se consultan en el portal público con
-            su documento. La cuenta propia es opcional.
+            Sus notas se consultan en el portal público con el año escolar y su
+            documento.
           </DialogDescription>
         </DialogHeader>
         <StudentForm

@@ -38,16 +38,8 @@ export async function createStudent(
   await requireGrant(STUDENT_GRANTS.create);
 
   const values = readValues(formData);
-  const {
-    firstName,
-    lastName,
-    documentType,
-    documentNumber,
-    studentCode,
-    createAccount,
-    email,
-  } = values;
-  const withAccount = createAccount === 'on';
+  const { firstName, lastName, documentType, documentNumber, studentCode } =
+    values;
 
   try {
     await authFetch('/students', {
@@ -58,7 +50,6 @@ export async function createStudent(
         documentType,
         documentNumber,
         ...(studentCode && { studentCode }),
-        ...(withAccount && { createAccount: true, email }),
         // Los vacíos no se envían.
         ...Object.fromEntries(
           OPTIONAL_FIELDS.filter((field) => values[field]).map((field) => [
@@ -75,9 +66,7 @@ export async function createStudent(
   refresh();
   return {
     status: 'success',
-    message: withAccount
-      ? `Se matriculó a ${firstName} ${lastName}. Si su cuenta es nueva, le enviamos la contraseña temporal a ${email}.`
-      : `Se matriculó a ${firstName} ${lastName}`,
+    message: `Se matriculó a ${firstName} ${lastName}`,
   };
 }
 
@@ -167,45 +156,4 @@ export async function importStudents(
 
   if (summary.created) refresh();
   return { status: 'done', summary };
-}
-
-// La cuenta queda desactivada; el estudiante sigue en el portal público.
-export async function unlinkStudentAccount(
-  studentId: string,
-): Promise<StudentActionResult> {
-  await requireGrant(STUDENT_GRANTS.update);
-
-  try {
-    await authFetch(`/students/${studentId}/account`, { method: 'DELETE' });
-  } catch (error) {
-    return { ok: false, message: toMessage(error) };
-  }
-
-  refresh();
-  return { ok: true };
-}
-
-export async function linkStudentAccount(
-  studentId: string,
-  _prev: StudentFormState,
-  formData: FormData,
-): Promise<StudentFormState> {
-  await requireGrant(STUDENT_GRANTS.update);
-
-  const values = readValues(formData);
-
-  try {
-    await authFetch(`/students/${studentId}/account`, {
-      method: 'POST',
-      body: { email: values.email },
-    });
-  } catch (error) {
-    return { status: 'error', message: toMessage(error), values };
-  }
-
-  refresh();
-  return {
-    status: 'success',
-    message: `Se vinculó la cuenta ${values.email}. Si es nueva, le enviamos la contraseña temporal.`,
-  };
 }

@@ -24,7 +24,6 @@ describe('UsersController', () => {
     findAllPaginated: jest.Mock;
     createOrganizationUser: jest.Mock;
     updateOrganizationUser: jest.Mock;
-    deleteOrganizationUser: jest.Mock;
   };
   let controller: UsersController;
 
@@ -34,7 +33,6 @@ describe('UsersController', () => {
       findAllPaginated: jest.fn().mockResolvedValue({ rows: [], count: 0 }),
       createOrganizationUser: jest.fn().mockResolvedValue({ id: 'new-id' }),
       updateOrganizationUser: jest.fn().mockResolvedValue({ id: 'target-id' }),
-      deleteOrganizationUser: jest.fn().mockResolvedValue(undefined),
     };
     controller = new UsersController(usersService as unknown as UsersService);
   });
@@ -110,7 +108,6 @@ describe('UsersController', () => {
   describe.each([
     ['createUser', PermissionEnum.USER_CREATE],
     ['updateUser', PermissionEnum.USER_UPDATE],
-    ['deleteUser', PermissionEnum.USER_DELETE],
   ])('%s', (handler, permission) => {
     it(`requires the ADMIN role and the ${permission} permission`, () => {
       expect(handlerMetadata(handler, AUTH_WITH_PERMISSIONS_KEY)).toEqual({
@@ -155,14 +152,10 @@ describe('UsersController', () => {
       );
     });
 
-    it('deletes a user of the organization and returns nothing', async () => {
-      await expect(
-        controller.deleteUser('target-id', auth),
-      ).resolves.toBeUndefined();
-      expect(usersService.deleteOrganizationUser).toHaveBeenCalledWith(
-        auth,
-        'target-id',
-      );
+    it('has no endpoint to delete users (they are only deactivated)', () => {
+      expect(
+        Object.getOwnPropertyNames(UsersController.prototype),
+      ).not.toContain('deleteUser');
     });
   });
 });

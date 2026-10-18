@@ -3,7 +3,6 @@ export const Permission = {
   USER_LIST: 'user:list',
   USER_CREATE: 'user:create',
   USER_UPDATE: 'user:update',
-  USER_DELETE: 'user:delete',
   ROLE_LIST: 'role:list',
   STUDENT_LIST: 'student:list',
   STUDENT_CREATE: 'student:create',
@@ -47,7 +46,6 @@ export const PERMISSION_LABELS: Record<string, string> = {
   [Permission.USER_LIST]: 'Ver usuarios',
   [Permission.USER_CREATE]: 'Crear usuarios',
   [Permission.USER_UPDATE]: 'Editar usuarios',
-  [Permission.USER_DELETE]: 'Eliminar usuarios',
   [Permission.ROLE_LIST]: 'Ver roles',
   [Permission.STUDENT_LIST]: 'Ver estudiantes',
   [Permission.STUDENT_CREATE]: 'Matricular estudiantes',
@@ -80,7 +78,8 @@ export const PERMISSION_LABELS: Record<string, string> = {
   [Permission.GRADE_LIST]: 'Ver planillas de notas',
   [Permission.GRADE_RECORD]: 'Registrar notas',
   [Permission.GRADE_RECOVER]: 'Registrar recuperaciones',
-  [Permission.REPORT_CARD_VIEW]: 'Boletín de notas (cuenta y portal público)',
+  [Permission.REPORT_CARD_VIEW]:
+    'Boletín de notas (portal público y vista previa)',
   [Permission.REPORT_CARD_EXPORT]: 'Exportar boletines en PDF',
   [Permission.RANKING_VIEW]: 'Rankings y cuadro de honor',
 };
@@ -106,7 +105,6 @@ export const USER_GRANTS = {
   list: { permission: Permission.USER_LIST, role: 'ADMIN' },
   create: { permission: Permission.USER_CREATE, role: 'ADMIN' },
   update: { permission: Permission.USER_UPDATE, role: 'ADMIN' },
-  delete: { permission: Permission.USER_DELETE, role: 'ADMIN' },
 } satisfies Record<string, Grant>;
 
 // Espejo de los @AuthWithPermissions de StudentsController.
@@ -193,7 +191,6 @@ export const RANKING_GRANTS = {
 
 // Espejo de los @AuthWithPermissions de ReportCardsController.
 export const REPORT_CARD_GRANTS = {
-  own: { permission: Permission.REPORT_CARD_VIEW, role: 'STUDENT' },
   // Vista previa del admin o del director de grupo.
   preview: {
     permission: Permission.REPORT_CARD_VIEW,

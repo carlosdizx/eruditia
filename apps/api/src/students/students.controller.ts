@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -22,8 +21,6 @@ import AuthWithPermissions from '@auth/decorators/auth-with-permissions.decorato
 import PermissionEnum from '@common/enums/permission.enum';
 import RoleNameEnum from '@common/enums/role-name.enum';
 import StudentsService from './students.service';
-import StudentAccessService from './student-access.service';
-import LinkStudentAccountDto from './dto/link-student-account.dto';
 import CreateStudentDto from './dto/create-student.dto';
 import UpdateStudentDto from './dto/update-student.dto';
 import ListStudentsDto from './dto/list-students.dto';
@@ -31,10 +28,7 @@ import { CSV_MAX_FILE_SIZE } from './constants/students-import.constant';
 
 @Controller('students')
 export default class StudentsController {
-  constructor(
-    private readonly studentsService: StudentsService,
-    private readonly studentAccessService: StudentAccessService,
-  ) {}
+  constructor(private readonly studentsService: StudentsService) {}
 
   @AuthWithPermissions({
     roles: [RoleNameEnum.ADMIN],
@@ -104,31 +98,5 @@ export default class StudentsController {
     @CurrentAuth() auth: AuthContextInterface,
   ) {
     return await this.studentsService.updateStudent(auth, studentId, dto);
-  }
-
-  @AuthWithPermissions({
-    roles: [RoleNameEnum.ADMIN],
-    permissions: [PermissionEnum.STUDENT_UPDATE],
-  })
-  @Post(':studentId/account')
-  public async linkAccount(
-    @Param('studentId', ParseUUIDPipe) studentId: string,
-    @Body() { email }: LinkStudentAccountDto,
-    @CurrentAuth() auth: AuthContextInterface,
-  ) {
-    return await this.studentAccessService.linkAccount(auth, studentId, email);
-  }
-
-  // Desactiva la cuenta y devuelve el estudiante sin ella.
-  @AuthWithPermissions({
-    roles: [RoleNameEnum.ADMIN],
-    permissions: [PermissionEnum.STUDENT_UPDATE],
-  })
-  @Delete(':studentId/account')
-  public async unlinkAccount(
-    @Param('studentId', ParseUUIDPipe) studentId: string,
-    @CurrentAuth() auth: AuthContextInterface,
-  ) {
-    return await this.studentAccessService.unlinkAccount(auth, studentId);
   }
 }

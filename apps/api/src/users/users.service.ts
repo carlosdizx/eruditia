@@ -210,17 +210,6 @@ export default class UsersService extends CrudService<
     return this.toSafeUser((await this.updateByPk(user.id, dto))!);
   };
 
-  public deleteOrganizationUser = async (
-    actor: OrganizationActor,
-    userId: string,
-  ) => {
-    const { user, isProtected } = await this.findManageableUser(actor, userId);
-
-    if (isProtected) throw new ForbiddenException(PROTECTED_USER_MESSAGE);
-
-    await this.deleteByPk(user.id);
-  };
-
   // Profesores activos de la organización; con ids, solo esos (para validar
   // asignaciones como director de grupo o docente de una materia).
   public findOrganizationTeachers = async (

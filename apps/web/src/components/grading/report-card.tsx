@@ -29,18 +29,18 @@ import type {
 
 type Card = NonNullable<ReportCardResponse['reportCard']>;
 
-// student: el propio estudiante (o el acudiente en el portal); staff: el admin
-// o el director de grupo revisando antes de entregar.
-type Audience = 'student' | 'staff';
+// public: el estudiante o el acudiente en el portal; staff: el admin o el
+// director de grupo revisando antes de entregar.
+type Audience = 'public' | 'staff';
 
-// Boletín del estudiante: lo usan el panel (con login), el portal público y la
-// vista previa del admin o el director de grupo.
+// Boletín del estudiante: lo usan el portal público y la vista previa del admin
+// o el director de grupo.
 // yearSelector: cómo se cambia de año en cada caso.
 export function ReportCard({
   data,
   yearSelector,
   actions,
-  audience = 'student',
+  audience = 'public',
 }: {
   data: ReportCardResponse;
   yearSelector?: ReactNode;

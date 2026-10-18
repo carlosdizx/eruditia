@@ -69,7 +69,8 @@ describe('AuthorizationGuard', () => {
   let guard: AuthorizationGuard;
 
   const admin = authContextFixture({ roleName: ADMIN });
-  const student = authContextFixture({ roleName: RoleNameEnum.STUDENT });
+  // Un rol de organización que ningún handler de prueba admite.
+  const guest = authContextFixture({ roleName: 'GUEST' });
   const superAdmin = authContextFixture({
     roleName: SUPER_ADMIN,
     roleCategory: RoleCategoryEnum.CORE,
@@ -112,7 +113,7 @@ describe('AuthorizationGuard', () => {
   });
 
   it('only requires authentication without @AuthWithPermissions', async () => {
-    await expect(run('plainHandler', student)).resolves.toBe(true);
+    await expect(run('plainHandler', guest)).resolves.toBe(true);
     expect(permissionsService.getEffectivePermissions).not.toHaveBeenCalled();
   });
 
@@ -131,7 +132,7 @@ describe('AuthorizationGuard', () => {
     });
 
     it('rejects a role that is not listed', async () => {
-      await expectForbidden(run('rolesHandler', student), MISSING_ROLE_MESSAGE);
+      await expectForbidden(run('rolesHandler', guest), MISSING_ROLE_MESSAGE);
     });
 
     it('does not load permissions when only roles are required', async () => {
@@ -222,7 +223,7 @@ describe('AuthorizationGuard', () => {
       grant(USER_CREATE);
 
       await expectForbidden(
-        run('roleAndPermissionHandler', student),
+        run('roleAndPermissionHandler', guest),
         MISSING_ROLE_MESSAGE,
       );
       expect(permissionsService.getEffectivePermissions).not.toHaveBeenCalled();
@@ -243,7 +244,7 @@ describe('AuthorizationGuard', () => {
     it('apply to handlers without their own decorator', async () => {
       await expect(runAdmin('plainHandler', admin)).resolves.toBe(true);
       await expectForbidden(
-        runAdmin('plainHandler', student),
+        runAdmin('plainHandler', guest),
         MISSING_ROLE_MESSAGE,
       );
     });
@@ -253,7 +254,7 @@ describe('AuthorizationGuard', () => {
       await expect(runAdmin('userListHandler', admin)).resolves.toBe(true);
 
       await expectForbidden(
-        runAdmin('userListHandler', student),
+        runAdmin('userListHandler', guest),
         MISSING_ROLE_MESSAGE,
       );
 

@@ -25,7 +25,6 @@ import PermissionsService from '../permissions/services/permissions.service';
 import RankingsService from '../rankings/rankings.service';
 import StudentRepository from '../students/student.repository';
 import LookupReportCardDto from './dto/lookup-report-card.dto';
-import GetReportCardPdfDto from './dto/get-report-card-pdf.dto';
 import LookupReportCardPdfDto from './dto/lookup-report-card-pdf.dto';
 import renderReportCardsPdf, {
   type PrintableReportCard,
@@ -38,8 +37,6 @@ import {
   REPORT_CARD_NOT_FOUND_MESSAGE,
   REPORT_CARD_PERIOD_NOT_FOUND_MESSAGE,
   REPORT_CARD_PORTAL_NOT_FOUND_MESSAGE,
-  REPORT_CARD_YEAR_NOT_FOUND_MESSAGE,
-  STUDENT_PROFILE_NOT_FOUND_MESSAGE,
 } from './constants/report-card-messages.constant';
 
 type Actor = Pick<
@@ -54,9 +51,6 @@ interface ReportCardScope {
   academicYearId?: string;
   enrollmentId?: string;
   visible?: (enrollment: Pick<Enrollment, 'classroom'>) => boolean;
-  // Sin matrícula en el año pedido responde sin boletín (el portal ofrece
-  // los años en los que sí tiene) en lugar de 404.
-  optionalYear?: boolean;
 }
 
 const STUDENT_ATTRIBUTES = [
@@ -149,25 +143,6 @@ export default class ReportCardsService {
     private readonly permissionsService: PermissionsService,
     private readonly rankingsService: RankingsService,
   ) {}
-
-  // Boletín del estudiante que inició sesión.
-  public getOwnReportCard = async (
-    actor: Pick<AuthContextInterface, 'organizationId' | 'userId'>,
-    academicYearId?: string,
-  ) => {
-    const organizationId = organizationOf(actor);
-    const student = await this.studentRepository.findOne(
-      { userId: actor.userId, organizationId },
-      false,
-      { attributes: STUDENT_ATTRIBUTES },
-    );
-    if (!student)
-      throw new NotFoundException(STUDENT_PROFILE_NOT_FOUND_MESSAGE);
-
-    return await this.buildReportCard(organizationId, student, {
-      academicYearId,
-    });
-  };
 
   // Boletín de una matrícula para el admin o el director de grupo del salón
   // (al profesor, las demás responden 404). El selector de años lista solo
@@ -269,7 +244,6 @@ export default class ReportCardsService {
 
     return await this.buildReportCard(organization.id, student, {
       academicYearId,
-      optionalYear: true,
     });
   };
 
@@ -402,12 +376,7 @@ export default class ReportCardsService {
   private buildReportCard = async (
     organizationId: string,
     student: StudentModel,
-    {
-      academicYearId,
-      enrollmentId,
-      visible = () => true,
-      optionalYear = false,
-    }: ReportCardScope,
+    { academicYearId, enrollmentId, visible = () => true }: ReportCardScope,
   ) => {
     const [organization, enrollments] = await Promise.all([
       this.organizationRepository.findByPk(organizationId, true, {
@@ -474,8 +443,8 @@ export default class ReportCardsService {
       : academicYearId
         ? enrollments.find((item) => item.academicYearId === academicYearId)
         : enrollments[0];
-    if (academicYearId && !enrollment && !optionalYear)
-      throw new NotFoundException(REPORT_CARD_YEAR_NOT_FOUND_MESSAGE);
+    // Sin matrícula en el año pedido no hay boletín: el portal ofrece los años
+    // en los que sí la tiene.
     if (!enrollment) return { ...base, reportCard: null };
 
     const cardFor = await this.loadClassroomCards(
@@ -530,15 +499,6 @@ export default class ReportCardsService {
       `boletin ${student.lastName} ${student.firstName} ${reportCard.academicYear.name}`,
     );
   };
-
-  public getOwnReportCardPdf = async (
-    actor: Pick<AuthContextInterface, 'organizationId' | 'userId'>,
-    { academicYearId, periodId }: GetReportCardPdfDto,
-  ) =>
-    await this.cardPdf(
-      await this.getOwnReportCard(actor, academicYearId),
-      periodId,
-    );
 
   public lookupReportCardPdf = async (
     slug: string,

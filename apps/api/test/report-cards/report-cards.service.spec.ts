@@ -27,8 +27,6 @@ import {
   REPORT_CARD_PORTAL_NOT_FOUND_MESSAGE,
   REPORT_CARD_NOT_FOUND_MESSAGE,
   REPORT_CARD_PERIOD_NOT_FOUND_MESSAGE,
-  REPORT_CARD_YEAR_NOT_FOUND_MESSAGE,
-  STUDENT_PROFILE_NOT_FOUND_MESSAGE,
 } from '../../src/report-cards/constants/report-card-messages.constant';
 
 type Mocked = Record<string, jest.Mock>;
@@ -234,17 +232,16 @@ describe('ReportCardsService', () => {
     );
   });
 
-  describe('getOwnReportCard', () => {
-    const actor = { organizationId: 'org-id', userId: 'user-id' };
+  describe('report card content', () => {
+    const lookup = () =>
+      service.lookupReportCard('sol', {
+        documentNumber: '1001',
+        academicYearId: 'y2026',
+      });
 
-    it('builds the latest year with every subject, activity and average', async () => {
-      const result = await service.getOwnReportCard(actor);
+    it('builds the year with every subject, activity and average', async () => {
+      const result = await lookup();
 
-      expect(studentRepository.findOne).toHaveBeenCalledWith(
-        { userId: 'user-id', organizationId: 'org-id' },
-        false,
-        expect.any(Object),
-      );
       expect(result.years).toEqual([
         { id: 'y2026', name: '2026', status: 'open' },
         { id: 'y2025', name: '2025', status: 'open' },
@@ -290,12 +287,12 @@ describe('ReportCardsService', () => {
     });
 
     it('hides the classroom position unless the school publishes it', async () => {
-      const hidden = await service.getOwnReportCard(actor);
+      const hidden = await lookup();
       expect(hidden.reportCard!.rank).toBeNull();
       expect(rankingsService.classroomPositions).not.toHaveBeenCalled();
 
       findScale.mockResolvedValue({ ...scale, showRankInReportCard: true });
-      const shown = await service.getOwnReportCard(actor);
+      const shown = await lookup();
 
       expect(shown.reportCard!.rank).toEqual({
         annual: { position: 2, total: 28 },
@@ -308,7 +305,10 @@ describe('ReportCardsService', () => {
     });
 
     it('opens a previous year on demand', async () => {
-      await service.getOwnReportCard(actor, 'y2025');
+      await service.lookupReportCard('sol', {
+        documentNumber: '1001',
+        academicYearId: 'y2025',
+      });
 
       expect(summaryRepository.findAll).toHaveBeenCalledWith(
         { enrollmentId: ['e2025'], classroomSubjectId: ['math', 'art'] },
@@ -316,27 +316,13 @@ describe('ReportCardsService', () => {
       );
     });
 
-    it('rejects a year without enrollment', async () => {
-      await expect(service.getOwnReportCard(actor, 'y2020')).rejects.toThrow(
-        REPORT_CARD_YEAR_NOT_FOUND_MESSAGE,
-      );
-    });
-
     it('has no report card without enrollments', async () => {
       enrollmentRepository.findAll.mockResolvedValue([]);
 
-      await expect(service.getOwnReportCard(actor)).resolves.toMatchObject({
+      await expect(lookup()).resolves.toMatchObject({
         years: [],
         reportCard: null,
       });
-    });
-
-    it('requires an account linked to a student', async () => {
-      studentRepository.findOne.mockResolvedValue(null);
-
-      await expect(service.getOwnReportCard(actor)).rejects.toThrow(
-        STUDENT_PROFILE_NOT_FOUND_MESSAGE,
-      );
     });
   });
 
@@ -407,22 +393,13 @@ describe('ReportCardsService', () => {
     const isPdf = (content: Buffer) =>
       content.subarray(0, 5).toString() === '%PDF-';
 
-    it("renders the student's own report card", async () => {
-      const result = await service.getOwnReportCardPdf(
-        { organizationId: 'org-id', userId: 'user-id' },
-        { periodId: 'p1' },
-      );
-
-      expect(result.filename).toBe('boletin-perez-ana-2026-p1.pdf');
-      expect(isPdf(result.content)).toBe(true);
-    });
-
     it('rejects a period from another year', async () => {
       await expect(
-        service.getOwnReportCardPdf(
-          { organizationId: 'org-id', userId: 'user-id' },
-          { periodId: 'other' },
-        ),
+        service.lookupReportCardPdf('sol', {
+          documentNumber: '1001',
+          academicYearId: 'y2026',
+          periodId: 'other',
+        }),
       ).rejects.toThrow(REPORT_CARD_PERIOD_NOT_FOUND_MESSAGE);
     });
 
@@ -468,17 +445,6 @@ describe('ReportCardsService', () => {
           'c5',
         ),
       ).rejects.toThrow(REPORT_CARD_CLASSROOM_NOT_FOUND_MESSAGE);
-    });
-
-    it('needs an enrollment to print', async () => {
-      enrollmentRepository.findAll.mockResolvedValue([]);
-
-      await expect(
-        service.getOwnReportCardPdf(
-          { organizationId: 'org-id', userId: 'user-id' },
-          {},
-        ),
-      ).rejects.toThrow(REPORT_CARD_NOT_FOUND_MESSAGE);
     });
   });
 

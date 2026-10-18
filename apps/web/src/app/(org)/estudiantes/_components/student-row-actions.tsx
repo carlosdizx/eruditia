@@ -1,23 +1,8 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import {
-  LinkIcon,
-  MoreHorizontalIcon,
-  PencilIcon,
-  RefreshCwIcon,
-  UnlinkIcon,
-} from 'lucide-react';
+import { MoreHorizontalIcon, PencilIcon, RefreshCwIcon } from 'lucide-react';
 import { toast } from 'sonner';
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -32,36 +17,25 @@ import {
   DropdownMenuItem,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
-  DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Spinner } from '@/components/ui/spinner';
-import {
-  changeStudentStatus,
-  linkStudentAccount,
-  unlinkStudentAccount,
-  updateStudent,
-} from '../actions';
+import { changeStudentStatus, updateStudent } from '../actions';
 import {
   STUDENT_STATUS_LABELS,
   STUDENT_STATUSES,
   type Student,
   type StudentStatus,
 } from '../types';
-import { LinkAccountForm } from './link-account-form';
 import { StudentForm } from './student-form';
 
 export function StudentRowActions({ student }: { student: Student }) {
   const [editOpen, setEditOpen] = useState(false);
-  const [linkOpen, setLinkOpen] = useState(false);
-  const [unlinkOpen, setUnlinkOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const fullName = `${student.firstName} ${student.lastName}`;
-  const hasAccount = !!student.user;
 
   const onStatusChange = (status: StudentStatus) => {
     if (status === student.status) return;
@@ -79,19 +53,6 @@ export function StudentRowActions({ student }: { student: Student }) {
       );
     });
   };
-
-  const unlink = () =>
-    startTransition(async () => {
-      const result = await unlinkStudentAccount(student.id);
-      setUnlinkOpen(false);
-
-      if (!result.ok) {
-        toast.error(result.message);
-        return;
-      }
-
-      toast.success(`Se desvinculó la cuenta de ${fullName}`);
-    });
 
   return (
     <>
@@ -134,18 +95,6 @@ export function StudentRowActions({ student }: { student: Student }) {
               </DropdownMenuRadioGroup>
             </DropdownMenuSubContent>
           </DropdownMenuSub>
-          <DropdownMenuSeparator />
-          {hasAccount ? (
-            <DropdownMenuItem onClick={() => setUnlinkOpen(true)}>
-              <UnlinkIcon />
-              Desvincular cuenta
-            </DropdownMenuItem>
-          ) : (
-            <DropdownMenuItem onClick={() => setLinkOpen(true)}>
-              <LinkIcon />
-              Vincular cuenta de acceso
-            </DropdownMenuItem>
-          )}
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -174,45 +123,6 @@ export function StudentRowActions({ student }: { student: Student }) {
           />
         </DialogContent>
       </Dialog>
-
-      <Dialog open={linkOpen} onOpenChange={setLinkOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Vincular cuenta de acceso</DialogTitle>
-            <DialogDescription>
-              {fullName} iniciará sesión con su correo para ver sus notas.
-            </DialogDescription>
-          </DialogHeader>
-          <LinkAccountForm
-            action={linkStudentAccount.bind(null, student.id)}
-            onDone={() => setLinkOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog
-        open={unlinkOpen}
-        onOpenChange={(open) => !pending && setUnlinkOpen(open)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              ¿Desvincular la cuenta de {fullName}?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              La cuenta {student.user?.email ?? ''} se desactivará. Sus notas se
-              podrán seguir consultando en el portal público con su documento.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={pending}>Cancelar</AlertDialogCancel>
-            <Button onClick={unlink} disabled={pending}>
-              {pending && <Spinner data-icon="inline-start" />}
-              Desvincular
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }

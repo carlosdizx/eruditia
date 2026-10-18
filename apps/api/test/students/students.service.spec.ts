@@ -10,8 +10,6 @@ import StudentDocumentTypeEnum from '@common/enums/student-document-type.enum';
 import StudentStatusEnum from '@common/enums/student-status.enum';
 import StudentsService from '../../src/students/students.service';
 import StudentRepository from '../../src/students/student.repository';
-import StudentAccessService from '../../src/students/student-access.service';
-import { STUDENT_USER_INCLUDE } from '../../src/students/utils/public-student.util';
 import CreateStudentDto from '../../src/students/dto/create-student.dto';
 import ListStudentsDto from '../../src/students/dto/list-students.dto';
 import {
@@ -30,7 +28,6 @@ describe('StudentsService', () => {
     transaction: jest.Mock;
   };
   const transaction = { id: 'tx' } as unknown as Transaction;
-  let studentAccessService: { provideAccount: jest.Mock };
   let service: StudentsService;
 
   const actor = { organizationId: 'org-id' };
@@ -59,22 +56,14 @@ describe('StudentsService', () => {
         run(transaction),
       ),
     };
-    studentAccessService = {
-      provideAccount: jest
-        .fn()
-        .mockResolvedValue({ id: 'user-id', email: 'sofia@example.com' }),
-    };
-    service = new StudentsService(
-      repository as unknown as StudentRepository,
-      studentAccessService as unknown as StudentAccessService,
-    );
+    service = new StudentsService(repository as unknown as StudentRepository);
   });
 
   describe('listStudents', () => {
     const list = (overrides: Partial<ListStudentsDto> = {}) =>
       Object.assign(new ListStudentsDto(), overrides);
 
-    it('lists only the actor organization, ordered by name, with the linked account', async () => {
+    it('lists only the actor organization, ordered by name', async () => {
       const pagination = list();
 
       await service.listStudents(actor, pagination);
@@ -83,7 +72,6 @@ describe('StudentsService', () => {
         pagination,
         { organizationId: 'org-id' },
         {
-          include: STUDENT_USER_INCLUDE,
           order: [
             ['lastName', 'ASC'],
             ['firstName', 'ASC'],
@@ -143,7 +131,7 @@ describe('StudentsService', () => {
       expect(repository.findOne).toHaveBeenCalledWith(
         { id: 'student-id', organizationId: 'org-id' },
         true,
-        { include: STUDENT_USER_INCLUDE },
+        undefined,
       );
     });
   });
@@ -164,42 +152,10 @@ describe('StudentsService', () => {
           ...dto,
           studentCode: 'EST-01',
           organizationId: 'org-id',
-          userId: null,
         },
-        { transaction },
+        undefined,
       );
-      expect(studentAccessService.provideAccount).not.toHaveBeenCalled();
-      expect(result).toMatchObject({
-        id: 'student-id',
-        user: null,
-      });
-    });
-
-    it('creates or links an account when requested', async () => {
-      repository.create.mockImplementation((data: object) =>
-        Promise.resolve({ id: 'student-id', ...data }),
-      );
-
-      const result = await service.createStudent(actor, {
-        ...dto,
-        createAccount: true,
-        email: 'sofia@example.com',
-      });
-
-      expect(studentAccessService.provideAccount).toHaveBeenCalledWith(
-        'org-id',
-        'sofia@example.com',
-        { ...dto },
-        transaction,
-      );
-      expect(repository.create).toHaveBeenCalledWith(
-        expect.objectContaining({ userId: 'user-id' }),
-        { transaction },
-      );
-      expect(repository.create.mock.calls[0][0]).not.toHaveProperty('email');
-      expect(result).toMatchObject({
-        user: { id: 'user-id', email: 'sofia@example.com', isActive: true },
-      });
+      expect(result).toMatchObject({ id: 'student-id' });
     });
 
     it('uses the document number as code when none is given', async () => {
@@ -207,7 +163,7 @@ describe('StudentsService', () => {
 
       expect(repository.create).toHaveBeenCalledWith(
         expect.objectContaining({ studentCode: '1020' }),
-        { transaction },
+        undefined,
       );
     });
 
