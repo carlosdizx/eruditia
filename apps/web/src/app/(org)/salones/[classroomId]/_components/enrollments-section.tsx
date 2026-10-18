@@ -1,0 +1,182 @@
+import Link from 'next/link';
+import { UsersIcon } from 'lucide-react';
+import { ReportCardLink } from '@/components/grading/report-card-link';
+import { ReportCardPdfMenu } from '@/components/grading/report-card-pdf-menu';
+import { Badge } from '@/components/ui/badge';
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import type { Classroom } from '../../types';
+import {
+  ENROLLMENT_STATUS_LABELS,
+  type Enrollment,
+  type EnrollmentStudent,
+} from '../types';
+import { EnrollStudentsDialog } from './enroll-students-dialog';
+import { EnrollmentRowActions } from './enrollment-row-actions';
+
+const formatDate = (value: string) =>
+  new Date(`${value}T00:00:00`).toLocaleDateString('es-CO', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+
+// Lista de clase del salón: también muestra a los retirados y trasladados.
+export function EnrollmentsSection({
+  classroom,
+  enrollments,
+  candidates,
+  classrooms,
+  canEnroll,
+  canUpdate,
+  canDelete,
+  canViewReportCards,
+  reportCardPeriods,
+}: {
+  classroom: Classroom;
+  enrollments: Enrollment[];
+  candidates: EnrollmentStudent[];
+  // Los demás salones del año, para cambiar de salón.
+  classrooms: { id: string; name: string }[];
+  canEnroll: boolean;
+  canUpdate: boolean;
+  canDelete: boolean;
+  canViewReportCards: boolean;
+  // Periodos para imprimir los boletines del salón; null sin permiso.
+  reportCardPeriods: { id: string; name: string }[] | null;
+}) {
+  const inProgress = enrollments.filter(
+    ({ status }) => status === 'in_progress',
+  ).length;
+  const available = classroom.capacity
+    ? Math.max(classroom.capacity - inProgress, 0)
+    : null;
+  const withActions = canUpdate || canDelete || canViewReportCards;
+
+  return (
+    <>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-base font-semibold">Lista de clase</h2>
+        <div className="flex flex-wrap gap-2">
+          {reportCardPeriods && enrollments.length > 0 && (
+            <ReportCardPdfMenu
+              label="Boletines del salón (PDF)"
+              periods={reportCardPeriods}
+              href={`/salones/${classroom.id}/boletines/pdf`}
+            />
+          )}
+          {canEnroll && (
+            <EnrollStudentsDialog
+              classroom={classroom}
+              candidates={candidates}
+              available={available}
+            />
+          )}
+        </div>
+      </div>
+
+      {!enrollments.length ? (
+        <Empty className="border">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <UsersIcon />
+            </EmptyMedia>
+            <EmptyTitle>Sin estudiantes</EmptyTitle>
+            <EmptyDescription>
+              Matricula a los estudiantes que cursan este año en el salón.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      ) : (
+        <div className="rounded-xl border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="pl-4">Estudiante</TableHead>
+                <TableHead className="hidden sm:table-cell">
+                  Documento
+                </TableHead>
+                <TableHead className="hidden md:table-cell">
+                  Matriculado
+                </TableHead>
+                <TableHead>Estado</TableHead>
+                {withActions && <TableHead className="pr-4" />}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {enrollments.map((enrollment) => (
+                <TableRow key={enrollment.id}>
+                  <TableCell className="pl-4">
+                    <div className="flex flex-col">
+                      <Link
+                        href={`/estudiantes/${enrollment.studentId}`}
+                        className="font-medium hover:underline"
+                      >
+                        {enrollment.student.lastName}{' '}
+                        {enrollment.student.firstName}
+                      </Link>
+                      <span className="text-muted-foreground text-xs">
+                        Código {enrollment.student.studentCode}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground hidden sm:table-cell">
+                    {enrollment.student.documentType}{' '}
+                    {enrollment.student.documentNumber}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground hidden md:table-cell">
+                    {formatDate(enrollment.enrollmentDate)}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={
+                        enrollment.status === 'in_progress'
+                          ? 'secondary'
+                          : 'outline'
+                      }
+                      title={enrollment.promotionNotes ?? undefined}
+                    >
+                      {ENROLLMENT_STATUS_LABELS[enrollment.status]}
+                    </Badge>
+                  </TableCell>
+                  {withActions && (
+                    <TableCell className="pr-4">
+                      <div className="flex items-center justify-end gap-1">
+                        {canViewReportCards && (
+                          <ReportCardLink
+                            enrollmentId={enrollment.id}
+                            from={`/salones/${classroom.id}`}
+                          />
+                        )}
+                        <EnrollmentRowActions
+                          classroomId={classroom.id}
+                          enrollment={enrollment}
+                          classrooms={classrooms}
+                          canUpdate={canUpdate}
+                          canDelete={canDelete}
+                        />
+                      </div>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </>
+  );
+}

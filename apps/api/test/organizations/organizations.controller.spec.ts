@@ -1,0 +1,187 @@
+import 'reflect-metadata';
+import RoleNameEnum from '@common/enums/role-name.enum';
+import DeletedFilterEnum from '@common/enums/deleted-filter.enum';
+import { IS_PUBLIC_KEY } from '@auth/decorators/public.decorator';
+import { AUTH_WITH_PERMISSIONS_KEY } from '@auth/decorators/auth-with-permissions.decorator';
+import OrganizationsController from '../../src/organizations/organizations.controller';
+import OrganizationsService from '../../src/organizations/organizations.service';
+import CreateOrganizationDto from '../../src/organizations/dto/create-organization.dto';
+import ListOrganizationsDto from '../../src/organizations/dto/list-organizations.dto';
+import CreateUserDto from '../../src/users/dto/create-user.dto';
+
+const handlerMetadata = (handler: string, key: string): unknown =>
+  Reflect.getMetadata(
+    key,
+    Object.getOwnPropertyDescriptor(OrganizationsController.prototype, handler)!
+      .value as object,
+  );
+
+describe('OrganizationsController', () => {
+  let organizationsService: {
+    registerOrganizationAndOwner: jest.Mock;
+    listOrganizations: jest.Mock;
+    findOrganization: jest.Mock;
+    updateOrganization: jest.Mock;
+    deleteOrganization: jest.Mock;
+    restoreOrganization: jest.Mock;
+  };
+  let controller: OrganizationsController;
+
+  const organizationDto = {
+    name: 'Colegio X',
+    slug: 'colegio-x',
+  } as CreateOrganizationDto;
+
+  const ownerDto: CreateUserDto = {
+    firstName: 'Ana',
+    lastName: 'Lopez',
+    email: 'ana@example.com',
+    roleId: 'admin-role-id',
+  };
+
+  beforeEach(() => {
+    organizationsService = {
+      registerOrganizationAndOwner: jest.fn().mockResolvedValue(undefined),
+      listOrganizations: jest.fn().mockResolvedValue({ rows: [], count: 0 }),
+      findOrganization: jest.fn().mockResolvedValue({ id: 'org-id' }),
+      updateOrganization: jest.fn().mockResolvedValue({ id: 'org-id' }),
+      deleteOrganization: jest.fn().mockResolvedValue(undefined),
+      restoreOrganization: jest.fn().mockResolvedValue({ id: 'org-id' }),
+    };
+    controller = new OrganizationsController(
+      organizationsService as unknown as OrganizationsService,
+    );
+  });
+
+  describe('route protection', () => {
+    it('restricts the whole controller to the SUPER_ADMIN role', () => {
+      expect(
+        Reflect.getMetadata(AUTH_WITH_PERMISSIONS_KEY, OrganizationsController),
+      ).toEqual({
+        roles: [RoleNameEnum.SUPER_ADMIN],
+        permissions: [],
+        mode: 'all',
+      });
+    });
+
+    it.each([
+      'registerOrganization',
+      'listOrganizations',
+      'findOrganization',
+      'updateOrganization',
+      'deleteOrganization',
+      'restoreOrganization',
+    ])(
+      '%s inherits the controller requirement without overriding it',
+      (handler) => {
+        expect(
+          handlerMetadata(handler, AUTH_WITH_PERMISSIONS_KEY),
+        ).toBeUndefined();
+        expect(handlerMetadata(handler, IS_PUBLIC_KEY)).toBeUndefined();
+      },
+    );
+
+    it('is not public', () => {
+      expect(
+        Reflect.getMetadata(IS_PUBLIC_KEY, OrganizationsController),
+      ).toBeUndefined();
+    });
+  });
+
+  describe('registerOrganization', () => {
+    it('passes the organization and owner bodies to the service', async () => {
+      await controller.registerOrganization(organizationDto, ownerDto);
+
+      expect(
+        organizationsService.registerOrganizationAndOwner,
+      ).toHaveBeenCalledWith(organizationDto, ownerDto);
+    });
+
+    it('propagates service errors', async () => {
+      const error = new Error('boom');
+      organizationsService.registerOrganizationAndOwner.mockRejectedValue(
+        error,
+      );
+
+      await expect(
+        controller.registerOrganization(organizationDto, ownerDto),
+      ).rejects.toBe(error);
+    });
+  });
+
+  describe('listOrganizations', () => {
+    const pagination = Object.assign(new ListOrganizationsDto(), {
+      page: 2,
+      pageSize: 5,
+      search: 'colegio',
+      deleted: DeletedFilterEnum.INCLUDE,
+    });
+
+    it('delegates the pagination and deleted filter to the service', async () => {
+      await expect(controller.listOrganizations(pagination)).resolves.toEqual({
+        rows: [],
+        count: 0,
+      });
+      expect(organizationsService.listOrganizations).toHaveBeenCalledWith(
+        pagination,
+      );
+    });
+
+    it('propagates service errors', async () => {
+      const error = new Error('boom');
+      organizationsService.listOrganizations.mockRejectedValue(error);
+
+      await expect(controller.listOrganizations(pagination)).rejects.toBe(
+        error,
+      );
+    });
+  });
+
+  describe('findOrganization', () => {
+    it('delegates to the service', async () => {
+      await expect(controller.findOrganization('org-id')).resolves.toEqual({
+        id: 'org-id',
+      });
+      expect(organizationsService.findOrganization).toHaveBeenCalledWith(
+        'org-id',
+      );
+    });
+  });
+
+  describe('updateOrganization', () => {
+    it('passes the id and body to the service', async () => {
+      const dto = { name: 'Nuevo' };
+
+      await expect(
+        controller.updateOrganization('org-id', dto),
+      ).resolves.toEqual({ id: 'org-id' });
+      expect(organizationsService.updateOrganization).toHaveBeenCalledWith(
+        'org-id',
+        dto,
+      );
+    });
+  });
+
+  describe('deleteOrganization', () => {
+    it('delegates to the service', async () => {
+      await expect(
+        controller.deleteOrganization('org-id'),
+      ).resolves.toBeUndefined();
+      expect(organizationsService.deleteOrganization).toHaveBeenCalledWith(
+        'org-id',
+      );
+    });
+  });
+
+  describe('restoreOrganization', () => {
+    it('delegates to the restore, not the delete', async () => {
+      await expect(controller.restoreOrganization('org-id')).resolves.toEqual({
+        id: 'org-id',
+      });
+      expect(organizationsService.restoreOrganization).toHaveBeenCalledWith(
+        'org-id',
+      );
+      expect(organizationsService.deleteOrganization).not.toHaveBeenCalled();
+    });
+  });
+});
