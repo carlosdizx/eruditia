@@ -10,6 +10,7 @@ const env: DatabaseEnvInterface = {
   DB_PASSWORD: 'password',
   DB_NAME: 'eruditia',
   DB_LOGGING: false,
+  DB_SSL: false,
 };
 
 describe('databaseOptionsUtil', () => {
@@ -42,6 +43,20 @@ describe('databaseOptionsUtil', () => {
       const options = databaseOptionsUtil({ ...env, DB_LOGGING: false });
 
       expect(options.logging).toBe(false);
+    });
+  });
+
+  describe('ssl', () => {
+    it('requires TLS when DB_SSL is true', () => {
+      const options = databaseOptionsUtil({ ...env, DB_SSL: true });
+
+      expect(options.dialectOptions).toEqual({ ssl: true });
+    });
+
+    it('is not configured when DB_SSL is false', () => {
+      const options = databaseOptionsUtil({ ...env, DB_SSL: false });
+
+      expect(options.dialectOptions).toBeUndefined();
     });
   });
 });

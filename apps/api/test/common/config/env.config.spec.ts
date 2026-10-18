@@ -26,6 +26,7 @@ describe('validateEnv', () => {
       LOG_LEVELS: ['log', 'error'],
       DB_PORT: 5432,
       DB_LOGGING: false,
+      DB_SSL: false,
       SMTP_PORT: 465,
       SMTP_SECURE: true,
       SESSION_TTL_HOURS: 24,
