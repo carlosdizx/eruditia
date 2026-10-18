@@ -13,6 +13,7 @@ const sequelizeConfigFactory = (
     DB_PASSWORD: configService.get('DB_PASSWORD', { infer: true }),
     DB_NAME: configService.get('DB_NAME', { infer: true }),
     DB_LOGGING: configService.get('DB_LOGGING', { infer: true }),
+    DB_SSL: configService.get('DB_SSL', { infer: true }),
   }),
   synchronize: false,
 });

@@ -8,11 +8,12 @@ const validEnv = {
 };
 
 describe('databaseSchema', () => {
-  it('applies defaults for DB_PORT and DB_LOGGING', () => {
+  it('applies defaults for DB_PORT, DB_LOGGING and DB_SSL', () => {
     expect(databaseSchema.parse(validEnv)).toEqual({
       ...validEnv,
       DB_PORT: 5432,
       DB_LOGGING: false,
+      DB_SSL: false,
     });
   });
 
@@ -46,6 +47,20 @@ describe('databaseSchema', () => {
     it.each(['TRUE', '1', 'yes', ''])('rejects "%s"', (value) => {
       expect(
         databaseSchema.safeParse({ ...validEnv, DB_LOGGING: value }).success,
+      ).toBe(false);
+    });
+  });
+
+  describe('DB_SSL', () => {
+    it('transforms "true" into true', () => {
+      expect(databaseSchema.parse({ ...validEnv, DB_SSL: 'true' }).DB_SSL).toBe(
+        true,
+      );
+    });
+
+    it.each(['TRUE', '1', 'require', ''])('rejects "%s"', (value) => {
+      expect(
+        databaseSchema.safeParse({ ...validEnv, DB_SSL: value }).success,
       ).toBe(false);
     });
   });
