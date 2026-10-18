@@ -105,14 +105,15 @@ export function LookupForm({
             data={data}
             actions={
               <ReportCardPdfMenu
+                prominent
+                label="Descargar Boletín en PDF"
                 periods={data.reportCard.periods}
-                form={{
-                  action: `/consulta-notas/${encodeURIComponent(slug)}/pdf`,
-                  fields: {
-                    documentNumber: credentials.documentNumber,
-                    academicYearId: credentials.academicYearId,
+                href={`/consulta-notas/${encodeURIComponent(slug)}/pdf?${new URLSearchParams(
+                  {
+                    anio: credentials.academicYearId,
+                    documento: credentials.documentNumber,
                   },
-                }}
+                )}`}
               />
             }
             yearSelector={

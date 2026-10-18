@@ -1,29 +1,22 @@
 import type { NextRequest } from 'next/server';
-import { fileResponse } from '@/lib/api/file-response';
+import { fileResponse, periodQuery } from '@/lib/api/file-response';
 
-const field = (form: FormData, name: string) => {
-  const value = form.get(name);
-  return typeof value === 'string' && value ? value : undefined;
-};
-
-// Portal sin sesión: el formulario reenvía año + documento para generar el
-// PDF.
-export async function POST(
+// Portal sin sesión: PDF del boletín por año + documento
+// (?anio=&documento=&periodo=).
+export async function GET(
   request: NextRequest,
   ctx: RouteContext<'/consulta-notas/[orgSlug]/pdf'>,
 ) {
   const { orgSlug } = await ctx.params;
-  const form = await request.formData();
+  const params = request.nextUrl.searchParams;
   return await fileResponse(
-    `/public/report-cards/${encodeURIComponent(orgSlug)}/pdf`,
-    {
-      auth: false,
-      method: 'POST',
-      body: {
-        documentNumber: field(form, 'documentNumber'),
-        academicYearId: field(form, 'academicYearId'),
-        periodId: field(form, 'periodId'),
+    `/public/organizations/${encodeURIComponent(orgSlug)}/report-card/pdf${periodQuery(
+      request,
+      {
+        academicYearId: params.get('anio') ?? '',
+        documentNumber: params.get('documento') ?? '',
       },
-    },
+    )}`,
+    { auth: false },
   );
 }

@@ -14,53 +14,45 @@ import {
 
 type Period = { id: string; name: string };
 
-// Descarga del boletín en PDF: el informe final o el de un periodo.
-// href: route handler GET (se le agrega ?periodo=); form: POST del portal con
-// documento + PIN, que no deben ir en la URL.
+// Descarga del boletín en PDF: el informe final o el de un periodo. href es
+// un route handler GET al que se le agrega ?periodo=. prominent: botón grande
+// para el portal público.
 export function ReportCardPdfMenu({
   periods,
   href,
-  form,
   label = 'Descargar PDF',
+  prominent = false,
 }: {
   periods: Period[];
-  href?: string;
-  form?: { action: string; fields: Record<string, string | undefined> };
+  href: string;
   label?: string;
+  prominent?: boolean;
 }) {
   const download = (periodId?: string) => {
-    if (href) {
-      const url = new URL(href, window.location.origin);
-      if (periodId) url.searchParams.set('periodo', periodId);
-      window.location.assign(url);
-      return;
-    }
-    if (!form) return;
-    const element = document.createElement('form');
-    element.method = 'POST';
-    element.action = form.action;
-    element.target = '_blank';
-    Object.entries({ ...form.fields, periodId }).forEach(([name, value]) => {
-      if (!value) return;
-      const input = document.createElement('input');
-      input.type = 'hidden';
-      input.name = name;
-      input.value = value;
-      element.append(input);
-    });
-    document.body.append(element);
-    element.submit();
-    element.remove();
+    const url = new URL(href, window.location.origin);
+    if (periodId) url.searchParams.set('periodo', periodId);
+    window.location.assign(url);
   };
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>
+      <DropdownMenuTrigger
+        render={
+          prominent ? (
+            <Button size="lg" className="h-12 w-full text-base sm:w-auto" />
+          ) : (
+            <Button variant="outline" size="sm" />
+          )
+        }
+      >
         <FileDownIcon data-icon="inline-start" />
         {label}
         <ChevronDownIcon data-icon="inline-end" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-48">
+      <DropdownMenuContent
+        align="end"
+        className={prominent ? 'min-w-64 text-base' : 'min-w-48'}
+      >
         <DropdownMenuItem onClick={() => download()}>
           Informe final (todo el año)
         </DropdownMenuItem>

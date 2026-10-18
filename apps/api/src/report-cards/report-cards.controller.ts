@@ -147,11 +147,10 @@ export default class ReportCardsController {
 
   @Public()
   @UseGuards(PortalRateLimitGuard)
-  @Post('public/report-cards/:slug/pdf')
-  @HttpCode(HttpStatus.OK)
+  @Get('public/organizations/:slug/report-card/pdf')
   public async lookupReportCardPdf(
     @Param('slug') slug: string,
-    @Body() dto: LookupReportCardPdfDto,
+    @Query() dto: LookupReportCardPdfDto,
   ) {
     return download(
       await this.reportCardsService.lookupReportCardPdf(slug, dto),

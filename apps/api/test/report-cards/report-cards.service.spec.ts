@@ -555,6 +555,26 @@ describe('ReportCardsService', () => {
       expect(result.years.map(({ id }) => id)).toEqual(['y2026', 'y2025']);
     });
 
+    it('renders the PDF of the year asked for', async () => {
+      const result = await service.lookupReportCardPdf('sol', {
+        documentNumber: '1001',
+        academicYearId: 'y2026',
+        periodId: 'p1',
+      });
+
+      expect(result.filename).toBe('boletin-perez-ana-2026-p1.pdf');
+      expect(result.content.subarray(0, 5).toString()).toBe('%PDF-');
+    });
+
+    it('has no PDF for a year without enrollment', async () => {
+      await expect(
+        service.lookupReportCardPdf('sol', {
+          documentNumber: '1001',
+          academicYearId: 'y2024',
+        }),
+      ).rejects.toThrow(REPORT_CARD_NOT_FOUND_MESSAGE);
+    });
+
     it('is not found for an unknown document', async () => {
       studentRepository.findOne.mockResolvedValue(null);
 

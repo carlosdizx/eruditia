@@ -1,5 +1,10 @@
 import 'reflect-metadata';
-import { GUARDS_METADATA } from '@nestjs/common/constants';
+import { RequestMethod } from '@nestjs/common';
+import {
+  GUARDS_METADATA,
+  METHOD_METADATA,
+  PATH_METADATA,
+} from '@nestjs/common/constants';
 import PermissionEnum from '@common/enums/permission.enum';
 import RoleNameEnum from '@common/enums/role-name.enum';
 import { AUTH_WITH_PERMISSIONS_KEY } from '@auth/decorators/auth-with-permissions.decorator';
@@ -116,6 +121,21 @@ describe('ReportCardsController', () => {
       ]);
     },
   );
+
+  it('downloads the public PDF with a GET link', async () => {
+    const dto = { documentNumber: '123', academicYearId: 'y1', periodId: 'p1' };
+
+    const file = await controller.lookupReportCardPdf('colegio', dto);
+
+    expect(handlerMetadata('lookupReportCardPdf', METHOD_METADATA)).toBe(
+      RequestMethod.GET,
+    );
+    expect(handlerMetadata('lookupReportCardPdf', PATH_METADATA)).toBe(
+      'public/organizations/:slug/report-card/pdf',
+    );
+    expect(service.lookupReportCardPdf).toHaveBeenCalledWith('colegio', dto);
+    expect(file.getHeaders()).toMatchObject({ type: 'application/pdf' });
+  });
 
   it('delegates', async () => {
     const dto = { documentNumber: '123', academicYearId: 'y1' };
