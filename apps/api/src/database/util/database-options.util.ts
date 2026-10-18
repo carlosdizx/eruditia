@@ -11,6 +11,7 @@ const databaseOptionsUtil = (env: DatabaseEnvInterface): SequelizeOptions => {
     password: env.DB_PASSWORD,
     database: env.DB_NAME,
     logging: env.DB_LOGGING ? console.log : false,
+    dialectOptions: env.DB_SSL ? { ssl: true } : undefined,
     models,
   };
 };

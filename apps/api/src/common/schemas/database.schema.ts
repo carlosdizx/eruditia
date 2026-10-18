@@ -10,6 +10,11 @@ const databaseSchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((value) => value === 'true'),
+  // Proveedores gestionados (Neon, Supabase, etc.) exigen conexiones TLS.
+  DB_SSL: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
 });
 
 export default databaseSchema;

@@ -5,4 +5,5 @@ export default interface DatabaseEnvInterface {
   DB_PASSWORD: string;
   DB_NAME: string;
   DB_LOGGING: boolean;
+  DB_SSL: boolean;
 }
