@@ -7,7 +7,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { ScoreText } from '@/components/grading/score-text';
+import { resolveConcept } from '@/lib/grading/concepts';
 import { cn } from '@/lib/utils';
 import {
   formatScore,
@@ -17,6 +23,7 @@ import {
 } from '@/lib/grading/scale';
 import { ENROLLMENT_STATUS_LABELS } from '../../../salones/[classroomId]/types';
 import { saveGrades } from '../../actions';
+import { ConceptsDialog } from './concepts-dialog';
 import { EvaluationItemsDialog } from './evaluation-items-dialog';
 import type {
   Gradebook,
@@ -69,6 +76,8 @@ export function GradebookSheet({
   const [pending, startTransition] = useTransition();
 
   const { items, students, scale, lock, period, classroomSubject } = gradebook;
+  // Los conceptos se editan aparte y llegan con cada render del servidor.
+  const { concepts } = initial;
   const base = useMemo(() => toDrafts(gradebook), [gradebook]);
   const canEdit = !lock;
 
@@ -241,14 +250,26 @@ export function GradebookSheet({
             <span className="text-destructive">{failing} reprobando</span>
           )}
         </div>
-        {canEdit && period && (
-          <EvaluationItemsDialog
-            classroomSubjectId={classroomSubject.id}
-            periodId={period.id}
-            items={items}
-            // Cambiar columnas recarga la planilla: primero hay que guardar.
-            disabled={dirty || pending}
-          />
+        {period && (
+          <div className="flex flex-wrap gap-2">
+            <ConceptsDialog
+              classroomSubjectId={classroomSubject.id}
+              periodId={period.id}
+              periodName={period.name}
+              concepts={concepts}
+              scale={scale}
+              editable={canEdit}
+            />
+            {canEdit && (
+              <EvaluationItemsDialog
+                classroomSubjectId={classroomSubject.id}
+                periodId={period.id}
+                items={items}
+                // Cambiar columnas recarga la planilla: primero hay que guardar.
+                disabled={dirty || pending}
+              />
+            )}
+          </div>
         )}
       </div>
 
@@ -279,6 +300,11 @@ export function GradebookSheet({
               <th className="min-w-24 border-l px-3 py-2 text-center font-medium">
                 Definitiva
               </th>
+              {concepts.length > 0 && (
+                <th className="min-w-48 px-3 py-2 text-left font-medium">
+                  Concepto
+                </th>
+              )}
               <th className="min-w-64 px-3 py-2 text-left font-medium">
                 Observación
               </th>
@@ -360,6 +386,18 @@ export function GradebookSheet({
                     <td className="border-l px-3 py-1.5 text-center">
                       <ScoreText score={final} scale={scale} />
                     </td>
+                    {concepts.length > 0 && (
+                      <td className="px-3 py-1.5">
+                        <ConceptPreview
+                          text={
+                            final === null
+                              ? null
+                              : (resolveConcept(concepts, final)?.conceptText ??
+                                '')
+                          }
+                        />
+                      </td>
+                    )}
                     <td className="px-3 py-1.5">
                       {editable ? (
                         <Input
@@ -459,5 +497,28 @@ function StudentName({ student }: { student: GradebookStudent }) {
         </Badge>
       )}
     </div>
+  );
+}
+
+// null: sin definitiva; vacío: la nota cae en un rango sin concepto.
+function ConceptPreview({ text }: { text: string | null }) {
+  if (text === null) return <span className="text-muted-foreground">—</span>;
+  if (!text)
+    return (
+      <span className="text-xs text-amber-700 dark:text-amber-400">
+        Sin concepto para esta nota
+      </span>
+    );
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <span className="text-muted-foreground block max-w-56 cursor-default truncate text-xs" />
+        }
+      >
+        {text}
+      </TooltipTrigger>
+      <TooltipContent className="max-w-sm">{text}</TooltipContent>
+    </Tooltip>
   );
 }

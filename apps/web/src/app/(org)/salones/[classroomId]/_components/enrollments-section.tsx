@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import { UsersIcon } from 'lucide-react';
+import { ReportCardLink } from '@/components/grading/report-card-link';
+import { ReportCardPdfMenu } from '@/components/grading/report-card-pdf-menu';
 import { Badge } from '@/components/ui/badge';
 import {
   Empty,
@@ -41,6 +43,8 @@ export function EnrollmentsSection({
   canEnroll,
   canUpdate,
   canDelete,
+  canViewReportCards,
+  reportCardPeriods,
 }: {
   classroom: Classroom;
   enrollments: Enrollment[];
@@ -50,6 +54,9 @@ export function EnrollmentsSection({
   canEnroll: boolean;
   canUpdate: boolean;
   canDelete: boolean;
+  canViewReportCards: boolean;
+  // Periodos para imprimir los boletines del salón; null sin permiso.
+  reportCardPeriods: { id: string; name: string }[] | null;
 }) {
   const inProgress = enrollments.filter(
     ({ status }) => status === 'in_progress',
@@ -57,19 +64,28 @@ export function EnrollmentsSection({
   const available = classroom.capacity
     ? Math.max(classroom.capacity - inProgress, 0)
     : null;
-  const withActions = canUpdate || canDelete;
+  const withActions = canUpdate || canDelete || canViewReportCards;
 
   return (
     <>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-base font-semibold">Lista de clase</h2>
-        {canEnroll && (
-          <EnrollStudentsDialog
-            classroom={classroom}
-            candidates={candidates}
-            available={available}
-          />
-        )}
+        <div className="flex flex-wrap gap-2">
+          {reportCardPeriods && enrollments.length > 0 && (
+            <ReportCardPdfMenu
+              label="Boletines del salón (PDF)"
+              periods={reportCardPeriods}
+              href={`/salones/${classroom.id}/boletines/pdf`}
+            />
+          )}
+          {canEnroll && (
+            <EnrollStudentsDialog
+              classroom={classroom}
+              candidates={candidates}
+              available={available}
+            />
+          )}
+        </div>
       </div>
 
       {!enrollments.length ? (
@@ -97,7 +113,7 @@ export function EnrollmentsSection({
                   Matriculado
                 </TableHead>
                 <TableHead>Estado</TableHead>
-                {withActions && <TableHead className="w-12 pr-4" />}
+                {withActions && <TableHead className="pr-4" />}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -137,14 +153,22 @@ export function EnrollmentsSection({
                     </Badge>
                   </TableCell>
                   {withActions && (
-                    <TableCell className="pr-4 text-right">
-                      <EnrollmentRowActions
-                        classroomId={classroom.id}
-                        enrollment={enrollment}
-                        classrooms={classrooms}
-                        canUpdate={canUpdate}
-                        canDelete={canDelete}
-                      />
+                    <TableCell className="pr-4">
+                      <div className="flex items-center justify-end gap-1">
+                        {canViewReportCards && (
+                          <ReportCardLink
+                            enrollmentId={enrollment.id}
+                            from={`/salones/${classroom.id}`}
+                          />
+                        )}
+                        <EnrollmentRowActions
+                          classroomId={classroom.id}
+                          enrollment={enrollment}
+                          classrooms={classrooms}
+                          canUpdate={canUpdate}
+                          canDelete={canDelete}
+                        />
+                      </div>
                     </TableCell>
                   )}
                 </TableRow>

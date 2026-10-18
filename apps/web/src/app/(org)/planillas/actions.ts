@@ -5,7 +5,10 @@ import { ApiError } from '@/lib/api/api-fetch';
 import { authFetch } from '@/lib/api/auth-fetch';
 import { requireGrant } from '@/lib/auth/current-user';
 import { GRADE_GRANTS } from '@/lib/auth/permissions';
+import type { SubjectConcept } from '@/lib/grading/concepts';
 import type {
+  ConceptSource,
+  ConceptsActionResult,
   EvaluationItemPayload,
   Gradebook,
   GradebookActionResult,
@@ -65,4 +68,59 @@ export async function setEvaluationItems(
 
   refresh();
   return { ok: true, message: 'Se actualizaron las actividades', gradebook };
+}
+
+export async function setSubjectConcepts(
+  classroomSubjectId: string,
+  periodId: string,
+  concepts: SubjectConcept[],
+): Promise<ConceptsActionResult> {
+  await requireGrant(GRADE_GRANTS.record);
+
+  let saved: Required<SubjectConcept>[];
+  try {
+    saved = await authFetch<Required<SubjectConcept>[]>(
+      `${gradebookPath(classroomSubjectId, periodId)}/concepts`,
+      {
+        method: 'PUT',
+        body: {
+          concepts: concepts.map(({ minScore, maxScore, conceptText }) => ({
+            minScore,
+            maxScore,
+            conceptText,
+          })),
+        },
+      },
+    );
+  } catch (error) {
+    return { ok: false, message: toMessage(error) };
+  }
+
+  refresh();
+  return {
+    ok: true,
+    message: saved.length
+      ? 'Se guardaron los conceptos del periodo'
+      : 'Se quitaron los conceptos del periodo',
+    concepts: saved,
+  };
+}
+
+export async function getConceptSources(
+  classroomSubjectId: string,
+): Promise<
+  { ok: true; sources: ConceptSource[] } | { ok: false; message: string }
+> {
+  await requireGrant(GRADE_GRANTS.record);
+
+  try {
+    return {
+      ok: true,
+      sources: await authFetch<ConceptSource[]>(
+        `/gradebooks/${classroomSubjectId}/concept-sources`,
+      ),
+    };
+  } catch (error) {
+    return { ok: false, message: toMessage(error) };
+  }
 }

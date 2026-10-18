@@ -53,7 +53,9 @@ const permissionDescriptions: Record<PermissionEnum, string> = {
   [PermissionEnum.GRADE_RECOVER]:
     'Registrar recuperaciones de materias perdidas al final del año (los profesores, de sus materias)',
   [PermissionEnum.REPORT_CARD_VIEW]:
-    'Boletín de notas: los estudiantes lo consultan con su cuenta o con documento + PIN en el portal público',
+    'Boletín de notas: los estudiantes lo consultan con su cuenta o con documento + PIN en el portal público; el admin y el director de grupo lo previsualizan',
+  [PermissionEnum.REPORT_CARD_EXPORT]:
+    'Generar y exportar boletines en PDF (individuales y por salón; los profesores, de su dirección de grupo)',
   [PermissionEnum.RANKING_VIEW]:
     'Rankings y cuadro de honor (los profesores, de su dirección de grupo y sus materias)',
 };

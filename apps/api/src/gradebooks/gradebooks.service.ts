@@ -34,6 +34,7 @@ import EvaluationItemRepository from './repositories/evaluation-item.repository'
 import StudentGradeRepository from './repositories/student-grade.repository';
 import PeriodSubjectSummaryRepository from './repositories/period-subject-summary.repository';
 import SubjectRecoveryRepository from './repositories/subject-recovery.repository';
+import SubjectPeriodConceptRepository from './repositories/subject-period-concept.repository';
 import periodScore from './utils/period-score.util';
 import annualScore, { withRecovery } from './utils/annual-score.util';
 import SetEvaluationItemsDto from './dto/set-evaluation-items.dto';
@@ -98,7 +99,7 @@ const gradeKey = (enrollmentId: string, evaluationItemId: string): GradeKey =>
 
 type StoredGrade = { score: number; feedback: string | null };
 
-interface GradebookContext {
+export interface GradebookContext {
   organizationId: string;
   assignment: ClassroomSubjectModel;
   classroom: ClassroomModel;
@@ -121,12 +122,13 @@ export default class GradebooksService {
     private readonly studentGradeRepository: StudentGradeRepository,
     private readonly periodSubjectSummaryRepository: PeriodSubjectSummaryRepository,
     private readonly subjectRecoveryRepository: SubjectRecoveryRepository,
+    private readonly subjectPeriodConceptRepository: SubjectPeriodConceptRepository,
     private readonly gradingScalesService: GradingScalesService,
   ) {}
 
   // El profesor solo ve las materias que dicta y, en modo lectura, las de los
   // salones donde es director de grupo. Lo demás responde 404.
-  private loadContext = async (
+  public loadContext = async (
     actor: Viewer,
     classroomSubjectId: string,
   ): Promise<GradebookContext> => {
@@ -194,7 +196,7 @@ export default class GradebooksService {
     return null;
   };
 
-  private assertEditable = (
+  public assertEditable = (
     context: GradebookContext,
     period: AcademicPeriodModel,
   ) => {
@@ -202,7 +204,7 @@ export default class GradebooksService {
     if (lock) throw LOCK_EXCEPTIONS[lock]();
   };
 
-  private findPeriod = (periods: AcademicPeriodModel[], periodId: string) => {
+  public findPeriod = (periods: AcademicPeriodModel[], periodId: string) => {
     const period = periods.find(({ id }) => id === periodId);
     if (!period)
       throw new NotFoundException(GRADEBOOK_PERIOD_NOT_FOUND_MESSAGE);
@@ -218,6 +220,18 @@ export default class GradebooksService {
       {
         attributes: ['id', 'title', 'weightPercentage', 'sortOrder'],
         order: [['sortOrder', 'ASC']],
+      },
+    );
+
+  public listConcepts = async (
+    classroomSubjectId: string,
+    academicPeriodId: string,
+  ) =>
+    await this.subjectPeriodConceptRepository.findAll(
+      { classroomSubjectId, academicPeriodId },
+      {
+        attributes: ['id', 'minScore', 'maxScore', 'conceptText'],
+        order: [['minScore', 'ASC']],
       },
     );
 
@@ -345,7 +359,14 @@ export default class GradebooksService {
 
     const base = await this.describe(context);
     if (!period)
-      return { ...base, period: null, lock: null, items: [], students: [] };
+      return {
+        ...base,
+        period: null,
+        lock: null,
+        items: [],
+        concepts: [],
+        students: [],
+      };
 
     const lock = this.lockOf(context, period);
     let items = await this.listItems(assignment.id, period.id);
@@ -360,10 +381,11 @@ export default class GradebooksService {
       items = await this.listItems(assignment.id, period.id);
     }
 
-    const [enrollments, grades, summaries] = await Promise.all([
+    const [enrollments, grades, summaries, concepts] = await Promise.all([
       this.listEnrollments(classroom.id),
       this.loadGrades(items.map(({ id }) => id)),
       this.loadSummaries(assignment.id, period.id),
+      this.listConcepts(assignment.id, period.id),
     ]);
 
     return {
@@ -371,6 +393,8 @@ export default class GradebooksService {
       period,
       lock,
       items,
+      // La planilla resuelve en vivo el concepto de cada definitiva.
+      concepts,
       students: enrollments.map(({ id, status, student }) => {
         const summary = summaries.get(id);
         return {

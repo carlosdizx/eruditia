@@ -35,7 +35,7 @@ export default class AnnualResultsService {
       this.classroomSubjectRepository.findAll(
         { classroomId: classroom.id },
         {
-          attributes: ['id', 'weightInGpa'],
+          attributes: ['id', 'weightInGpa', 'weeklyHours'],
           include: [
             { model: SubjectModel, attributes: ['id', 'name', 'areaName'] },
             {
@@ -92,9 +92,10 @@ export default class AnnualResultsService {
     );
 
     const subjects = assignments.map(
-      ({ id, weightInGpa, subject, teacher }) => ({
+      ({ id, weightInGpa, weeklyHours, subject, teacher }) => ({
         id,
         weightInGpa,
+        weeklyHours,
         subject: subject!,
         teacher: teacher
           ? { firstName: teacher.firstName, lastName: teacher.lastName }

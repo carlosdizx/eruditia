@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 import { TableSkeleton } from '@/components/data/table-skeleton';
 import { ReportCard } from '@/components/grading/report-card';
+import { ReportCardPdfMenu } from '@/components/grading/report-card-pdf-menu';
 import { PanelContent, PanelHeader } from '@/components/panel/panel-header';
 import { Button } from '@/components/ui/button';
 import {
@@ -50,6 +51,14 @@ async function ReportCardView({ searchParams }: PageProps<'/boletin'>) {
   return (
     <ReportCard
       data={data}
+      actions={
+        data.reportCard && (
+          <ReportCardPdfMenu
+            periods={data.reportCard.periods}
+            href={`/boletin/pdf?anio=${current}`}
+          />
+        )
+      }
       yearSelector={
         data.years.length > 1 && (
           <nav aria-label="Años lectivos" className="flex flex-wrap gap-2">

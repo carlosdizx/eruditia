@@ -1,5 +1,11 @@
 import type { ReactNode } from 'react';
-import { ChevronDownIcon, MessageSquareTextIcon } from 'lucide-react';
+import {
+  CheckCircle2Icon,
+  ChevronDownIcon,
+  ClipboardCheckIcon,
+  MessageSquareQuoteIcon,
+  MessageSquareTextIcon,
+} from 'lucide-react';
 import { AnnualStatusBadge } from '@/components/grading/annual-status-badge';
 import { ScoreText } from '@/components/grading/score-text';
 import {
@@ -23,14 +29,23 @@ import type {
 
 type Card = NonNullable<ReportCardResponse['reportCard']>;
 
-// Boletín del estudiante: lo usan el panel (con login) y el portal con PIN.
+// student: el propio estudiante (o el acudiente en el portal); staff: el admin
+// o el director de grupo revisando antes de entregar.
+type Audience = 'student' | 'staff';
+
+// Boletín del estudiante: lo usan el panel (con login), el portal con PIN y la
+// vista previa del admin o el director de grupo.
 // yearSelector: cómo se cambia de año en cada caso.
 export function ReportCard({
   data,
   yearSelector,
+  actions,
+  audience = 'student',
 }: {
   data: ReportCardResponse;
   yearSelector?: ReactNode;
+  actions?: ReactNode;
+  audience?: Audience;
 }) {
   const { organization, student, reportCard } = data;
 
@@ -41,8 +56,9 @@ export function ReportCard({
           <CardDescription>
             {organization.name} · Boletín de calificaciones
           </CardDescription>
-          <CardTitle className="text-xl">
+          <CardTitle className="flex flex-wrap items-center justify-between gap-2 text-xl">
             {student.lastName} {student.firstName}
+            {actions}
           </CardTitle>
           <p className="text-muted-foreground text-sm">
             {[
@@ -69,19 +85,27 @@ export function ReportCard({
           <EmptyHeader>
             <EmptyTitle>Sin matrícula</EmptyTitle>
             <EmptyDescription>
-              Todavía no estás matriculado en ningún año lectivo.
+              {audience === 'staff'
+                ? 'El estudiante no tiene matrícula en ningún año lectivo.'
+                : 'Todavía no estás matriculado en ningún año lectivo.'}
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : (
-        <ReportCardBody card={reportCard} />
+        <ReportCardBody card={reportCard} audience={audience} />
       )}
     </div>
   );
 }
 
-function ReportCardBody({ card }: { card: Card }) {
-  const { scale, periods, subjects, averages } = card;
+function ReportCardBody({
+  card,
+  audience,
+}: {
+  card: Card;
+  audience: Audience;
+}) {
+  const { scale, periods, subjects, averages, rank } = card;
   const atRisk = subjects.filter(
     ({ annual }) => annual.status === 'at_risk' || annual.status === 'failed',
   ).length;
@@ -103,14 +127,20 @@ function ReportCardBody({ card }: { card: Card }) {
               scale={scale}
               className="text-xl"
             />
+            {rank?.periods[period.id] && (
+              <span className="text-muted-foreground text-xs">
+                Puesto {rank.periods[period.id]!.position} de{' '}
+                {rank.periods[period.id]!.total}
+              </span>
+            )}
           </Stat>
         ))}
-        {card.rank && (
-          <Stat label="Puesto en el salón">
+        {rank?.annual && (
+          <Stat label="Puesto en el salón (acumulado)">
             <span className="text-xl font-semibold">
-              {card.rank.position}{' '}
+              {rank.annual.position}{' '}
               <span className="text-muted-foreground text-sm font-normal">
-                de {card.rank.total} estudiantes
+                de {rank.annual.total} estudiantes
               </span>
             </span>
           </Stat>
@@ -133,12 +163,17 @@ function ReportCardBody({ card }: { card: Card }) {
           <EmptyHeader>
             <EmptyTitle>Sin materias</EmptyTitle>
             <EmptyDescription>
-              Tu salón aún no tiene materias asignadas.
+              {audience === 'staff'
+                ? 'El salón aún no tiene materias asignadas.'
+                : 'Tu salón aún no tiene materias asignadas.'}
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : (
         <>
+          {audience === 'staff' && (
+            <Readiness periods={periods} subjects={subjects} />
+          )}
           <div className="overflow-x-auto rounded-xl border">
             <table className="w-full min-w-max border-collapse text-sm">
               <thead>
@@ -258,6 +293,7 @@ function SubjectDetail({
       !!result &&
       (result.score !== null ||
         !!result.observation ||
+        !!result.concept ||
         result.activities.some(({ score }) => score !== null))
     );
   });
@@ -336,6 +372,12 @@ function SubjectDetail({
                     ))}
                   </ul>
                 )}
+                {result.concept && (
+                  <p className="flex items-start gap-2 rounded-lg border px-3 py-2 text-sm">
+                    <MessageSquareQuoteIcon className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+                    {result.concept}
+                  </p>
+                )}
                 {result.observation && (
                   <p className="bg-muted flex items-start gap-2 rounded-lg px-3 py-2 text-sm">
                     <MessageSquareTextIcon className="text-muted-foreground mt-0.5 size-4 shrink-0" />
@@ -348,5 +390,65 @@ function SubjectDetail({
         )}
       </div>
     </details>
+  );
+}
+
+// Para el admin o el director de grupo: qué falta en cada periodo ya
+// iniciado (alguna materia con definitiva) antes de entregar el boletín.
+function Readiness({
+  periods,
+  subjects,
+}: {
+  periods: Card['periods'];
+  subjects: Card['subjects'];
+}) {
+  const pending = periods.flatMap((period) => {
+    const results = subjects.map((subject) => ({
+      name: subject.subject.name,
+      result: subject.periods[period.id],
+    }));
+    if (!results.some(({ result }) => result?.score != null)) return [];
+
+    const withoutScore = results
+      .filter(({ result }) => result?.score == null)
+      .map(({ name }) => name);
+    const withoutConcept = results
+      .filter(({ result }) => result?.score != null && !result.concept)
+      .map(({ name }) => name);
+    return withoutScore.length || withoutConcept.length
+      ? [{ period, withoutScore, withoutConcept }]
+      : [];
+  });
+
+  if (!pending.length)
+    return (
+      <p className="flex items-center gap-2 rounded-lg border border-emerald-300/50 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+        <CheckCircle2Icon className="size-4 shrink-0" />
+        Todas las materias tienen nota y concepto en los periodos calificados.
+      </p>
+    );
+
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border border-amber-300/50 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+      <span className="flex items-center gap-2 font-medium">
+        <ClipboardCheckIcon className="size-4 shrink-0" />
+        Pendiente antes de entregar
+      </span>
+      <ul className="flex flex-col gap-1 pl-6">
+        {pending.map(({ period, withoutScore, withoutConcept }) => (
+          <li key={period.id}>
+            <span className="font-medium">{period.name}:</span>{' '}
+            {[
+              withoutScore.length > 0 &&
+                `sin definitiva en ${withoutScore.join(', ')}`,
+              withoutConcept.length > 0 &&
+                `sin concepto en ${withoutConcept.join(', ')}`,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

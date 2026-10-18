@@ -1,4 +1,5 @@
 import type { AnnualScore, SubjectRecovery } from '@/lib/grading/annual';
+import type { SubjectConcept } from '@/lib/grading/concepts';
 import type { GradingScale } from '@/lib/grading/scale';
 
 export type GradebookPeriod = {
@@ -56,6 +57,8 @@ export type Gradebook = {
   period: GradebookPeriod | null;
   lock: GradebookLock | null;
   items: EvaluationItem[];
+  // Rangos y conceptos del periodo, ordenados por nota mínima.
+  concepts: Required<SubjectConcept>[];
   students: GradebookStudent[];
 };
 
@@ -94,6 +97,25 @@ export type EvaluationItemPayload = {
   title: string;
   weightPercentage: number;
 };
+
+// Contrato de GET /gradebooks/:classroomSubjectId/concept-sources.
+export type ConceptSource = {
+  classroomSubjectId: string;
+  // Esta misma materia (otro periodo).
+  current: boolean;
+  classroom: { id: string; name: string; gradeLevel: { name: string } | null };
+  academicYear: { id: string; name: string } | null;
+  periods: {
+    id: string;
+    name: string;
+    orderIndex: number;
+    concepts: SubjectConcept[];
+  }[];
+};
+
+export type ConceptsActionResult =
+  | { ok: true; message: string; concepts: Required<SubjectConcept>[] }
+  | { ok: false; message: string };
 
 export type GradebookActionResult =
   | { ok: true; message: string; gradebook: Gradebook }

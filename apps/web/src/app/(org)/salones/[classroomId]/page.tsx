@@ -40,6 +40,7 @@ import {
   ENROLLMENT_GRANTS,
   canOpenGradebooks,
   isGranted,
+  REPORT_CARD_GRANTS,
   SUBJECT_GRANTS,
 } from '@/lib/auth/permissions';
 import type { Classroom, Teacher } from '../types';
@@ -107,24 +108,33 @@ async function ClassroomLoad({
     editableEnrollments && isGranted(me, ENROLLMENT_GRANTS.delete);
   const canPromote = isGranted(me, ENROLLMENT_GRANTS.promote);
 
-  const [catalog, teachers, candidates, yearClassrooms] = await Promise.all([
-    canAssign && isGranted(me, SUBJECT_GRANTS.list)
-      ? authFetch<SubjectOption[]>('/subjects')
-      : Promise.resolve([]),
-    canAssign
-      ? authFetch<Teacher[]>('/classrooms/teachers')
-      : Promise.resolve([]),
-    canEnroll
-      ? authFetch<EnrollmentStudent[]>(
-          `/classrooms/${classroomId}/enrollments/candidates`,
-        )
-      : Promise.resolve([]),
-    canUpdateEnrollments
-      ? authFetch<Classroom[]>(
-          `/classrooms?academicYearId=${classroom.academicYearId}`,
-        )
-      : Promise.resolve([]),
-  ]);
+  const canExportReportCards =
+    canListEnrollments && isGranted(me, REPORT_CARD_GRANTS.export);
+
+  const [catalog, teachers, candidates, yearClassrooms, reportCardPeriods] =
+    await Promise.all([
+      canAssign && isGranted(me, SUBJECT_GRANTS.list)
+        ? authFetch<SubjectOption[]>('/subjects')
+        : Promise.resolve([]),
+      canAssign
+        ? authFetch<Teacher[]>('/classrooms/teachers')
+        : Promise.resolve([]),
+      canEnroll
+        ? authFetch<EnrollmentStudent[]>(
+            `/classrooms/${classroomId}/enrollments/candidates`,
+          )
+        : Promise.resolve([]),
+      canUpdateEnrollments
+        ? authFetch<Classroom[]>(
+            `/classrooms?academicYearId=${classroom.academicYearId}`,
+          )
+        : Promise.resolve([]),
+      canExportReportCards
+        ? authFetch<{ id: string; name: string }[]>(
+            `/classrooms/${classroomId}/report-cards/periods`,
+          ).catch(() => null)
+        : Promise.resolve(null),
+    ]);
 
   const siblings = yearClassrooms.filter(({ id }) => id !== classroom.id);
   const inProgress = enrollments.filter(
@@ -218,6 +228,8 @@ async function ClassroomLoad({
               canEnroll={canEnroll}
               canUpdate={canUpdateEnrollments}
               canDelete={canDeleteEnrollments}
+              canViewReportCards={isGranted(me, REPORT_CARD_GRANTS.preview)}
+              reportCardPeriods={reportCardPeriods}
             />
           ) : (
             <NoAccess />

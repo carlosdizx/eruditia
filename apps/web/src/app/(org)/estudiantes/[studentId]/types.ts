@@ -24,6 +24,7 @@ export type HistoryEnrollment = {
   classroom: {
     id: string;
     name: string;
+    homeroomTeacherId: string | null;
     gradeLevel: {
       id: string;
       name: string;

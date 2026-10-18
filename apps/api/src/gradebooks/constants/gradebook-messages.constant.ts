@@ -36,3 +36,12 @@ export const RECOVERY_SCORE_RANGE_MESSAGE = (min: string, max: string) =>
   `La nota de recuperación debe estar entre ${min} y ${max}`;
 export const RECOVERY_SCORE_DECIMALS_MESSAGE = (decimalPlaces: number) =>
   `La nota de recuperación admite como máximo ${decimalPlaces} ${decimalPlaces === 1 ? 'decimal' : 'decimales'}`;
+export const SUBJECT_CONCEPT_NOT_FOUND_MESSAGE = 'Concepto no encontrado';
+export const CONCEPT_RANGE_ORDER_MESSAGE = (min: string, max: string) =>
+  `El rango ${min} a ${max} es inválido: la nota mínima no puede superar la máxima`;
+export const CONCEPT_RANGE_SCALE_MESSAGE = (min: string, max: string) =>
+  `Los rangos deben estar entre ${min} y ${max}`;
+export const CONCEPT_RANGE_DECIMALS_MESSAGE = (decimalPlaces: number) =>
+  `Los rangos admiten como máximo ${decimalPlaces} ${decimalPlaces === 1 ? 'decimal' : 'decimales'}`;
+export const CONCEPT_RANGE_OVERLAP_MESSAGE = (first: string, second: string) =>
+  `Los rangos ${first} y ${second} se cruzan`;

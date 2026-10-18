@@ -457,15 +457,19 @@ describe('RankingsService', () => {
     });
   });
 
-  describe('classroomPosition', () => {
-    it('returns the position in the annual classroom ranking', async () => {
-      await expect(
-        service.classroomPosition('org-id', {
-          id: 'e1',
-          classroomId: 'c5a',
-          academicYearId: 'y2026',
-        }),
-      ).resolves.toEqual({ position: 3, total: 3 });
+  describe('classroomPositions', () => {
+    it('returns the annual and per-period positions in the classroom', async () => {
+      const positionsOf = await service.classroomPositions('org-id', {
+        id: 'c5a',
+        academicYearId: 'y2026',
+      });
+      const positions = positionsOf('e1');
+
+      expect(positions.annual).toEqual({ position: 3, total: 3 });
+      expect(Object.keys(positions.periods)).toEqual(
+        periods.map(({ id }) => id),
+      );
+      expect(positionsOf('unknown')).toMatchObject({ annual: null });
     });
   });
 

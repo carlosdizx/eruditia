@@ -42,10 +42,10 @@ const forwardedHeaders = async (): Promise<Record<string, string>> => {
   return forwarded;
 };
 
-export async function apiFetch<T>(
+const request = async (
   path: string,
-  { body, token, headers: init, ...options }: ApiFetchOptions = {},
-): Promise<T> {
+  { body, token, headers: init, ...options }: ApiFetchOptions,
+): Promise<Response> => {
   let response: Response;
   // Los archivos van como multipart: fetch pone el content-type con su boundary.
   const isFormData = body instanceof FormData;
@@ -74,8 +74,37 @@ export async function apiFetch<T>(
   if (!response.ok)
     throw new ApiError(response.status, await readErrorMessage(response));
 
+  return response;
+};
+
+export async function apiFetch<T>(
+  path: string,
+  options: ApiFetchOptions = {},
+): Promise<T> {
+  const response = await request(path, options);
+
   // Algunos endpoints (204, o 201 sin retorno) responden sin cuerpo.
   const text = await response.text();
 
   return (text ? JSON.parse(text) : undefined) as T;
+}
+
+export type ApiFile = {
+  content: ArrayBuffer;
+  contentType: string;
+  disposition: string | null;
+};
+
+// Descargas (PDF): el archivo tal cual, con el nombre que propone la API.
+export async function apiFetchFile(
+  path: string,
+  options: ApiFetchOptions = {},
+): Promise<ApiFile> {
+  const response = await request(path, options);
+  return {
+    content: await response.arrayBuffer(),
+    contentType:
+      response.headers.get('content-type') ?? 'application/octet-stream',
+    disposition: response.headers.get('content-disposition'),
+  };
 }
