@@ -30,6 +30,22 @@ describe('envSchema', () => {
       SMTP_SECURE: true,
       SESSION_TTL_HOURS: 24,
       SESSION_IDLE_TIMEOUT_MINUTES: 120,
+      TRUST_PROXY: ['loopback', 'linklocal', 'uniquelocal'],
+    });
+  });
+
+  describe('TRUST_PROXY', () => {
+    it('reads a list of trusted subnets', () => {
+      expect(
+        envSchema.parse({ ...validEnv, TRUST_PROXY: 'loopback, 10.0.0.0/8' })
+          .TRUST_PROXY,
+      ).toEqual(['loopback', '10.0.0.0/8']);
+    });
+
+    it('reads a number of hops', () => {
+      expect(
+        envSchema.parse({ ...validEnv, TRUST_PROXY: '1' }).TRUST_PROXY,
+      ).toBe(1);
     });
   });
 
