@@ -19,6 +19,20 @@ export const envSchema = z
       )
       .pipe(z.array(logLevelSchema).min(1)),
     SUPER_ADMIN_EMAIL: z.email(),
+    // Proxies de confianza para X-Forwarded-For (IP real del navegador en el
+    // límite de consultas del portal y en las sesiones): subredes o palabras
+    // clave de Express separadas por comas, o un número de saltos.
+    TRUST_PROXY: z
+      .string()
+      .default('loopback,linklocal,uniquelocal')
+      .transform((value) =>
+        /^\d+$/.test(value.trim())
+          ? Number(value)
+          : value
+              .split(',')
+              .map((entry) => entry.trim())
+              .filter(Boolean),
+      ),
   })
   .extend(databaseSchema.shape)
   .extend(observeSchema.shape)
