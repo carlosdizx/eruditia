@@ -27,7 +27,6 @@ describe('StudentsController', () => {
     importStudents: jest.Mock;
   };
   let studentAccessService: {
-    regenerateAccessPin: jest.Mock;
     linkAccount: jest.Mock;
     unlinkAccount: jest.Mock;
   };
@@ -44,9 +43,8 @@ describe('StudentsController', () => {
       importStudents: jest.fn().mockResolvedValue({ created: 1 }),
     };
     studentAccessService = {
-      regenerateAccessPin: jest.fn().mockResolvedValue({ accessPin: '012345' }),
       linkAccount: jest.fn().mockResolvedValue({ id: 'student-id' }),
-      unlinkAccount: jest.fn().mockResolvedValue({ accessPin: '012345' }),
+      unlinkAccount: jest.fn().mockResolvedValue({ id: 'student-id' }),
     };
     controller = new StudentsController(
       studentsService as unknown as StudentsService,
@@ -60,7 +58,6 @@ describe('StudentsController', () => {
     ['createStudent', PermissionEnum.STUDENT_CREATE],
     ['updateStudent', PermissionEnum.STUDENT_UPDATE],
     ['importStudents', PermissionEnum.STUDENT_IMPORT],
-    ['regenerateAccessPin', PermissionEnum.STUDENT_UPDATE],
     ['linkAccount', PermissionEnum.STUDENT_UPDATE],
     ['unlinkAccount', PermissionEnum.STUDENT_UPDATE],
   ])('%s', (handler, permission) => {
@@ -127,16 +124,6 @@ describe('StudentsController', () => {
     expect(studentsService.importStudents).toHaveBeenCalledWith(auth, buffer);
   });
 
-  it('regenerates the PIN of a student of the current organization', async () => {
-    await expect(
-      controller.regenerateAccessPin('student-id', auth),
-    ).resolves.toEqual({ accessPin: '012345' });
-    expect(studentAccessService.regenerateAccessPin).toHaveBeenCalledWith(
-      auth,
-      'student-id',
-    );
-  });
-
   it('links an account by email', async () => {
     await controller.linkAccount(
       'student-id',
@@ -151,9 +138,9 @@ describe('StudentsController', () => {
     );
   });
 
-  it('unlinks the account and returns the new PIN', async () => {
+  it('unlinks the account and returns the student', async () => {
     await expect(controller.unlinkAccount('student-id', auth)).resolves.toEqual(
-      { accessPin: '012345' },
+      { id: 'student-id' },
     );
     expect(studentAccessService.unlinkAccount).toHaveBeenCalledWith(
       auth,

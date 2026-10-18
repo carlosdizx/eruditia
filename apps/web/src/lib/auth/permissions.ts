@@ -80,7 +80,7 @@ export const PERMISSION_LABELS: Record<string, string> = {
   [Permission.GRADE_LIST]: 'Ver planillas de notas',
   [Permission.GRADE_RECORD]: 'Registrar notas',
   [Permission.GRADE_RECOVER]: 'Registrar recuperaciones',
-  [Permission.REPORT_CARD_VIEW]: 'Boletín de notas (cuenta y portal con PIN)',
+  [Permission.REPORT_CARD_VIEW]: 'Boletín de notas (cuenta y portal público)',
   [Permission.REPORT_CARD_EXPORT]: 'Exportar boletines en PDF',
   [Permission.RANKING_VIEW]: 'Rankings y cuadro de honor',
 };

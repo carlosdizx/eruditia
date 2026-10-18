@@ -33,7 +33,7 @@ type Card = NonNullable<ReportCardResponse['reportCard']>;
 // o el director de grupo revisando antes de entregar.
 type Audience = 'student' | 'staff';
 
-// Boletín del estudiante: lo usan el panel (con login), el portal con PIN y la
+// Boletín del estudiante: lo usan el panel (con login), el portal público y la
 // vista previa del admin o el director de grupo.
 // yearSelector: cómo se cambia de año en cada caso.
 export function ReportCard({

@@ -1,16 +1,11 @@
-jest.mock('../../src/students/utils/access-pin.util', () => ({
-  generateAccessPin: jest.fn(),
-}));
-
 import 'reflect-metadata';
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import { Transaction } from 'sequelize';
 import RoleNameEnum from '@common/enums/role-name.enum';
 import StudentAccessService from '../../src/students/student-access.service';
 import StudentRepository from '../../src/students/student.repository';
 import UsersService from '../../src/users/users.service';
 import RolesService from '../../src/roles/roles.service';
-import { generateAccessPin } from '../../src/students/utils/access-pin.util';
 import { STUDENT_USER_INCLUDE } from '../../src/students/utils/public-student.util';
 import {
   ACCOUNT_ALREADY_LINKED_MESSAGE,
@@ -63,10 +58,7 @@ describe('StudentAccessService', () => {
   beforeEach(() => {
     repository = {
       findOne: jest.fn(),
-      findByPk: jest.fn().mockResolvedValue({
-        ...withAccount(),
-        accessPin: null,
-      }),
+      findByPk: jest.fn().mockResolvedValue(withAccount()),
       updateByPk: jest.fn().mockResolvedValue({}),
       transaction: jest.fn((run: (tx: Transaction) => unknown) =>
         run(transaction),
@@ -82,11 +74,6 @@ describe('StudentAccessService', () => {
     rolesService = {
       findOne: jest.fn().mockResolvedValue({ id: 'student-role-id' }),
     };
-    jest
-      .mocked(generateAccessPin)
-      .mockReset()
-      .mockResolvedValue({ accessPin: '012345', accessPinHash: 'pin-hash' });
-
     service = new StudentAccessService(
       repository as unknown as StudentRepository,
       usersService as unknown as UsersService,
@@ -186,7 +173,7 @@ describe('StudentAccessService', () => {
   });
 
   describe('linkAccount', () => {
-    it('links the account, clears the PIN and returns the student', async () => {
+    it('links the account and returns the student', async () => {
       mockStudent(student());
 
       const result = await service.linkAccount(
@@ -203,11 +190,22 @@ describe('StudentAccessService', () => {
       expect(usersService.createUser).toHaveBeenCalled();
       expect(repository.updateByPk).toHaveBeenCalledWith(
         'student-id',
-        { userId: 'new-user-id', accessPin: null },
+        { userId: 'new-user-id' },
         { transaction },
       );
-      expect(result).toMatchObject({ id: 'student-id', hasAccessPin: false });
-      expect(result).not.toHaveProperty('accessPin');
+      expect(result).toMatchObject({ id: 'student-id' });
+    });
+
+    it('treats a link to a deleted user as no account', async () => {
+      mockStudent(student({ userId: 'deleted-user-id', user: null }));
+
+      await service.linkAccount(actor, 'student-id', 'sofia@example.com');
+
+      expect(repository.updateByPk).toHaveBeenCalledWith(
+        'student-id',
+        { userId: 'new-user-id' },
+        { transaction },
+      );
     });
 
     it('rejects a student that already has an account', async () => {
@@ -229,12 +227,13 @@ describe('StudentAccessService', () => {
   });
 
   describe('unlinkAccount', () => {
-    it('deactivates the account and switches the student to a new PIN', async () => {
+    it('deactivates the account and returns the student', async () => {
       mockStudent(withAccount());
+      repository.findByPk.mockResolvedValue(student());
 
-      await expect(service.unlinkAccount(actor, 'student-id')).resolves.toEqual(
-        { accessPin: '012345' },
-      );
+      await expect(
+        service.unlinkAccount(actor, 'student-id'),
+      ).resolves.toMatchObject({ id: 'student-id' });
 
       expect(usersService.updateByPk).toHaveBeenCalledWith(
         'user-id',
@@ -243,7 +242,7 @@ describe('StudentAccessService', () => {
       );
       expect(repository.updateByPk).toHaveBeenCalledWith(
         'student-id',
-        { userId: null, accessPin: 'pin-hash' },
+        { userId: null },
         { transaction },
       );
     });
@@ -255,37 +254,6 @@ describe('StudentAccessService', () => {
         NO_ACCOUNT_MESSAGE,
       );
       expect(usersService.updateByPk).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('regenerateAccessPin', () => {
-    it('stores the hash of a new PIN and returns it in plain text', async () => {
-      mockStudent(student());
-
-      await expect(
-        service.regenerateAccessPin(actor, 'student-id'),
-      ).resolves.toEqual({ accessPin: '012345' });
-      expect(repository.updateByPk).toHaveBeenCalledWith('student-id', {
-        userId: null,
-        accessPin: 'pin-hash',
-      });
-    });
-
-    it('treats a link to a deleted user as no account', async () => {
-      mockStudent(student({ userId: 'deleted-user-id', user: null }));
-
-      await expect(
-        service.regenerateAccessPin(actor, 'student-id'),
-      ).resolves.toEqual({ accessPin: '012345' });
-    });
-
-    it('rejects a student with an account', async () => {
-      mockStudent(withAccount());
-
-      await expect(
-        service.regenerateAccessPin(actor, 'student-id'),
-      ).rejects.toBeInstanceOf(ConflictException);
-      expect(repository.updateByPk).not.toHaveBeenCalled();
     });
   });
 });

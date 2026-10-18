@@ -204,7 +204,7 @@ export function StudentForm({
                 <FieldDescription>
                   {createAccount
                     ? 'Iniciará sesión con su correo; le enviaremos una contraseña temporal.'
-                    : 'Sin cuenta, consultará sus notas con su documento y un PIN de 6 dígitos que se genera ahora.'}
+                    : 'Sin cuenta, sus notas se consultan en el portal público con el año escolar y su documento.'}
                 </FieldDescription>
               </FieldContent>
               <Switch

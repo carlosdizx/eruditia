@@ -17,14 +17,10 @@ import {
 } from './utils/students-csv.util';
 import type { StudentsImportSummary } from './interfaces/students-import-summary.interface';
 import StudentAccessService from './student-access.service';
-import { generateAccessPin } from './utils/access-pin.util';
 import organizationOf, {
   type OrganizationActor,
 } from '@common/utils/organization-of.util';
-import {
-  STUDENT_USER_INCLUDE,
-  toPublicStudent,
-} from './utils/public-student.util';
+import { STUDENT_USER_INCLUDE } from './utils/public-student.util';
 
 const SEARCHABLE_FIELDS = [
   'firstName',
@@ -116,22 +112,18 @@ export default class StudentsService extends CrudService<
       },
     );
 
-    return { data: data.map(toPublicStudent), meta };
+    return { data, meta };
   };
 
   // Un estudiante de otra organización responde 404, igual que uno inexistente.
-  public findStudent = async (actor: OrganizationActor, studentId: string) => {
-    return toPublicStudent(
-      (await this.findOne(
-        { id: studentId, organizationId: organizationOf(actor) },
-        true,
-        { include: STUDENT_USER_INCLUDE },
-      ))!,
-    );
-  };
+  public findStudent = async (actor: OrganizationActor, studentId: string) =>
+    (await this.findOne(
+      { id: studentId, organizationId: organizationOf(actor) },
+      true,
+      { include: STUDENT_USER_INCLUDE },
+    ))!;
 
-  // Con createAccount se crea o vincula su cuenta; si no, se le genera un PIN
-  // que se devuelve en claro solo en esta respuesta.
+  // Con createAccount se crea o vincula su cuenta.
   public createStudent = async (
     actor: OrganizationActor,
     { createAccount, email, ...dto }: CreateStudentDto,
@@ -153,7 +145,6 @@ export default class StudentsService extends CrudService<
             transaction,
           )
         : null;
-      const pin = user ? null : await generateAccessPin();
 
       const student = await this.create(
         {
@@ -161,15 +152,13 @@ export default class StudentsService extends CrudService<
           studentCode,
           organizationId,
           userId: user?.id ?? null,
-          accessPin: pin?.accessPinHash ?? null,
         },
         { transaction },
       );
 
       return {
-        ...toPublicStudent(student),
+        ...student,
         user: user && { id: user.id, email: user.email, isActive: true },
-        accessPin: pin?.accessPin ?? null,
       };
     });
   };

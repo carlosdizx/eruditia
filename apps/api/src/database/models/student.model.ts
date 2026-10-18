@@ -64,11 +64,6 @@ export default class StudentModel extends BaseModel {
   @Column(DataType.STRING)
   declare guardianEmail: string | null;
 
-  // Hash del PIN de consulta rápida; nunca se expone.
-  @AllowNull
-  @Column(DataType.STRING)
-  declare accessPin: string | null;
-
   @Default(StudentStatusEnum.ACTIVE)
   @Column(DataType.ENUM(...Object.values(StudentStatusEnum)))
   declare status: StudentStatusEnum;

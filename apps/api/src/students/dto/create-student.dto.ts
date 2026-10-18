@@ -73,7 +73,7 @@ export default class CreateStudentDto {
   @IsEnum(StudentStatusEnum)
   status?: StudentStatusEnum;
 
-  // Cuenta de acceso (rol estudiante). Sin ella se le genera un PIN.
+  // Cuenta de acceso (rol estudiante).
   @IsOptional()
   @IsBoolean()
   createAccount?: boolean;

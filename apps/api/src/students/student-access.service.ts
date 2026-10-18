@@ -11,19 +11,15 @@ import {
   HAS_ACCOUNT_MESSAGE,
   NO_ACCOUNT_MESSAGE,
 } from './constants/student-messages.constant';
-import { generateAccessPin } from './utils/access-pin.util';
 import organizationOf, {
   type OrganizationActor,
 } from '@common/utils/organization-of.util';
-import {
-  STUDENT_USER_INCLUDE,
-  toPublicStudent,
-} from './utils/public-student.util';
+import { STUDENT_USER_INCLUDE } from './utils/public-student.util';
 
 type AccountOwner = Pick<StudentModel, 'firstName' | 'lastName'>;
 
-// Un estudiante accede de una sola forma: con su cuenta (rol STUDENT) o, si no
-// la tiene, consultando con documento + PIN.
+// Cuenta de usuario (rol STUDENT) del estudiante. Con o sin ella, su boletín
+// se consulta en el portal público con año lectivo + documento.
 @Injectable()
 export default class StudentAccessService {
   constructor(
@@ -122,22 +118,25 @@ export default class StudentAccessService {
         transaction,
       );
 
-      // Con cuenta propia el PIN deja de servir.
       await this.repository.updateByPk(
         student.id,
-        { userId: user.id, accessPin: null },
+        { userId: user.id },
         { transaction },
       );
 
-      return toPublicStudent(
-        (await this.repository.findByPk(student.id, true, {
-          include: STUDENT_USER_INCLUDE,
-          transaction,
-        }))!,
-      );
+      return await this.findWithAccount(student.id, transaction);
     });
 
-  // La cuenta se desactiva (no se elimina) y el estudiante vuelve al PIN.
+  private findWithAccount = async (
+    studentId: string,
+    transaction: Transaction,
+  ) =>
+    (await this.repository.findByPk(studentId, true, {
+      include: STUDENT_USER_INCLUDE,
+      transaction,
+    }))!;
+
+  // La cuenta se desactiva (no se elimina).
   public unlinkAccount = async (actor: OrganizationActor, studentId: string) =>
     await this.repository.transaction(async (transaction) => {
       const { student, hasAccount } = await this.findManageableStudent(
@@ -153,34 +152,12 @@ export default class StudentAccessService {
         { transaction },
       );
 
-      const { accessPin, accessPinHash } = await generateAccessPin();
       await this.repository.updateByPk(
         student.id,
-        { userId: null, accessPin: accessPinHash },
+        { userId: null },
         { transaction },
       );
 
-      return { accessPin };
+      return await this.findWithAccount(student.id, transaction);
     });
-
-  // Reemplaza el PIN anterior, que deja de funcionar.
-  public regenerateAccessPin = async (
-    actor: OrganizationActor,
-    studentId: string,
-  ) => {
-    const { student, hasAccount } = await this.findManageableStudent(
-      actor,
-      studentId,
-    );
-    if (hasAccount) throw new ConflictException(HAS_ACCOUNT_MESSAGE);
-
-    const { accessPin, accessPinHash } = await generateAccessPin();
-    // userId en null por si apuntaba a una cuenta ya eliminada.
-    await this.repository.updateByPk(student.id, {
-      userId: null,
-      accessPin: accessPinHash,
-    });
-
-    return { accessPin };
-  };
 }

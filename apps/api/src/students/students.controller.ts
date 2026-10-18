@@ -106,20 +106,6 @@ export default class StudentsController {
     return await this.studentsService.updateStudent(auth, studentId, dto);
   }
 
-  // Devuelve el PIN nuevo en claro; el anterior deja de funcionar.
-  @AuthWithPermissions({
-    roles: [RoleNameEnum.ADMIN],
-    permissions: [PermissionEnum.STUDENT_UPDATE],
-  })
-  @HttpCode(HttpStatus.OK)
-  @Post(':studentId/access-pin')
-  public async regenerateAccessPin(
-    @Param('studentId', ParseUUIDPipe) studentId: string,
-    @CurrentAuth() auth: AuthContextInterface,
-  ) {
-    return await this.studentAccessService.regenerateAccessPin(auth, studentId);
-  }
-
   @AuthWithPermissions({
     roles: [RoleNameEnum.ADMIN],
     permissions: [PermissionEnum.STUDENT_UPDATE],
@@ -133,7 +119,7 @@ export default class StudentsController {
     return await this.studentAccessService.linkAccount(auth, studentId, email);
   }
 
-  // Desactiva la cuenta y devuelve el PIN con el que consultará a partir de ahora.
+  // Desactiva la cuenta y devuelve el estudiante sin ella.
   @AuthWithPermissions({
     roles: [RoleNameEnum.ADMIN],
     permissions: [PermissionEnum.STUDENT_UPDATE],
