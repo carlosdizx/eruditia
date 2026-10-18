@@ -1,10 +1,12 @@
 import 'reflect-metadata';
+import { GUARDS_METADATA } from '@nestjs/common/constants';
 import PermissionEnum from '@common/enums/permission.enum';
 import RoleNameEnum from '@common/enums/role-name.enum';
 import { AUTH_WITH_PERMISSIONS_KEY } from '@auth/decorators/auth-with-permissions.decorator';
 import { IS_PUBLIC_KEY } from '@auth/decorators/public.decorator';
 import ReportCardsController from '../../src/report-cards/report-cards.controller';
 import ReportCardsService from '../../src/report-cards/report-cards.service';
+import PortalRateLimitGuard from '../../src/report-cards/guards/portal-rate-limit.guard';
 import authContextFixture from '../auth/fixtures/auth-context.fixture';
 
 const handlerMetadata = (handler: string, key: string): unknown =>
@@ -106,8 +108,17 @@ describe('ReportCardsController', () => {
     },
   );
 
+  it.each(['lookupReportCard', 'lookupReportCardPdf'])(
+    '%s is rate limited by IP',
+    (handler) => {
+      expect(handlerMetadata(handler, GUARDS_METADATA)).toEqual([
+        PortalRateLimitGuard,
+      ]);
+    },
+  );
+
   it('delegates', async () => {
-    const dto = { documentNumber: '123', accessPin: '123456' };
+    const dto = { documentNumber: '123', academicYearId: 'y1' };
 
     await controller.getOwnReportCard({ academicYearId: 'y1' }, auth);
     await controller.getEnrollmentReportCard('e1', auth);

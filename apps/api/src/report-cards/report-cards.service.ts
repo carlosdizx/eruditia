@@ -1,13 +1,4 @@
-import {
-  HttpException,
-  HttpStatus,
-  Inject,
-  Injectable,
-  NotFoundException,
-  UnauthorizedException,
-} from '@nestjs/common';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import type { Cache } from 'cache-manager';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Op } from 'sequelize';
 import type AuthContextInterface from '@auth/interfaces/auth-context.interface';
 import AcademicYearModel from '@database/models/academic-year.model';
@@ -19,8 +10,8 @@ import EnrollmentStatusEnum from '@common/enums/enrollment-status.enum';
 import PermissionEnum from '@common/enums/permission.enum';
 import RoleNameEnum from '@common/enums/role-name.enum';
 import organizationOf from '@common/utils/organization-of.util';
-import { hashPassword, verifyPassword } from '@common/utils/password.util';
 import AcademicPeriodRepository from '../academic-years/repositories/academic-period.repository';
+import AcademicYearRepository from '../academic-years/repositories/academic-year.repository';
 import ClassroomRepository from '../classrooms/classroom.repository';
 import EnrollmentRepository from '../enrollments/enrollment.repository';
 import AnnualResultsService from '../gradebooks/annual-results.service';
@@ -40,7 +31,8 @@ import renderReportCardsPdf, {
   type PrintableReportCard,
 } from './utils/report-card-pdf.util';
 import {
-  INVALID_ACCESS_PIN_MESSAGE,
+  PORTAL_NOT_FOUND_MESSAGE,
+  PUBLIC_STUDENT_NOT_FOUND_MESSAGE,
   REPORT_CARD_CLASSROOM_EMPTY_MESSAGE,
   REPORT_CARD_CLASSROOM_NOT_FOUND_MESSAGE,
   REPORT_CARD_NOT_FOUND_MESSAGE,
@@ -48,12 +40,7 @@ import {
   REPORT_CARD_PORTAL_NOT_FOUND_MESSAGE,
   REPORT_CARD_YEAR_NOT_FOUND_MESSAGE,
   STUDENT_PROFILE_NOT_FOUND_MESSAGE,
-  TOO_MANY_LOOKUPS_MESSAGE,
 } from './constants/report-card-messages.constant';
-
-// Intentos fallidos de documento + PIN antes de bloquear la consulta.
-export const LOOKUP_WINDOW_MS = 15 * 60 * 1000;
-export const MAX_FAILED_LOOKUPS = 5;
 
 type Actor = Pick<
   AuthContextInterface,
@@ -67,6 +54,9 @@ interface ReportCardScope {
   academicYearId?: string;
   enrollmentId?: string;
   visible?: (enrollment: Pick<Enrollment, 'classroom'>) => boolean;
+  // Sin matrícula en el año pedido responde sin boletín (el portal ofrece
+  // los años en los que sí tiene) en lugar de 404.
+  optionalYear?: boolean;
 }
 
 const STUDENT_ATTRIBUTES = [
@@ -144,16 +134,13 @@ const slugify = (value: string) =>
 
 @Injectable()
 export default class ReportCardsService {
-  // Hash de referencia para comparar aunque el documento no exista, así la
-  // respuesta tarda lo mismo y no revela qué documentos están registrados.
-  private dummyPinHash?: Promise<string>;
-
   constructor(
     private readonly organizationRepository: OrganizationRepository,
     private readonly studentRepository: StudentRepository,
     private readonly enrollmentRepository: EnrollmentRepository,
     private readonly classroomRepository: ClassroomRepository,
     private readonly academicPeriodRepository: AcademicPeriodRepository,
+    private readonly academicYearRepository: AcademicYearRepository,
     private readonly annualResultsService: AnnualResultsService,
     private readonly evaluationItemRepository: EvaluationItemRepository,
     private readonly studentGradeRepository: StudentGradeRepository,
@@ -161,7 +148,6 @@ export default class ReportCardsService {
     private readonly gradingScalesService: GradingScalesService,
     private readonly permissionsService: PermissionsService,
     private readonly rankingsService: RankingsService,
-    @Inject(CACHE_MANAGER) private readonly cache: Cache,
   ) {}
 
   // Boletín del estudiante que inició sesión.
@@ -214,65 +200,76 @@ export default class ReportCardsService {
     });
   };
 
-  // Portal público: solo colegios activos que tengan contratado el boletín.
-  public getPortal = async (slug: string) => {
+  // Colegio activo del portal público y si tiene habilitado el boletín.
+  private findPortal = async (slug: string) => {
     const organization = await this.organizationRepository.findOne(
       { slug: slug.toLowerCase(), isActive: true },
       false,
       { attributes: ['id', 'name', 'slug', 'logoUrl'] },
     );
-    const permissions = organization
-      ? await this.permissionsService.getEffectivePermissions(organization.id)
-      : [];
-    if (!organization || !permissions.includes(PermissionEnum.REPORT_CARD_VIEW))
-      throw new NotFoundException(REPORT_CARD_PORTAL_NOT_FOUND_MESSAGE);
+    if (!organization) throw new NotFoundException(PORTAL_NOT_FOUND_MESSAGE);
 
+    const permissions = await this.permissionsService.getEffectivePermissions(
+      organization.id,
+    );
+    return {
+      organization,
+      reportCardsEnabled: permissions.includes(PermissionEnum.REPORT_CARD_VIEW),
+    };
+  };
+
+  private getPortal = async (slug: string) => {
+    const { organization, reportCardsEnabled } = await this.findPortal(slug);
+    if (!reportCardsEnabled)
+      throw new NotFoundException(REPORT_CARD_PORTAL_NOT_FOUND_MESSAGE);
     return organization;
   };
 
+  // Datos del portal: el colegio y sus años lectivos, del más reciente al más
+  // antiguo (sin el boletín habilitado no lista años).
   public getPublicPortal = async (slug: string) => {
-    const {
-      name,
-      slug: organizationSlug,
-      logoUrl,
-    } = await this.getPortal(slug);
-    return { name, slug: organizationSlug, logoUrl };
+    const { organization, reportCardsEnabled } = await this.findPortal(slug);
+    const academicYears = reportCardsEnabled
+      ? await this.academicYearRepository.findAll(
+          { organizationId: organization.id },
+          {
+            attributes: ['id', 'name', 'isActive', 'status'],
+            order: [['startDate', 'DESC']],
+          },
+        )
+      : [];
+
+    return {
+      name: organization.name,
+      slug: organization.slug,
+      logoUrl: organization.logoUrl,
+      reportCardsEnabled,
+      academicYears,
+    };
   };
 
-  // Consulta sin cuenta con documento + PIN. Los intentos fallidos se limitan
-  // por documento para frenar la fuerza bruta sobre el PIN.
+  // Consulta sin cuenta con año lectivo + documento, tenga o no el estudiante
+  // usuario. El límite de consultas por IP lo pone PortalRateLimitGuard.
   public lookupReportCard = async (
     slug: string,
-    { documentNumber, accessPin, academicYearId }: LookupReportCardDto,
+    { documentNumber, academicYearId }: LookupReportCardDto,
   ) => {
     const organization = await this.getPortal(slug);
-    const key = `report-card-lookup:${organization.id}:${documentNumber.toLowerCase()}`;
-    const failures = (await this.cache.get<number>(key)) ?? 0;
-    if (failures >= MAX_FAILED_LOOKUPS)
-      throw new HttpException(
-        TOO_MANY_LOOKUPS_MESSAGE,
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
-
+    // El documento ya viene validado (letras, números y guiones): solo se
+    // ignoran mayúsculas.
     const student = await this.studentRepository.findOne(
-      { organizationId: organization.id, documentNumber },
+      {
+        organizationId: organization.id,
+        documentNumber: { [Op.iLike]: documentNumber },
+      },
       false,
-      { attributes: [...STUDENT_ATTRIBUTES, 'accessPin'] },
+      { attributes: STUDENT_ATTRIBUTES },
     );
-    this.dummyPinHash ??= hashPassword('000000');
-    const valid = await verifyPassword(
-      accessPin,
-      student?.accessPin ?? (await this.dummyPinHash),
-    );
+    if (!student) throw new NotFoundException(PUBLIC_STUDENT_NOT_FOUND_MESSAGE);
 
-    if (!student?.accessPin || !valid) {
-      await this.cache.set(key, failures + 1, LOOKUP_WINDOW_MS);
-      throw new UnauthorizedException(INVALID_ACCESS_PIN_MESSAGE);
-    }
-
-    await this.cache.del(key);
     return await this.buildReportCard(organization.id, student, {
       academicYearId,
+      optionalYear: true,
     });
   };
 
@@ -405,7 +402,12 @@ export default class ReportCardsService {
   private buildReportCard = async (
     organizationId: string,
     student: StudentModel,
-    { academicYearId, enrollmentId, visible = () => true }: ReportCardScope,
+    {
+      academicYearId,
+      enrollmentId,
+      visible = () => true,
+      optionalYear = false,
+    }: ReportCardScope,
   ) => {
     const [organization, enrollments] = await Promise.all([
       this.organizationRepository.findByPk(organizationId, true, {
@@ -472,7 +474,7 @@ export default class ReportCardsService {
       : academicYearId
         ? enrollments.find((item) => item.academicYearId === academicYearId)
         : enrollments[0];
-    if (academicYearId && !enrollment)
+    if (academicYearId && !enrollment && !optionalYear)
       throw new NotFoundException(REPORT_CARD_YEAR_NOT_FOUND_MESSAGE);
     if (!enrollment) return { ...base, reportCard: null };
 
@@ -553,8 +555,6 @@ export default class ReportCardsService {
       periodId,
     );
 
-  // Todos los boletines de un salón en un solo PDF (por apellido), para el
-  // admin o el director de grupo. Los retirados y trasladados no se imprimen.
   // Salón cuyos boletines puede imprimir quien consulta: el admin, cualquiera
   // de su organización; el profesor, solo el de su dirección de grupo.
   private findPrintableClassroom = async (
@@ -593,6 +593,8 @@ export default class ReportCardsService {
     );
   };
 
+  // Todos los boletines de un salón en un solo PDF (por apellido), para el
+  // admin o el director de grupo. Los retirados y trasladados no se imprimen.
   public getClassroomReportCardsPdf = async (
     actor: Actor,
     classroomId: string,

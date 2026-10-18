@@ -9,6 +9,7 @@ import {
   Post,
   Query,
   StreamableFile,
+  UseGuards,
 } from '@nestjs/common';
 import CurrentAuth from '@auth/decorators/current-auth.decorator';
 import Public from '@auth/decorators/public.decorator';
@@ -22,6 +23,7 @@ import LookupReportCardDto from './dto/lookup-report-card.dto';
 import GetReportCardPdfDto from './dto/get-report-card-pdf.dto';
 import LookupReportCardPdfDto from './dto/lookup-report-card-pdf.dto';
 import ReportCardPeriodDto from './dto/report-card-period.dto';
+import PortalRateLimitGuard from './guards/portal-rate-limit.guard';
 
 const download = ({ filename, content }: ReportCardPdf) =>
   new StreamableFile(content, {
@@ -127,13 +129,14 @@ export default class ReportCardsController {
   }
 
   @Public()
-  @Get('public/report-cards/:slug')
+  @Get('public/organizations/:slug/info')
   public async getPortal(@Param('slug') slug: string) {
     return await this.reportCardsService.getPublicPortal(slug);
   }
 
   @Public()
-  @Post('public/report-cards/:slug')
+  @UseGuards(PortalRateLimitGuard)
+  @Post('public/organizations/:slug/report-card')
   @HttpCode(HttpStatus.OK)
   public async lookupReportCard(
     @Param('slug') slug: string,
@@ -143,6 +146,7 @@ export default class ReportCardsController {
   }
 
   @Public()
+  @UseGuards(PortalRateLimitGuard)
   @Post('public/report-cards/:slug/pdf')
   @HttpCode(HttpStatus.OK)
   public async lookupReportCardPdf(

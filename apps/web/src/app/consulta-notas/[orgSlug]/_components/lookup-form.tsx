@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { REGEXP_ONLY_DIGITS } from 'input-otp';
-import { LogOutIcon } from 'lucide-react';
+import { SearchIcon } from 'lucide-react';
 import { ReportCard } from '@/components/grading/report-card';
 import { ReportCardPdfMenu } from '@/components/grading/report-card-pdf-menu';
 import { Button } from '@/components/ui/button';
@@ -22,22 +21,35 @@ import {
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from '@/components/ui/input-otp';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import type { ReportCardResponse } from '@/lib/grading/report-card';
 import { lookupReportCard, type LookupCredentials } from '../actions';
 
-const PIN_LENGTH = 6;
+export type PortalYear = { id: string; name: string; isActive: boolean };
 
-export function LookupForm({ slug }: { slug: string }) {
+// El acudiente puede escribir "1.001.234 567": se consulta sin puntos, comas
+// ni espacios.
+const cleanDocument = (value: string) => value.replace(/[\s.,]/g, '');
+
+export function LookupForm({
+  slug,
+  years,
+}: {
+  slug: string;
+  years: PortalYear[];
+}) {
+  const [academicYearId, setAcademicYearId] = useState(
+    () => (years.find(({ isActive }) => isActive) ?? years[0])?.id ?? '',
+  );
   const [documentNumber, setDocumentNumber] = useState('');
-  const [accessPin, setAccessPin] = useState('');
   const [error, setError] = useState<string | null>(null);
-  // Las credenciales quedan solo en memoria para cambiar de año.
-  const [session, setSession] = useState<{
+  const [result, setResult] = useState<{
     credentials: LookupCredentials;
     data: ReportCardResponse;
   } | null>(null);
@@ -45,148 +57,179 @@ export function LookupForm({ slug }: { slug: string }) {
 
   const consult = (credentials: LookupCredentials) =>
     startTransition(async () => {
-      const result = await lookupReportCard(slug, credentials);
-      if (!result.ok) {
-        setError(result.message);
-        setAccessPin('');
+      const response = await lookupReportCard(slug, credentials);
+      if (!response.ok) {
+        setError(response.message);
         return;
       }
       setError(null);
-      setSession({ credentials, data: result.data });
+      setAcademicYearId(credentials.academicYearId);
+      setResult({ credentials, data: response.data });
     });
 
-  const exit = () => {
-    setSession(null);
-    setDocumentNumber('');
-    setAccessPin('');
-  };
+  const changeYear = (yearId: string) =>
+    result && consult({ ...result.credentials, academicYearId: yearId });
 
-  if (session) {
-    const current = session.data.reportCard?.academicYear.id;
+  if (result) {
+    const { data, credentials } = result;
+    const requested = years.find(({ id }) => id === credentials.academicYearId);
+    const yearButtons = (current?: string) => (
+      <fieldset className="flex flex-wrap items-center gap-2">
+        <legend className="sr-only">Años lectivos con matrícula</legend>
+        {data.years.map((year) => (
+          <Button
+            key={year.id}
+            size="lg"
+            variant={year.id === current ? 'default' : 'outline'}
+            aria-pressed={year.id === current}
+            disabled={pending}
+            onClick={() => changeYear(year.id)}
+          >
+            {year.name}
+          </Button>
+        ))}
+        {pending && <Spinner className="text-muted-foreground" />}
+      </fieldset>
+    );
+
     return (
       <div className="flex flex-col gap-4">
         <div className="flex justify-end">
-          <Button variant="outline" size="sm" onClick={exit}>
-            <LogOutIcon data-icon="inline-start" />
-            Salir
+          <Button variant="outline" size="lg" onClick={() => setResult(null)}>
+            <SearchIcon data-icon="inline-start" />
+            Nueva consulta
           </Button>
         </div>
-        <ReportCard
-          data={session.data}
-          actions={
-            session.data.reportCard && (
+        {data.reportCard ? (
+          <ReportCard
+            data={data}
+            actions={
               <ReportCardPdfMenu
-                periods={session.data.reportCard.periods}
+                periods={data.reportCard.periods}
                 form={{
                   action: `/consulta-notas/${encodeURIComponent(slug)}/pdf`,
                   fields: {
-                    documentNumber: session.credentials.documentNumber,
-                    accessPin: session.credentials.accessPin,
-                    academicYearId: current,
+                    documentNumber: credentials.documentNumber,
+                    academicYearId: credentials.academicYearId,
                   },
                 }}
               />
-            )
-          }
-          yearSelector={
-            session.data.years.length > 1 && (
-              <fieldset className="flex flex-wrap items-center gap-2">
-                <legend className="sr-only">Años lectivos</legend>
-                {session.data.years.map((year) => (
-                  <Button
-                    key={year.id}
-                    size="sm"
-                    variant={year.id === current ? 'default' : 'outline'}
-                    aria-pressed={year.id === current}
-                    disabled={pending}
-                    onClick={() =>
-                      consult({
-                        ...session.credentials,
-                        academicYearId: year.id,
-                      })
-                    }
-                  >
-                    {year.name}
-                  </Button>
-                ))}
-                {pending && <Spinner className="text-muted-foreground" />}
-              </fieldset>
-            )
-          }
-        />
+            }
+            yearSelector={
+              data.years.length > 1 &&
+              yearButtons(data.reportCard.academicYear.id)
+            }
+          />
+        ) : (
+          <Card className="mx-auto w-full max-w-lg">
+            <CardHeader>
+              <CardTitle className="text-lg">
+                {data.student.firstName} {data.student.lastName} no tiene
+                matrícula en {requested?.name ?? 'ese año escolar'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-3 text-base">
+              {data.years.length ? (
+                <>
+                  <p>Registra matrícula en estos años. Toca uno para verlo:</p>
+                  {yearButtons()}
+                </>
+              ) : (
+                <p>Aún no registra matrículas en el colegio.</p>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
     );
   }
 
-  const canSubmit =
-    !!documentNumber.trim() && accessPin.length === PIN_LENGTH && !pending;
+  const cleaned = cleanDocument(documentNumber);
+  const canSubmit = !!academicYearId && !!cleaned && !pending;
 
   return (
-    <Card className="mx-auto w-full max-w-sm">
+    <Card className="mx-auto w-full max-w-md">
       <CardHeader className="text-center">
-        <CardTitle className="text-xl">Consulta de notas</CardTitle>
-        <CardDescription>
-          Ingresa el documento del estudiante y el PIN de 6 dígitos que te
-          entregó el colegio.
+        <CardTitle className="text-2xl">Consulta de notas</CardTitle>
+        <CardDescription className="text-base">
+          Mira el boletín del estudiante con solo dos datos.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form
           onSubmit={(event) => {
             event.preventDefault();
-            if (canSubmit)
-              consult({ documentNumber: documentNumber.trim(), accessPin });
+            if (canSubmit) consult({ academicYearId, documentNumber: cleaned });
           }}
         >
           <FieldGroup>
+            <Field>
+              <FieldLabel htmlFor="academicYearId" className="text-base">
+                1. Selecciona el año escolar
+              </FieldLabel>
+              <Select
+                items={years.map(({ id, name }) => ({
+                  value: id,
+                  label: name,
+                }))}
+                value={academicYearId}
+                onValueChange={(value) => setAcademicYearId(String(value))}
+                disabled={pending}
+              >
+                <SelectTrigger
+                  id="academicYearId"
+                  className="w-full text-base data-[size=default]:h-12"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {years.map((year) => (
+                    <SelectItem
+                      key={year.id}
+                      value={year.id}
+                      className="text-base"
+                    >
+                      {year.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
             <Field data-invalid={!!error}>
-              <FieldLabel htmlFor="documentNumber">
-                Documento del estudiante
+              <FieldLabel htmlFor="documentNumber" className="text-base">
+                2. Escribe el documento del estudiante (sin puntos ni espacios)
               </FieldLabel>
               <Input
                 id="documentNumber"
                 inputMode="numeric"
                 autoComplete="off"
-                maxLength={30}
+                placeholder="Ej: 1001234567"
+                maxLength={40}
+                className="h-12 text-lg"
                 value={documentNumber}
                 onChange={(event) => setDocumentNumber(event.target.value)}
                 aria-invalid={!!error}
+                disabled={pending}
                 required
               />
-            </Field>
-            <Field data-invalid={!!error}>
-              <FieldLabel htmlFor="accessPin">PIN</FieldLabel>
-              <InputOTP
-                id="accessPin"
-                containerClassName="gap-2"
-                maxLength={PIN_LENGTH}
-                pattern={REGEXP_ONLY_DIGITS}
-                inputMode="numeric"
-                autoComplete="off"
-                aria-invalid={!!error}
-                value={accessPin}
-                onChange={setAccessPin}
-                disabled={pending}
-              >
-                <InputOTPGroup>
-                  {Array.from({ length: PIN_LENGTH }, (_, index) => (
-                    <InputOTPSlot
-                      key={index}
-                      index={index}
-                      className="size-10 text-lg"
-                      aria-invalid={!!error}
-                    />
-                  ))}
-                </InputOTPGroup>
-              </InputOTP>
-              <FieldError>{error}</FieldError>
+              <FieldError className="text-base">{error}</FieldError>
               <FieldDescription>
-                ¿No tienes PIN? Pídelo en la secretaría del colegio.
+                Es el número de la tarjeta de identidad o registro civil del
+                estudiante.
               </FieldDescription>
             </Field>
             <Field>
-              <Button type="submit" disabled={!canSubmit}>
-                {pending && <Spinner data-icon="inline-start" />}
+              <Button
+                type="submit"
+                size="lg"
+                className="h-12 text-base"
+                disabled={!canSubmit}
+              >
+                {pending ? (
+                  <Spinner data-icon="inline-start" />
+                ) : (
+                  <SearchIcon data-icon="inline-start" />
+                )}
                 {pending ? 'Consultando…' : 'Ver boletín'}
               </Button>
             </Field>

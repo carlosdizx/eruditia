@@ -4,6 +4,7 @@ import GradingScalesModule from '../grading-scales/grading-scales.module';
 import PermissionsModule from '../permissions/permissions.module';
 import RankingsModule from '../rankings/rankings.module';
 import AcademicPeriodRepository from '../academic-years/repositories/academic-period.repository';
+import AcademicYearRepository from '../academic-years/repositories/academic-year.repository';
 import ClassroomRepository from '../classrooms/classroom.repository';
 import EnrollmentRepository from '../enrollments/enrollment.repository';
 import EvaluationItemRepository from '../gradebooks/repositories/evaluation-item.repository';
@@ -26,6 +27,7 @@ import ReportCardsService from './report-cards.service';
     OrganizationRepository,
     StudentRepository,
     AcademicPeriodRepository,
+    AcademicYearRepository,
     ClassroomRepository,
     EnrollmentRepository,
     EvaluationItemRepository,

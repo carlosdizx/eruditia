@@ -6,8 +6,8 @@ const field = (form: FormData, name: string) => {
   return typeof value === 'string' && value ? value : undefined;
 };
 
-// Portal sin sesión: el formulario reenvía documento + PIN para generar el
-// PDF (por POST, para que el PIN no quede en la URL ni en el historial).
+// Portal sin sesión: el formulario reenvía año + documento para generar el
+// PDF.
 export async function POST(
   request: NextRequest,
   ctx: RouteContext<'/consulta-notas/[orgSlug]/pdf'>,
@@ -21,7 +21,6 @@ export async function POST(
       method: 'POST',
       body: {
         documentNumber: field(form, 'documentNumber'),
-        accessPin: field(form, 'accessPin'),
         academicYearId: field(form, 'academicYearId'),
         periodId: field(form, 'periodId'),
       },

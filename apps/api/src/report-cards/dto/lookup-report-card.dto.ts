@@ -1,17 +1,21 @@
 import { Transform } from 'class-transformer';
-import { IsNotEmpty, IsString, Matches, MaxLength } from 'class-validator';
-import GetReportCardDto from './get-report-card.dto';
+import { IsUUID, Matches } from 'class-validator';
+import {
+  DOCUMENT_NUMBER_PATTERN,
+  INVALID_DOCUMENT_NUMBER_MESSAGE,
+} from '@common/constants/contact-validation.constant';
 
-export default class LookupReportCardDto extends GetReportCardDto {
+export default class LookupReportCardDto {
+  @IsUUID()
+  academicYearId: string;
+
+  // El acudiente puede escribir "1.001.234 567": se quitan puntos, comas y
+  // espacios antes de buscar.
   @Transform(({ value }: { value: unknown }) =>
-    typeof value === 'string' ? value.trim() : value,
+    typeof value === 'string' ? value.replace(/[\s.,]/g, '') : value,
   )
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(30)
+  @Matches(DOCUMENT_NUMBER_PATTERN, {
+    message: INVALID_DOCUMENT_NUMBER_MESSAGE,
+  })
   documentNumber: string;
-
-  @IsString()
-  @Matches(/^\d{6}$/, { message: 'El PIN tiene 6 dígitos' })
-  accessPin: string;
 }
