@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { REGEXP_ONLY_DIGITS } from 'input-otp';
 import { LogOutIcon } from 'lucide-react';
 import { ReportCard } from '@/components/grading/report-card';
+import { ReportCardPdfMenu } from '@/components/grading/report-card-pdf-menu';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -72,6 +73,21 @@ export function LookupForm({ slug }: { slug: string }) {
         </div>
         <ReportCard
           data={session.data}
+          actions={
+            session.data.reportCard && (
+              <ReportCardPdfMenu
+                periods={session.data.reportCard.periods}
+                form={{
+                  action: `/consulta-notas/${encodeURIComponent(slug)}/pdf`,
+                  fields: {
+                    documentNumber: session.credentials.documentNumber,
+                    accessPin: session.credentials.accessPin,
+                    academicYearId: current,
+                  },
+                }}
+              />
+            )
+          }
           yearSelector={
             session.data.years.length > 1 && (
               <fieldset className="flex flex-wrap items-center gap-2">

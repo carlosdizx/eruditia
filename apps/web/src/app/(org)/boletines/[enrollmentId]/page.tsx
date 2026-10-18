@@ -5,12 +5,13 @@ import { Suspense } from 'react';
 import { ArrowLeftIcon } from 'lucide-react';
 import { TableSkeleton } from '@/components/data/table-skeleton';
 import { ReportCard } from '@/components/grading/report-card';
+import { ReportCardPdfMenu } from '@/components/grading/report-card-pdf-menu';
 import { PanelContent, PanelHeader } from '@/components/panel/panel-header';
 import { Button } from '@/components/ui/button';
 import { ApiError } from '@/lib/api/api-fetch';
 import { authFetch } from '@/lib/api/auth-fetch';
 import { requireGrant } from '@/lib/auth/current-user';
-import { REPORT_CARD_GRANTS } from '@/lib/auth/permissions';
+import { isGranted, REPORT_CARD_GRANTS } from '@/lib/auth/permissions';
 import type { ReportCardResponse } from '@/lib/grading/report-card';
 
 export const metadata: Metadata = { title: 'Boletín del estudiante' };
@@ -24,7 +25,7 @@ const backPath = (value: unknown) =>
     : null;
 
 async function ReportCardPreview({ params, searchParams }: Props) {
-  await requireGrant(REPORT_CARD_GRANTS.preview);
+  const me = await requireGrant(REPORT_CARD_GRANTS.preview);
 
   const { enrollmentId } = await params;
   const back = backPath((await searchParams).desde);
@@ -60,6 +61,15 @@ async function ReportCardPreview({ params, searchParams }: Props) {
       <ReportCard
         data={data}
         audience="staff"
+        actions={
+          data.reportCard &&
+          isGranted(me, REPORT_CARD_GRANTS.export) && (
+            <ReportCardPdfMenu
+              periods={data.reportCard.periods}
+              href={`/boletines/${enrollmentId}/pdf`}
+            />
+          )
+        }
         yearSelector={
           data.years.length > 1 && (
             <nav aria-label="Años lectivos" className="flex flex-wrap gap-2">

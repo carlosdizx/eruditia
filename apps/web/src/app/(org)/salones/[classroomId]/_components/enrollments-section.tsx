@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { UsersIcon } from 'lucide-react';
 import { ReportCardLink } from '@/components/grading/report-card-link';
+import { ReportCardPdfMenu } from '@/components/grading/report-card-pdf-menu';
 import { Badge } from '@/components/ui/badge';
 import {
   Empty,
@@ -43,6 +44,7 @@ export function EnrollmentsSection({
   canUpdate,
   canDelete,
   canViewReportCards,
+  reportCardPeriods,
 }: {
   classroom: Classroom;
   enrollments: Enrollment[];
@@ -53,6 +55,8 @@ export function EnrollmentsSection({
   canUpdate: boolean;
   canDelete: boolean;
   canViewReportCards: boolean;
+  // Periodos para imprimir los boletines del salón; null sin permiso.
+  reportCardPeriods: { id: string; name: string }[] | null;
 }) {
   const inProgress = enrollments.filter(
     ({ status }) => status === 'in_progress',
@@ -66,13 +70,22 @@ export function EnrollmentsSection({
     <>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-base font-semibold">Lista de clase</h2>
-        {canEnroll && (
-          <EnrollStudentsDialog
-            classroom={classroom}
-            candidates={candidates}
-            available={available}
-          />
-        )}
+        <div className="flex flex-wrap gap-2">
+          {reportCardPeriods && enrollments.length > 0 && (
+            <ReportCardPdfMenu
+              label="Boletines del salón (PDF)"
+              periods={reportCardPeriods}
+              href={`/salones/${classroom.id}/boletines/pdf`}
+            />
+          )}
+          {canEnroll && (
+            <EnrollStudentsDialog
+              classroom={classroom}
+              candidates={candidates}
+              available={available}
+            />
+          )}
+        </div>
       </div>
 
       {!enrollments.length ? (

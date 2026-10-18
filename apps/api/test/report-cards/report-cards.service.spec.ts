@@ -17,6 +17,7 @@ import AcademicPeriodRepository from '../../src/academic-years/repositories/acad
 import AnnualResultsService from '../../src/gradebooks/annual-results.service';
 import SubjectRecoveryRepository from '../../src/gradebooks/repositories/subject-recovery.repository';
 import ClassroomSubjectRepository from '../../src/classroom-subjects/classroom-subject.repository';
+import ClassroomRepository from '../../src/classrooms/classroom.repository';
 import EnrollmentRepository from '../../src/enrollments/enrollment.repository';
 import EvaluationItemRepository from '../../src/gradebooks/repositories/evaluation-item.repository';
 import PeriodSubjectSummaryRepository from '../../src/gradebooks/repositories/period-subject-summary.repository';
@@ -29,7 +30,9 @@ import RankingsService from '../../src/rankings/rankings.service';
 import StudentRepository from '../../src/students/student.repository';
 import {
   INVALID_ACCESS_PIN_MESSAGE,
+  REPORT_CARD_CLASSROOM_NOT_FOUND_MESSAGE,
   REPORT_CARD_NOT_FOUND_MESSAGE,
+  REPORT_CARD_PERIOD_NOT_FOUND_MESSAGE,
   REPORT_CARD_YEAR_NOT_FOUND_MESSAGE,
   STUDENT_PROFILE_NOT_FOUND_MESSAGE,
 } from '../../src/report-cards/constants/report-card-messages.constant';
@@ -40,6 +43,7 @@ describe('ReportCardsService', () => {
   let organizationRepository: Mocked;
   let studentRepository: Mocked;
   let enrollmentRepository: Mocked;
+  let classroomRepository: Mocked;
   let summaryRepository: Mocked;
   let classroomSubjectRepository: Mocked;
   let permissionsService: Mocked;
@@ -131,6 +135,17 @@ describe('ReportCardsService', () => {
     classroomSubjectRepository = {
       findAll: jest.fn().mockResolvedValue(assignments),
     };
+    classroomRepository = {
+      findOne: jest.fn().mockResolvedValue({
+        id: 'c5',
+        name: '5°A',
+        academicYearId: 'y2026',
+        homeroomTeacherId: 'homeroom-id',
+        academicYear: year2026,
+        gradeLevel: { name: 'Quinto' },
+        homeroomTeacher: { firstName: 'Luz', lastName: 'Mora' },
+      }),
+    };
     summaryRepository = {
       findAll: jest.fn().mockResolvedValue([
         {
@@ -175,6 +190,10 @@ describe('ReportCardsService', () => {
       organizationRepository as unknown as OrganizationRepository,
       studentRepository as unknown as StudentRepository,
       enrollmentRepository as unknown as EnrollmentRepository,
+      classroomRepository as unknown as ClassroomRepository,
+      {
+        findAll: jest.fn().mockResolvedValue(periods),
+      } as unknown as AcademicPeriodRepository,
       new AnnualResultsService(
         {
           findAll: jest.fn().mockResolvedValue(periods),
@@ -199,7 +218,9 @@ describe('ReportCardsService', () => {
       {
         findAll: jest
           .fn()
-          .mockResolvedValue([{ evaluationItemId: 'i1', score: 4 }]),
+          .mockResolvedValue([
+            { enrollmentId: 'e2026', evaluationItemId: 'i1', score: 4 },
+          ]),
       } as unknown as StudentGradeRepository,
       {
         findAll: jest.fn().mockResolvedValue([
@@ -250,6 +271,7 @@ describe('ReportCardsService', () => {
       expect(card.classroom).toEqual({
         name: '5°A',
         gradeLevel: { name: 'Quinto' },
+        homeroomTeacher: null,
       });
       expect(card.subjects[0]).toMatchObject({
         id: 'math',
@@ -386,6 +408,90 @@ describe('ReportCardsService', () => {
       await expect(
         service.getEnrollmentReportCard(admin, 'missing'),
       ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe('PDF', () => {
+    const admin = {
+      organizationId: 'org-id',
+      userId: 'admin-id',
+      roleName: RoleNameEnum.ADMIN,
+    };
+    const isPdf = (content: Buffer) =>
+      content.subarray(0, 5).toString() === '%PDF-';
+
+    it("renders the student's own report card", async () => {
+      const result = await service.getOwnReportCardPdf(
+        { organizationId: 'org-id', userId: 'user-id' },
+        { periodId: 'p1' },
+      );
+
+      expect(result.filename).toBe('boletin-perez-ana-2026-p1.pdf');
+      expect(isPdf(result.content)).toBe(true);
+    });
+
+    it('rejects a period from another year', async () => {
+      await expect(
+        service.getOwnReportCardPdf(
+          { organizationId: 'org-id', userId: 'user-id' },
+          { periodId: 'other' },
+        ),
+      ).rejects.toThrow(REPORT_CARD_PERIOD_NOT_FOUND_MESSAGE);
+    });
+
+    it('prints every student of the classroom in one file', async () => {
+      enrollmentRepository.findAll.mockResolvedValue([
+        { id: 'e2026', status: 'in_progress', student },
+        {
+          id: 'e-luis',
+          status: 'in_progress',
+          student: { ...student, id: 's2', firstName: 'Luis' },
+        },
+      ]);
+
+      const result = await service.getClassroomReportCardsPdf(admin, 'c5');
+
+      expect(enrollmentRepository.findAll).toHaveBeenCalledWith(
+        expect.objectContaining({ classroomId: 'c5' }),
+        expect.any(Object),
+      );
+      // Una sola consulta de notas para todo el salón.
+      expect(summaryRepository.findAll).toHaveBeenCalledTimes(1);
+      expect(summaryRepository.findAll).toHaveBeenCalledWith(
+        {
+          enrollmentId: ['e2026', 'e-luis'],
+          classroomSubjectId: ['math', 'art'],
+        },
+        expect.any(Object),
+      );
+      expect(result.filename).toBe('boletines-5-a-2026.pdf');
+      expect(isPdf(result.content)).toBe(true);
+    });
+
+    it('lists the periods of the classroom year', async () => {
+      await expect(service.listClassroomPeriods(admin, 'c5')).resolves.toBe(
+        periods,
+      );
+    });
+
+    it("hides another teacher's classroom", async () => {
+      await expect(
+        service.getClassroomReportCardsPdf(
+          { ...admin, userId: 'other', roleName: RoleNameEnum.TEACHER },
+          'c5',
+        ),
+      ).rejects.toThrow(REPORT_CARD_CLASSROOM_NOT_FOUND_MESSAGE);
+    });
+
+    it('needs an enrollment to print', async () => {
+      enrollmentRepository.findAll.mockResolvedValue([]);
+
+      await expect(
+        service.getOwnReportCardPdf(
+          { organizationId: 'org-id', userId: 'user-id' },
+          {},
+        ),
+      ).rejects.toThrow(REPORT_CARD_NOT_FOUND_MESSAGE);
     });
   });
 

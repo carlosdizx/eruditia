@@ -37,6 +37,7 @@ export const Permission = {
   GRADE_RECORD: 'grade:record',
   GRADE_RECOVER: 'grade:recover',
   REPORT_CARD_VIEW: 'report-card:view',
+  REPORT_CARD_EXPORT: 'report-card:export',
   RANKING_VIEW: 'ranking:view',
 } as const;
 
@@ -80,6 +81,7 @@ export const PERMISSION_LABELS: Record<string, string> = {
   [Permission.GRADE_RECORD]: 'Registrar notas',
   [Permission.GRADE_RECOVER]: 'Registrar recuperaciones',
   [Permission.REPORT_CARD_VIEW]: 'Boletín de notas (cuenta y portal con PIN)',
+  [Permission.REPORT_CARD_EXPORT]: 'Exportar boletines en PDF',
   [Permission.RANKING_VIEW]: 'Rankings y cuadro de honor',
 };
 
@@ -195,6 +197,11 @@ export const REPORT_CARD_GRANTS = {
   // Vista previa del admin o del director de grupo.
   preview: {
     permission: Permission.REPORT_CARD_VIEW,
+    role: ['ADMIN', 'TEACHER'],
+  },
+  // PDF individual o del salón (el profesor, de su dirección de grupo).
+  export: {
+    permission: Permission.REPORT_CARD_EXPORT,
     role: ['ADMIN', 'TEACHER'],
   },
 } satisfies Record<string, Grant>;
