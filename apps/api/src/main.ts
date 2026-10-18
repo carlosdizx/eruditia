@@ -12,12 +12,12 @@ const bootstrap = async () => {
     bufferLogs: true,
   });
 
-  // La web llama a la API desde su servidor: se confía en X-Forwarded-For solo
-  // si viene de la red privada, para tener la IP real del navegador (límite de
-  // consultas del portal y sesiones) sin que un cliente externo la falsifique.
-  app.set('trust proxy', ['loopback', 'linklocal', 'uniquelocal']);
-
   const configService = app.get(ConfigService<Env, true>);
+
+  // La web llama a la API desde su servidor: por defecto se confía en
+  // X-Forwarded-For solo si viene de la red privada, para tener la IP real del
+  // navegador sin que un cliente externo la falsifique.
+  app.set('trust proxy', configService.get('TRUST_PROXY', { infer: true }));
 
   const terminalLogger = new Logger('AUX LOGGER');
 

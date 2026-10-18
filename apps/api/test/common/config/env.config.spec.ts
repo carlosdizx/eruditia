@@ -30,6 +30,7 @@ describe('validateEnv', () => {
       SMTP_SECURE: true,
       SESSION_TTL_HOURS: 24,
       SESSION_IDLE_TIMEOUT_MINUTES: 120,
+      TRUST_PROXY: ['loopback', 'linklocal', 'uniquelocal'],
     });
   });
 
