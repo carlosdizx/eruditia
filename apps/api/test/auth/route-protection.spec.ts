@@ -6,6 +6,7 @@ import { AUTH_WITH_PERMISSIONS_KEY } from '@auth/decorators/auth-with-permission
 import UsersController from '../../src/users/users.controller';
 import OrganizationsController from '../../src/organizations/organizations.controller';
 import RolesController from '../../src/roles/roles.controller';
+import HealthController from '../../src/health/health.controller';
 
 const metadataOf = (
   controller: { prototype: object },
@@ -23,6 +24,10 @@ describe('route protection', () => {
     expect(metadataOf(UsersController, 'createSuperAdmin', IS_PUBLIC_KEY)).toBe(
       true,
     );
+  });
+
+  it('GET /health is public for the platform health check', () => {
+    expect(metadataOf(HealthController, 'check', IS_PUBLIC_KEY)).toBe(true);
   });
 
   it('/organizations is restricted to the SUPER_ADMIN role', () => {
