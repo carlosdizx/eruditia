@@ -291,7 +291,7 @@ describe('UsersService', () => {
     });
   });
 
-  describe('createSuperAdmin', () => {
+  describe('ensureSuperAdmin', () => {
     const email = 'superadmin@example.com';
 
     beforeEach(() => {
@@ -300,7 +300,7 @@ describe('UsersService', () => {
     });
 
     it('reads the email from SUPER_ADMIN_EMAIL', async () => {
-      await service.createSuperAdmin();
+      await service.ensureSuperAdmin();
 
       expect(configService.get).toHaveBeenCalledWith('SUPER_ADMIN_EMAIL', {
         infer: true,
@@ -308,7 +308,7 @@ describe('UsersService', () => {
     });
 
     it('finds the SUPER_ADMIN role by name inside the transaction', async () => {
-      await service.createSuperAdmin();
+      await service.ensureSuperAdmin();
 
       expect(repository.transaction).toHaveBeenCalledTimes(1);
       expect(rolesService.findOne).toHaveBeenCalledWith(
@@ -318,8 +318,18 @@ describe('UsersService', () => {
       );
     });
 
+    it('looks for any user with the SUPER_ADMIN role', async () => {
+      await service.ensureSuperAdmin();
+
+      expect(repository.findOne).toHaveBeenCalledWith(
+        { roleId: 'super-admin-role-id' },
+        false,
+        { attributes: ['id'], transaction },
+      );
+    });
+
     it('creates an active "Super Admin" user with that role', async () => {
-      await service.createSuperAdmin();
+      await expect(service.ensureSuperAdmin()).resolves.toBe(true);
 
       expect(repository.create).toHaveBeenCalledWith(
         {
@@ -332,10 +342,15 @@ describe('UsersService', () => {
         },
         { transaction },
       );
+      expect(emailService.main).toHaveBeenCalledTimes(1);
     });
 
-    it('resolves without returning the user', async () => {
-      await expect(service.createSuperAdmin()).resolves.toBeUndefined();
+    it('does nothing when a super admin already exists', async () => {
+      repository.findOne.mockResolvedValue({ id: 'existing-id' });
+
+      await expect(service.ensureSuperAdmin()).resolves.toBe(false);
+      expect(repository.create).not.toHaveBeenCalled();
+      expect(emailService.main).not.toHaveBeenCalled();
     });
 
     it('does not create the user when the role does not exist', async () => {
@@ -343,17 +358,8 @@ describe('UsersService', () => {
         new NotFoundException('Rol no encontrado'),
       );
 
-      await expect(service.createSuperAdmin()).rejects.toBeInstanceOf(
+      await expect(service.ensureSuperAdmin()).rejects.toBeInstanceOf(
         NotFoundException,
-      );
-      expect(repository.create).not.toHaveBeenCalled();
-    });
-
-    it('throws ConflictException when the super admin already exists', async () => {
-      repository.findOne.mockResolvedValue({ id: 'existing-id' });
-
-      await expect(service.createSuperAdmin()).rejects.toBeInstanceOf(
-        ConflictException,
       );
       expect(repository.create).not.toHaveBeenCalled();
     });

@@ -239,7 +239,9 @@ export default class UsersService extends CrudService<
     );
   };
 
-  public createSuperAdmin = async () => {
+  // Idempotente: corre en cada deploy (db:deploy) y solo crea la cuenta si
+  // todavía no existe ningún super admin, aunque cambie SUPER_ADMIN_EMAIL.
+  public ensureSuperAdmin = async () => {
     const email = this.configService.get('SUPER_ADMIN_EMAIL', { infer: true });
 
     return await this.transaction(async (transaction) => {
@@ -248,6 +250,15 @@ export default class UsersService extends CrudService<
         true,
         { attributes: ['id'], transaction },
       ))!;
+
+      const existing = await this.findOne({ roleId: role.id }, false, {
+        attributes: ['id'],
+        transaction,
+      });
+      if (existing) {
+        this.logger.verbose('Super admin already exists');
+        return false;
+      }
 
       await this.createUser(
         {
@@ -261,6 +272,7 @@ export default class UsersService extends CrudService<
       );
 
       this.logger.verbose('Super admin created');
+      return true;
     });
   };
 }
