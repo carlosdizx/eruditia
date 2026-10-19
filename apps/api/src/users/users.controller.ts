@@ -9,6 +9,7 @@ import {
   Query,
 } from '@nestjs/common';
 import UsersService from './users.service';
+import Public from '@auth/decorators/public.decorator';
 import PaginationDto from '@common/dto/pagination.dto';
 import CurrentAuth from '@auth/decorators/current-auth.decorator';
 import type AuthContextInterface from '@auth/interfaces/auth-context.interface';
@@ -22,6 +23,12 @@ import UpdateOrganizationUserDto from './dto/update-organization-user.dto';
 @Controller('users')
 export default class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+  @Public()
+  @Post('super-admin')
+  public async createSuperAdmin() {
+    return await this.usersService.createSuperAdmin();
+  }
 
   @AuthWithPermissions({
     roles: [RoleNameEnum.ADMIN],

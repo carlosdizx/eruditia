@@ -20,6 +20,7 @@ const handlerMetadata = (handler: string, key: string): unknown =>
 
 describe('UsersController', () => {
   let usersService: {
+    createSuperAdmin: jest.Mock;
     findAllPaginated: jest.Mock;
     createOrganizationUser: jest.Mock;
     updateOrganizationUser: jest.Mock;
@@ -28,11 +29,30 @@ describe('UsersController', () => {
 
   beforeEach(() => {
     usersService = {
+      createSuperAdmin: jest.fn().mockResolvedValue(undefined),
       findAllPaginated: jest.fn().mockResolvedValue({ rows: [], count: 0 }),
       createOrganizationUser: jest.fn().mockResolvedValue({ id: 'new-id' }),
       updateOrganizationUser: jest.fn().mockResolvedValue({ id: 'target-id' }),
     };
     controller = new UsersController(usersService as unknown as UsersService);
+  });
+
+  describe('createSuperAdmin', () => {
+    it('is public', () => {
+      expect(handlerMetadata('createSuperAdmin', IS_PUBLIC_KEY)).toBe(true);
+    });
+
+    it('delegates to UsersService.createSuperAdmin', async () => {
+      await expect(controller.createSuperAdmin()).resolves.toBeUndefined();
+      expect(usersService.createSuperAdmin).toHaveBeenCalledTimes(1);
+    });
+
+    it('propagates service errors', async () => {
+      const error = new Error('boom');
+      usersService.createSuperAdmin.mockRejectedValue(error);
+
+      await expect(controller.createSuperAdmin()).rejects.toBe(error);
+    });
   });
 
   describe('listUsers', () => {
